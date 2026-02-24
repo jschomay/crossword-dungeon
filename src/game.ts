@@ -1,6 +1,7 @@
 import * as ROT from '../lib/rotjs';
 import demoJson from '../puzzles/demo.json';
 import { validateIpuz } from './puzzle';
+import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 
 export default class Game {
@@ -8,7 +9,8 @@ export default class Game {
 
   constructor() {
     const ipuz = validateIpuz(demoJson);
-    const dungeon = new Dungeon(ipuz);
+    const puzzle = new Puzzle(ipuz);
+    const dungeon = new Dungeon(puzzle);
 
     this.display = new ROT.Display({
       width: dungeon.displayWidth,

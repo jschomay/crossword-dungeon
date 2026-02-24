@@ -1,18 +1,26 @@
 import * as ROT from '../lib/rotjs';
-import { type Ipuz } from './puzzle';
+import Puzzle from './puzzle';
 
 const WALL_FG = '#888888';
 const UNKNOWN_FG = '#ffff00';
+const DOT_FG = '#4444ff';
 const BLACK = '#000000';
+
+// The 8 interior non-center cells in a 5×5 room, left-to-right, top-to-bottom
+const DOT_POSITIONS: [number, number][] = [
+  [1, 1], [2, 1], [3, 1],
+  [1, 2],         [3, 2],
+  [1, 3], [2, 3], [3, 3],
+];
 
 export default class Dungeon {
   readonly displayWidth: number;
   readonly displayHeight: number;
-  private ipuz: Ipuz;
+  private puzzle: Puzzle;
 
-  constructor(ipuz: Ipuz) {
-    this.ipuz = ipuz;
-    const { width, height } = ipuz.dimensions;
+  constructor(puzzle: Puzzle) {
+    this.puzzle = puzzle;
+    const { width, height } = puzzle.ipuz.dimensions;
     // Each grid cell = 5×5 room; adjacent rooms share a 1-cell corridor gap.
     // Total = gridSize * 6 - 1 cells, plus 1-cell padding each side = gridSize * 6 + 1
     this.displayWidth = width * 6 + 1;
@@ -20,7 +28,7 @@ export default class Dungeon {
   }
 
   render(display: ROT.Display): void {
-    const { width, height } = this.ipuz.dimensions;
+    const { width, height } = this.puzzle.ipuz.dimensions;
     const ox = 1; // left/top padding offset
     const oy = 1;
 
@@ -36,9 +44,9 @@ export default class Dungeon {
   }
 
   private hasRoom(gx: number, gy: number): boolean {
-    const { width, height } = this.ipuz.dimensions;
+    const { width, height } = this.puzzle.ipuz.dimensions;
     if (gx < 0 || gy < 0 || gx >= width || gy >= height) return false;
-    const v = this.ipuz.solution[gy][gx];
+    const v = this.puzzle.ipuz.solution[gy][gx];
     return v !== null && v !== '#';
   }
 
@@ -50,6 +58,8 @@ export default class Dungeon {
     const connDown  = this.hasRoom(gx, gy + 1);
     const connLeft  = this.hasRoom(gx - 1, gy);
     const connRight = this.hasRoom(gx + 1, gy);
+
+    const potentialLevel = this.puzzle.potentialLevels[gy][gx];
 
     for (let lx = 0; lx < 5; lx++) {
       for (let ly = 0; ly < 5; ly++) {
@@ -64,6 +74,12 @@ export default class Dungeon {
         }
         // interior floor cells: left as default (black bg, no char needed)
       }
+    }
+
+    // Draw blue dots for potential level, left-to-right
+    for (let i = 0; i < potentialLevel; i++) {
+      const [lx, ly] = DOT_POSITIONS[i];
+      display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
     }
   }
 

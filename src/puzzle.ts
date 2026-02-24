@@ -11,6 +11,47 @@ export type Ipuz = {
   [key: string]: unknown;
 }
 
+type Coord = { x: number; y: number };
+
+function isBlackCell(ipuz: Ipuz, { x, y }: Coord): boolean {
+  const v = ipuz.solution[y][x];
+  return v === null || v === '#';
+}
+
+// Returns the length of the word at coord in the given direction.
+// Returns 0 if coord is part of a 1-letter run (not a real word).
+function wordLength(ipuz: Ipuz, coord: Coord, direction: 'across' | 'down'): number {
+  if (isBlackCell(ipuz, coord)) return 0;
+  const { width, height } = ipuz.dimensions;
+  let len = 1;
+  if (direction === 'across') {
+    for (let x = coord.x - 1; x >= 0 && !isBlackCell(ipuz, { x, y: coord.y }); x--) len++;
+    for (let x = coord.x + 1; x < width && !isBlackCell(ipuz, { x, y: coord.y }); x++) len++;
+  } else {
+    for (let y = coord.y - 1; y >= 0 && !isBlackCell(ipuz, { x: coord.x, y }); y--) len++;
+    for (let y = coord.y + 1; y < height && !isBlackCell(ipuz, { x: coord.x, y }); y++) len++;
+  }
+  return len > 1 ? len : 0;
+}
+
+// Potential level = (acrossWordLen - 1) + (downWordLen - 1), capped at 8.
+// Words of length 1 don't count (wordLength returns 0 for those).
+export function computePotentialLevel(ipuz: Ipuz, coord: Coord): number {
+  const across = wordLength(ipuz, coord, 'across');
+  const down = wordLength(ipuz, coord, 'down');
+  const level = (across > 0 ? across - 1 : 0) + (down > 0 ? down - 1 : 0);
+  return Math.min(level, 8);
+}
+
+export function computePotentialLevels(ipuz: Ipuz): number[][] {
+  const { width, height } = ipuz.dimensions;
+  return Array.from({ length: height }, (_, y) =>
+    Array.from({ length: width }, (_, x) =>
+      isBlackCell(ipuz, { x, y }) ? 0 : computePotentialLevel(ipuz, { x, y })
+    )
+  );
+}
+
 export function validateIpuz(data: unknown): Ipuz {
   if (!data || typeof data !== 'object') throw new Error('Invalid ipuz: not an object');
   const d = data as Record<string, unknown>;
@@ -40,9 +81,11 @@ export default class Puzzle {
   x: number = 0;
   y: number = 0;
   current: string;
+  readonly potentialLevels: number[][];
 
   constructor(ipuz: Ipuz) {
     this.ipuz = ipuz;
+    this.potentialLevels = computePotentialLevels(ipuz);
     if (!this.valid()) this.next();
     this.current = this.ipuz.solution[this.y][this.x] ?? '#';
   }

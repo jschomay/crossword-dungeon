@@ -1,0 +1,23 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": ["http://ipuz.org/crossword#1"],
+  "dimensions": { "width": 5, "height": 3 },
+  "puzzle": [
+    [1, 2, "#", 3, 4],
+    [5, 6, "#", 7, 8],
+    [9, 10, "#", 11, 12]
+  ],
+  "solution": [
+    ["A", "B", "#", "C", "D"],
+    ["E", "F", "#", "G", "H"],
+    ["I", "J", "#", "K", "L"]
+  ],
+  "clues": {
+    "Across": [
+      [1, "clue 1"], [3, "clue 3"], [5, "clue 5"], [7, "clue 7"], [9, "clue 9"], [11, "clue 11"]
+    ],
+    "Down": [
+      [1, "clue 1d"], [2, "clue 2d"], [3, "clue 3d"], [4, "clue 4d"]
+    ]
+  }
+}
