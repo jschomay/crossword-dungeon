@@ -4,6 +4,7 @@ import Puzzle from './puzzle';
 const WALL_FG = '#888888';
 const UNKNOWN_FG = '#ffff00';
 const DOT_FG = '#4444ff';
+const PLAYER_FG = '#ffffff';
 const BLACK = '#000000';
 
 // The 8 interior non-center cells in a 5×5 room, left-to-right, top-to-bottom
@@ -27,7 +28,7 @@ export default class Dungeon {
     this.displayHeight = height * 6 + 1;
   }
 
-  render(display: ROT.Display): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     const ox = 1; // left/top padding offset
     const oy = 1;
@@ -35,7 +36,7 @@ export default class Dungeon {
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, ox, oy);
+          this.drawRoom(display, gx, gy, ox, oy, playerPos);
           if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, ox, oy);
           if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, ox, oy);
         }
@@ -43,14 +44,14 @@ export default class Dungeon {
     }
   }
 
-  private hasRoom(gx: number, gy: number): boolean {
+  hasRoom(gx: number, gy: number): boolean {
     const { width, height } = this.puzzle.ipuz.dimensions;
     if (gx < 0 || gy < 0 || gx >= width || gy >= height) return false;
     const v = this.puzzle.ipuz.solution[gy][gx];
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, ox: number, oy: number): void {
+  private drawRoom(display: ROT.Display, gx: number, gy: number, ox: number, oy: number, playerPos: { x: number; y: number }): void {
     const dx = ox + gx * 6;
     const dy = oy + gy * 6;
 
@@ -60,11 +61,14 @@ export default class Dungeon {
     const connRight = this.hasRoom(gx + 1, gy);
 
     const potentialLevel = this.puzzle.potentialLevels[gy][gx];
+    const hasPlayer = playerPos.x === gx && playerPos.y === gy;
 
     for (let lx = 0; lx < 5; lx++) {
       for (let ly = 0; ly < 5; ly++) {
         if (lx === 2 && ly === 2) {
-          display.draw(dx + lx, dy + ly, '?', UNKNOWN_FG, BLACK);
+          const centerChar = hasPlayer ? '@' : '?';
+          const centerFg = hasPlayer ? PLAYER_FG : UNKNOWN_FG;
+          display.draw(dx + lx, dy + ly, centerChar, centerFg, BLACK);
           continue;
         }
 

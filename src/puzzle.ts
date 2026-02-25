@@ -120,4 +120,15 @@ export default class Puzzle {
     this.y = y;
     this.current = this.ipuz.solution[this.y][this.x] ?? '#';
   }
+
+  getRooms(): { x: number; y: number }[] {
+    const { width, height } = this.ipuz.dimensions;
+    const rooms: { x: number; y: number }[] = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!this.isBlack({ x, y })) rooms.push({ x, y });
+      }
+    }
+    return rooms;
+  }
 }
