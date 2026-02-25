@@ -11,3 +11,4 @@ The workflow will progress layer by layer of functionality in an agile style.
 
 Output should be kept brief. Before making changes, succinctly outline the plan to get approval. Bring up any questions around missing or unclear context or potentially high impact trade-off decisions.
 
+After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest.

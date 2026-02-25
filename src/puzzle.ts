@@ -13,9 +13,17 @@ export type Ipuz = {
 
 type Coord = { x: number; y: number };
 
-function isBlackCell(ipuz: Ipuz, { x, y }: Coord): boolean {
+export function isBlackCell(ipuz: Ipuz, { x, y }: Coord): boolean {
   const v = ipuz.solution[y][x];
   return v === null || v === '#';
+}
+
+function clueNumberFromCell(cell: IpuzPuzzleCell): number | null {
+  if (typeof cell === 'number') return cell;
+  if (cell && typeof cell === 'object' && typeof (cell as Record<string, unknown>)['cell'] === 'number') {
+    return (cell as Record<string, unknown>)['cell'] as number;
+  }
+  return null;
 }
 
 // Returns the length of the word at coord in the given direction.
@@ -78,47 +86,11 @@ export function validateIpuz(data: unknown): Ipuz {
 
 export default class Puzzle {
   ipuz: Ipuz;
-  x: number = 0;
-  y: number = 0;
-  current: string;
   readonly potentialLevels: number[][];
 
   constructor(ipuz: Ipuz) {
     this.ipuz = ipuz;
     this.potentialLevels = computePotentialLevels(ipuz);
-    if (!this.valid()) this.next();
-    this.current = this.ipuz.solution[this.y][this.x] ?? '#';
-  }
-
-  valueAt(coords: { x: number; y: number }): string {
-    return this.ipuz.solution[coords.y][coords.x] ?? '#';
-  }
-
-  isBlack(coords: { x: number; y: number }): boolean {
-    const v = this.ipuz.solution[coords.y][coords.x];
-    return v === null || v === '#';
-  }
-
-  valid(): boolean {
-    return !this.isBlack({ x: this.x, y: this.y });
-  }
-
-  next(): boolean {
-    this.x++;
-    if (this.x >= this.ipuz.dimensions.width) {
-      this.x = 0;
-      this.y++;
-    }
-    if (this.y >= this.ipuz.dimensions.height) return false;
-    if (!this.valid()) return this.next();
-    this.current = this.ipuz.solution[this.y][this.x] ?? '#';
-    return true;
-  }
-
-  set({ x, y }: { x: number; y: number }) {
-    this.x = x;
-    this.y = y;
-    this.current = this.ipuz.solution[this.y][this.x] ?? '#';
   }
 
   getRooms(): { x: number; y: number }[] {
@@ -126,9 +98,29 @@ export default class Puzzle {
     const rooms: { x: number; y: number }[] = [];
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        if (!this.isBlack({ x, y })) rooms.push({ x, y });
+        if (!isBlackCell(this.ipuz, { x, y })) rooms.push({ x, y });
       }
     }
     return rooms;
+  }
+
+  getCluesAt(coord: Coord): { direction: 'Across' | 'Down'; clue: string }[] {
+    const results: { direction: 'Across' | 'Down'; clue: string }[] = [];
+    for (const direction of ['across', 'down'] as const) {
+      if (wordLength(this.ipuz, coord, direction) === 0) continue;
+      // Walk to word start
+      const start = { ...coord };
+      if (direction === 'across') {
+        while (start.x > 0 && !isBlackCell(this.ipuz, { x: start.x - 1, y: start.y })) start.x--;
+      } else {
+        while (start.y > 0 && !isBlackCell(this.ipuz, { x: start.x, y: start.y - 1 })) start.y--;
+      }
+      const num = clueNumberFromCell(this.ipuz.puzzle[start.y][start.x]);
+      if (num === null) continue;
+      const dir = direction === 'across' ? 'Across' : 'Down';
+      const entry = this.ipuz.clues[dir].find(([n]) => n === num);
+      if (entry) results.push({ direction: dir, clue: entry[1] });
+    }
+    return results;
   }
 }

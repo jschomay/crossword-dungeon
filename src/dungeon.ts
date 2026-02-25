@@ -30,15 +30,12 @@ export default class Dungeon {
 
   render(display: ROT.Display, playerPos: { x: number; y: number }): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
-    const ox = 1; // left/top padding offset
-    const oy = 1;
-
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, ox, oy, playerPos);
-          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, ox, oy);
-          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, ox, oy);
+          this.drawRoom(display, gx, gy, playerPos);
+          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy);
+          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy);
         }
       }
     }
@@ -51,9 +48,9 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, ox: number, oy: number, playerPos: { x: number; y: number }): void {
-    const dx = ox + gx * 6;
-    const dy = oy + gy * 6;
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }): void {
+    const dx = 1 + gx * 6;
+    const dy = 1 + gy * 6;
 
     const connUp    = this.hasRoom(gx, gy - 1);
     const connDown  = this.hasRoom(gx, gy + 1);
@@ -97,17 +94,17 @@ export default class Dungeon {
   }
 
   // Corridor column between (gx, gy) and (gx+1, gy): walls at rows 1 and 3, open at center
-  private drawHCorridor(display: ROT.Display, gx: number, gy: number, ox: number, oy: number): void {
-    const cx = ox + gx * 6 + 5;
-    const ry = oy + gy * 6;
+  private drawHCorridor(display: ROT.Display, gx: number, gy: number): void {
+    const cx = 1 + gx * 6 + 5;
+    const ry = 1 + gy * 6;
     display.draw(cx, ry + 1, '#', WALL_FG, BLACK);
     display.draw(cx, ry + 3, '#', WALL_FG, BLACK);
   }
 
   // Corridor row between (gx, gy) and (gx, gy+1): walls at cols 1 and 3, open at center
-  private drawVCorridor(display: ROT.Display, gx: number, gy: number, ox: number, oy: number): void {
-    const rx = ox + gx * 6;
-    const cy = oy + gy * 6 + 5;
+  private drawVCorridor(display: ROT.Display, gx: number, gy: number): void {
+    const rx = 1 + gx * 6;
+    const cy = 1 + gy * 6 + 5;
     display.draw(rx + 1, cy, '#', WALL_FG, BLACK);
     display.draw(rx + 3, cy, '#', WALL_FG, BLACK);
   }

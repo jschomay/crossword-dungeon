@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { validateIpuz, computePotentialLevel, computePotentialLevels } from './puzzle';
+import Puzzle from './puzzle';
 import testPuzzleJson from '../puzzles/test-potential.json';
+import demoJson from '../puzzles/demo.json';
 
 // Layout (x=col, y=row):
 //   x: 0  1  2  3  4
@@ -52,6 +54,50 @@ describe('computePotentialLevel', () => {
     });
     // Center cell(4,4): across len 9 + down len 9 → (9-1)+(9-1)=16, capped at 8
     expect(computePotentialLevel(bigIpuz, { x: 4, y: 4 })).toBe(8);
+  });
+});
+
+// Demo puzzle layout:
+//   x: 0    1    2    3
+// y=0: C    A    #    #
+// y=1: B    O    T    S
+// y=2: null L    O    #
+//
+// Across: CA(1,"OR neighbor"), BOTS(3,"Droids"), LO(5,"Behold!")
+// Down: CB(1,"Trucker's radio"), AOL(2,"MSN competitor"), TO(4,"A preposition")
+// Puzzle cells: (0,0)={cell:1,...}, (1,0)=2(plain number), (3,1)=null(no clue number)
+
+describe('getCluesAt', () => {
+  const demoPuzzle = new Puzzle(validateIpuz(demoJson));
+
+  it('returns both clues for a cell at a word intersection', () => {
+    // O(1,1): across BOTS ("Droids") + down AOL ("MSN competitor")
+    // Cell at (1,1) is an object with style but no cell number — word start is (0,1) for across, (1,0) for down
+    const clues = demoPuzzle.getCluesAt({ x: 1, y: 1 });
+    expect(clues).toHaveLength(2);
+    expect(clues).toContainEqual({ direction: 'Across', clue: 'Droids' });
+    expect(clues).toContainEqual({ direction: 'Down', clue: 'MSN competitor' });
+  });
+
+  it('reads clue number from a plain number puzzle cell', () => {
+    // A(1,0): cell value is plain number 2 — across CA ("OR neighbor") + down AOL ("MSN competitor")
+    const clues = demoPuzzle.getCluesAt({ x: 1, y: 0 });
+    expect(clues).toContainEqual({ direction: 'Across', clue: 'OR neighbor' });
+    expect(clues).toContainEqual({ direction: 'Down', clue: 'MSN competitor' });
+  });
+
+  it('reads clue number from an object-format puzzle cell', () => {
+    // C(0,0): cell is { cell: 1, style: ... } — across CA ("OR neighbor") + down CB ("Trucker\'s radio")
+    const clues = demoPuzzle.getCluesAt({ x: 0, y: 0 });
+    expect(clues).toContainEqual({ direction: 'Across', clue: 'OR neighbor' });
+    expect(clues).toContainEqual({ direction: 'Down', clue: "Trucker's radio" });
+  });
+
+  it('returns only one clue for a cell with no intersecting word', () => {
+    // S(3,1): only in across BOTS, no down word (isolated vertically)
+    const clues = demoPuzzle.getCluesAt({ x: 3, y: 1 });
+    expect(clues).toHaveLength(1);
+    expect(clues[0]).toEqual({ direction: 'Across', clue: 'Droids' });
   });
 });
 
