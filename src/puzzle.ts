@@ -26,6 +26,16 @@ function clueNumberFromCell(cell: IpuzPuzzleCell): number | null {
   return null;
 }
 
+function wordStart(ipuz: Ipuz, coord: Coord, direction: 'across' | 'down'): Coord {
+  const start = { ...coord };
+  if (direction === 'across') {
+    while (start.x > 0 && !isBlackCell(ipuz, { x: start.x - 1, y: start.y })) start.x--;
+  } else {
+    while (start.y > 0 && !isBlackCell(ipuz, { x: start.x, y: start.y - 1 })) start.y--;
+  }
+  return start;
+}
+
 // Returns the length of the word at coord in the given direction.
 // Returns 0 if coord is part of a 1-letter run (not a real word).
 function wordLength(ipuz: Ipuz, coord: Coord, direction: 'across' | 'down'): number {
@@ -93,6 +103,22 @@ export default class Puzzle {
     this.potentialLevels = computePotentialLevels(ipuz);
   }
 
+  // Returns all coords sharing an across or down word with coord. Does not include coord itself.
+  getWordNeighbors(coord: Coord): Coord[] {
+    const neighbors: Coord[] = [];
+    for (const direction of ['across', 'down'] as const) {
+      if (wordLength(this.ipuz, coord, direction) === 0) continue;
+      const start = wordStart(this.ipuz, coord, direction);
+      let pos = { ...start };
+      while (pos.x < this.ipuz.dimensions.width && pos.y < this.ipuz.dimensions.height && !isBlackCell(this.ipuz, pos)) {
+        if (pos.x !== coord.x || pos.y !== coord.y) neighbors.push({ ...pos });
+        if (direction === 'across') pos = { x: pos.x + 1, y: pos.y };
+        else pos = { x: pos.x, y: pos.y + 1 };
+      }
+    }
+    return neighbors;
+  }
+
   getRooms(): { x: number; y: number }[] {
     const { width, height } = this.ipuz.dimensions;
     const rooms: { x: number; y: number }[] = [];
@@ -108,13 +134,7 @@ export default class Puzzle {
     const results: { direction: 'Across' | 'Down'; clue: string }[] = [];
     for (const direction of ['across', 'down'] as const) {
       if (wordLength(this.ipuz, coord, direction) === 0) continue;
-      // Walk to word start
-      const start = { ...coord };
-      if (direction === 'across') {
-        while (start.x > 0 && !isBlackCell(this.ipuz, { x: start.x - 1, y: start.y })) start.x--;
-      } else {
-        while (start.y > 0 && !isBlackCell(this.ipuz, { x: start.x, y: start.y - 1 })) start.y--;
-      }
+      const start = wordStart(this.ipuz, coord, direction);
       const num = clueNumberFromCell(this.ipuz.puzzle[start.y][start.x]);
       if (num === null) continue;
       const dir = direction === 'across' ? 'Across' : 'Down';

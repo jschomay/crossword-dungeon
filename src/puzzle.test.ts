@@ -101,6 +101,62 @@ describe('getCluesAt', () => {
   });
 });
 
+// getWordNeighbors uses the test-potential fixture:
+//   x: 0  1  2  3  4
+// y=0: A  B  #  C  D
+// y=1: E  F  #  G  H
+// y=2: I  J  #  K  L
+// Across words: AB, EF, IJ, CD, GH, KL
+// Down words: AEI(x=0), BFJ(x=1), CGK(x=3), DHL(x=4)
+
+describe('getWordNeighbors', () => {
+  const puzzle = new Puzzle(ipuz);
+
+  it('returns across and down neighbors for an intersection cell', () => {
+    // A(0,0): across neighbor B(1,0), down neighbors E(0,1) and I(0,2)
+    const neighbors = puzzle.getWordNeighbors({ x: 0, y: 0 });
+    expect(neighbors).toHaveLength(3);
+    expect(neighbors).toContainEqual({ x: 1, y: 0 });
+    expect(neighbors).toContainEqual({ x: 0, y: 1 });
+    expect(neighbors).toContainEqual({ x: 0, y: 2 });
+  });
+
+  it('does not include coord itself', () => {
+    const neighbors = puzzle.getWordNeighbors({ x: 0, y: 0 });
+    expect(neighbors).not.toContainEqual({ x: 0, y: 0 });
+  });
+
+  it('does not cross black cells to include cells from a different word', () => {
+    // A(0,0): across word is AB only — C(3,0) and D(4,0) are across a black cell at x=2
+    const neighbors = puzzle.getWordNeighbors({ x: 0, y: 0 });
+    expect(neighbors).not.toContainEqual({ x: 3, y: 0 });
+    expect(neighbors).not.toContainEqual({ x: 4, y: 0 });
+  });
+
+  it('returns only down neighbors for an interior cell of a down-only word', () => {
+    // E(0,1): across word EF (len 2) → neighbor F(1,1); down word AEI → neighbors A(0,0) and I(0,2)
+    const neighbors = puzzle.getWordNeighbors({ x: 0, y: 1 });
+    expect(neighbors).toContainEqual({ x: 1, y: 1 }); // across neighbor
+    expect(neighbors).toContainEqual({ x: 0, y: 0 }); // down neighbor above
+    expect(neighbors).toContainEqual({ x: 0, y: 2 }); // down neighbor below
+    expect(neighbors).toHaveLength(3);
+  });
+
+  it('returns no neighbors for a 1-letter run cell', () => {
+    const soloIpuz = validateIpuz({
+      version: 'http://ipuz.org/v1',
+      kind: ['http://ipuz.org/crossword#1'],
+      dimensions: { width: 3, height: 3 },
+      puzzle: [[1, '#', 2], ['#', '#', '#'], [3, '#', 4]],
+      solution: [['A', null, 'B'], [null, null, null], ['C', null, 'D']],
+      clues: { Across: [], Down: [] },
+    });
+    // A(0,0): surrounded by black cells on all sides — no valid words
+    const soloPuzzle = new Puzzle(soloIpuz);
+    expect(soloPuzzle.getWordNeighbors({ x: 0, y: 0 })).toHaveLength(0);
+  });
+});
+
 describe('computePotentialLevels', () => {
   it('returns 0 for black cells', () => {
     const levels = computePotentialLevels(ipuz);

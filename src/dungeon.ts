@@ -3,7 +3,9 @@ import Puzzle from './puzzle';
 
 const WALL_FG = '#888888';
 const UNKNOWN_FG = '#ffff00';
+const SOLVED_FG = '#aaaaaa';
 const DOT_FG = '#4444ff';
+const PLUS_FG = '#ffaa00';
 const PLAYER_FG = '#ffffff';
 const BLACK = '#000000';
 
@@ -28,12 +30,12 @@ export default class Dungeon {
     this.displayHeight = height * 6 + 1;
   }
 
-  render(display: ROT.Display, playerPos: { x: number; y: number }): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, playerPos);
+          this.drawRoom(display, gx, gy, playerPos, roomStates);
           if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy);
           if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy);
         }
@@ -48,7 +50,7 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }): void {
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>): void {
     const dx = 1 + gx * 6;
     const dy = 1 + gy * 6;
 
@@ -57,14 +59,24 @@ export default class Dungeon {
     const connLeft  = this.hasRoom(gx - 1, gy);
     const connRight = this.hasRoom(gx + 1, gy);
 
+    const state = roomStates.get(`${gx},${gy}`);
+    const solved = state?.solvedLetter ?? null;
+    const activatedLevel = state?.activatedLevel ?? 0;
     const potentialLevel = this.puzzle.potentialLevels[gy][gx];
     const hasPlayer = playerPos.x === gx && playerPos.y === gy;
 
     for (let lx = 0; lx < 5; lx++) {
       for (let ly = 0; ly < 5; ly++) {
         if (lx === 2 && ly === 2) {
-          const centerChar = hasPlayer ? '@' : '?';
-          const centerFg = hasPlayer ? PLAYER_FG : UNKNOWN_FG;
+          let centerChar: string;
+          let centerFg: string;
+          if (hasPlayer) {
+            centerChar = '@'; centerFg = PLAYER_FG;
+          } else if (solved !== null) {
+            centerChar = solved; centerFg = SOLVED_FG;
+          } else {
+            centerChar = '?'; centerFg = UNKNOWN_FG;
+          }
           display.draw(dx + lx, dy + ly, centerChar, centerFg, BLACK);
           continue;
         }
@@ -72,15 +84,29 @@ export default class Dungeon {
         const wall = this.isWall(lx, ly, connUp, connDown, connLeft, connRight);
         if (wall) {
           display.draw(dx + lx, dy + ly, '#', WALL_FG, BLACK);
+        } else {
+          // Clear interior floor cells so stale chars don't linger
+          display.draw(dx + lx, dy + ly, ' ', BLACK, BLACK);
         }
-        // interior floor cells: left as default (black bg, no char needed)
       }
     }
 
-    // Draw blue dots for potential level, left-to-right
-    for (let i = 0; i < potentialLevel; i++) {
-      const [lx, ly] = DOT_POSITIONS[i];
-      display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
+    if (solved !== null) {
+      // Solved: show only activated plusses, no dots
+      for (let i = 0; i < activatedLevel; i++) {
+        const [lx, ly] = DOT_POSITIONS[i];
+        display.draw(dx + lx, dy + ly, '+', PLUS_FG, BLACK);
+      }
+    } else {
+      // Unsolved: activated plusses first, then potential dots
+      for (let i = 0; i < potentialLevel; i++) {
+        const [lx, ly] = DOT_POSITIONS[i];
+        if (i < activatedLevel) {
+          display.draw(dx + lx, dy + ly, '+', PLUS_FG, BLACK);
+        } else {
+          display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
+        }
+      }
     }
   }
 

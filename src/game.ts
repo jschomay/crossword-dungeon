@@ -5,11 +5,17 @@ import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 
 const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
-  ArrowUp: { dx: 0, dy: -1 }, w: { dx: 0, dy: -1 }, k: { dx: 0, dy: -1 },
-  ArrowDown: { dx: 0, dy: 1 }, s: { dx: 0, dy: 1 }, j: { dx: 0, dy: 1 },
-  ArrowLeft: { dx: -1, dy: 0 }, a: { dx: -1, dy: 0 }, h: { dx: -1, dy: 0 },
-  ArrowRight: { dx: 1, dy: 0 }, d: { dx: 1, dy: 0 }, l: { dx: 1, dy: 0 },
+  ArrowUp: { dx: 0, dy: -1 },
+  ArrowDown: { dx: 0, dy: 1 },
+  ArrowLeft: { dx: -1, dy: 0 },
+  ArrowRight: { dx: 1, dy: 0 },
 };
+
+type RoomState = { activatedLevel: number; solvedLetter: string | null };
+
+function roomKey(x: number, y: number): string {
+  return `${x},${y}`;
+}
 
 export default class Game {
   display: ROT.Display;
@@ -17,6 +23,7 @@ export default class Game {
   private dungeon: Dungeon;
   private playerPos: { x: number; y: number };
   private cluesEl: HTMLElement;
+  private roomStates: Map<string, RoomState> = new Map();
 
   constructor() {
     const ipuz = validateIpuz(demoJson);
@@ -44,7 +51,36 @@ export default class Game {
     window.addEventListener('keydown', (e) => this.handleKey(e));
   }
 
+  private getRoomState(x: number, y: number): RoomState {
+    const key = roomKey(x, y);
+    if (!this.roomStates.has(key)) this.roomStates.set(key, { activatedLevel: 0, solvedLetter: null });
+    return this.roomStates.get(key)!;
+  }
+
+  private solveRoom(x: number, y: number, letter: string): void {
+    const state = this.getRoomState(x, y);
+    if (state.solvedLetter !== null) return; // already solved
+    state.solvedLetter = letter;
+    // Propagate +1 activated level to each unsolved word neighbor
+    const neighbors = this.puzzle.getWordNeighbors({ x, y });
+    for (const nb of neighbors) {
+      const nbState = this.getRoomState(nb.x, nb.y);
+      if (nbState.solvedLetter !== null) continue;
+      const potential = this.puzzle.potentialLevels[nb.y][nb.x];
+      nbState.activatedLevel = Math.min(nbState.activatedLevel + 1, potential);
+    }
+  }
+
   private handleKey(e: KeyboardEvent): void {
+    if (/^[a-z]$/.test(e.key)) {
+      const { x, y } = this.playerPos;
+      if (this.dungeon.hasRoom(x, y)) {
+        this.solveRoom(x, y, e.key.toUpperCase());
+        this.render();
+      }
+      return;
+    }
+
     const dir = KEY_DIRS[e.key];
     if (!dir) return;
     const nx = this.playerPos.x + dir.dx;
@@ -56,7 +92,7 @@ export default class Game {
   }
 
   private render(): void {
-    this.dungeon.render(this.display, this.playerPos);
+    this.dungeon.render(this.display, this.playerPos, this.roomStates);
     const clues = this.puzzle.getCluesAt(this.playerPos);
     const lines = clues.map(({ direction, clue }) => `${direction}: ${clue}`);
     while (lines.length < 2) lines.push('&nbsp;');
