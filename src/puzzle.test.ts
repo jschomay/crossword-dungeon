@@ -93,11 +93,12 @@ describe('getCluesAt', () => {
     expect(clues).toContainEqual({ direction: 'Down', clue: "Trucker's radio" });
   });
 
-  it('returns only one clue for a cell with no intersecting word', () => {
-    // S(3,1): only in across BOTS, no down word (isolated vertically)
+  it('returns both clues for S, which now intersects down word IS', () => {
+    // S(3,1): across BOTS ("Droids") + down IS ("Exists")
     const clues = demoPuzzle.getCluesAt({ x: 3, y: 1 });
-    expect(clues).toHaveLength(1);
-    expect(clues[0]).toEqual({ direction: 'Across', clue: 'Droids' });
+    expect(clues).toHaveLength(2);
+    expect(clues).toContainEqual({ direction: 'Across', clue: 'Droids' });
+    expect(clues).toContainEqual({ direction: 'Down', clue: 'Exists' });
   });
 });
 
