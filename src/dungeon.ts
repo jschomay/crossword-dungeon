@@ -30,12 +30,12 @@ export default class Dungeon {
     this.displayHeight = height * 6 + 1;
   }
 
-  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>, hidePlayer = false): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, playerPos, roomStates);
+          this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer);
           if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy);
           if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy);
         }
@@ -50,7 +50,7 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>): void {
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>, hidePlayer: boolean): void {
     const dx = 1 + gx * 6;
     const dy = 1 + gy * 6;
 
@@ -63,7 +63,7 @@ export default class Dungeon {
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
     const potentialLevel = this.puzzle.potentialLevels[gy][gx];
-    const hasPlayer = playerPos.x === gx && playerPos.y === gy;
+    const hasPlayer = !hidePlayer && playerPos.x === gx && playerPos.y === gy;
 
     for (let lx = 0; lx < 5; lx++) {
       for (let ly = 0; ly < 5; ly++) {
