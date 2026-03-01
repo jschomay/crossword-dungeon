@@ -183,7 +183,7 @@ export default class Game {
       const { x, y } = this.playerPos;
       const state = this.getRoomState(x, y);
       const encLines = formatEncounter(state.encounter, state.activatedLevel);
-      this.encounterEl.innerHTML = encLines.join('<br>');
+      this.encounterEl.textContent = encLines.join('\n');
     }
   }
 }

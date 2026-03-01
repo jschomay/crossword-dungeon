@@ -225,9 +225,35 @@ const FLAVOR_TEXTS = [
   'The room is empty... for now!',
 ];
 
+function modEffectSummary(
+  mod: typeof MONSTER_MODIFIERS[number] | typeof TRAP_MODIFIERS[number] | typeof TREASURE_MODIFIERS[number],
+  context: 'monster' | 'trap' | 'treasure-item',
+  extra?: string,
+): string {
+  const parts: string[] = [];
+  if (context === 'monster') {
+    const m = mod as typeof MONSTER_MODIFIERS[number];
+    if (m.hp_multiplier !== 1) parts.push(`+${Math.round((m.hp_multiplier - 1) * 100)}% HP`);
+    if (m.damage_multiplier !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% DMG`);
+    if (m.xp_multiplier !== 1) parts.push(`+${Math.round((m.xp_multiplier - 1) * 100)}% XP reward`);
+  } else if (context === 'trap') {
+    const m = mod as typeof TRAP_MODIFIERS[number];
+    const dmgLabel = extra === 'mana' ? 'mana drain' : 'DMG';
+    if (m.damage_multiplier !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% ${dmgLabel}`);
+    if (m.reward_multiplier !== 1) parts.push(`+${Math.round((m.reward_multiplier - 1) * 100)}% reward`);
+  } else {
+    const m = mod as typeof TREASURE_MODIFIERS[number];
+    if ('stat_multiplier' in m) {
+      parts.push(`+${Math.round((m.stat_multiplier - 1) * 100)}% ${extra ?? 'stat'}`);
+    } else {
+      parts.push(`+${m.passive_amount} ${m.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'mana each hit'}`);
+    }
+  }
+  return parts.join(', ');
+}
+
 export function formatEncounter(encounter: Encounter, displayLevel: number): string[] {
   if (displayLevel === 0) {
-    // activatedLevel 0 — reveal nothing yet
     const idx = Math.abs(encounter.baseName.charCodeAt(0)) % FLAVOR_TEXTS.length;
     return [FLAVOR_TEXTS[idx]];
   }
@@ -240,94 +266,128 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     const rawXp = encounter.baseXp + displayLevel * encounter.xpGrowth;
 
     let hpMult = 1, dmgMult = 1, xpMult = 1;
-    const activeModifiers: string[] = [];
+    const activeMods: typeof MONSTER_MODIFIERS[number][] = [];
     if (displayLevel >= 3) {
       hpMult *= encounter.mod1.hp_multiplier;
       dmgMult *= encounter.mod1.damage_multiplier;
       xpMult *= encounter.mod1.xp_multiplier;
-      activeModifiers.push(encounter.mod1.name);
+      activeMods.push(encounter.mod1);
     }
     if (displayLevel >= 6) {
       hpMult *= encounter.mod2.hp_multiplier;
       dmgMult *= encounter.mod2.damage_multiplier;
       xpMult *= encounter.mod2.xp_multiplier;
-      activeModifiers.push(encounter.mod2.name);
+      activeMods.push(encounter.mod2);
     }
 
-    const nameParts = [...activeModifiers, encounter.baseName];
-    lines.push(`[MONSTER] Level ${displayLevel}`);
-    lines.push(nameParts.join(' '));
-    lines.push(activeModifiers.length > 0
-      ? `${activeModifiers.join(', ')} — ${encounter.baseDescription}`
-      : encounter.baseDescription);
-    lines.push(`HP: ${round(rawHp * hpMult)}  DMG: ${round(rawDmg * dmgMult)}  XP: ${round(rawXp * xpMult)}`);
+    const title = `[MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    lines.push(title);
+    lines.push(encounter.baseDescription);
+    if (activeMods.length > 0) {
+      const indent = '  ◆ ';
+      const longestName = Math.max(...activeMods.map(m => m.name.length));
+      const arrowPad = ' '.repeat(indent.length + longestName + 2);
+      for (const mod of activeMods) {
+        const fx = modEffectSummary(mod, 'monster');
+        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
+        if (fx) lines.push(`${arrowPad}→ ${fx}`);
+      }
+    }
+    lines.push('');
+    lines.push(`HP: ${round(rawHp * hpMult)}   DMG: ${round(rawDmg * dmgMult)}`);
+    lines.push('');
+    lines.push('REWARD');
+    lines.push(`✦ ${round(rawXp * xpMult)} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
     const rawDmg = encounter.baseDamage + displayLevel * encounter.damageGrowth;
     const rawReward = encounter.baseReward + displayLevel * encounter.rewardGrowth;
 
     let dmgMult = 1, rewardMult = 1;
-    const activeModifiers: string[] = [];
+    const activeMods: typeof TRAP_MODIFIERS[number][] = [];
     if (displayLevel >= 3) {
       dmgMult *= encounter.mod1.damage_multiplier;
       rewardMult *= encounter.mod1.reward_multiplier;
-      activeModifiers.push(encounter.mod1.name);
+      activeMods.push(encounter.mod1);
     }
     if (displayLevel >= 6) {
       dmgMult *= encounter.mod2.damage_multiplier;
       rewardMult *= encounter.mod2.reward_multiplier;
-      activeModifiers.push(encounter.mod2.name);
+      activeMods.push(encounter.mod2);
     }
 
-    const nameParts = [...activeModifiers, encounter.baseName];
     const typeLabel = encounter.trapType === 'magical' ? 'MAGICAL TRAP' : 'TRAP';
-    lines.push(`[${typeLabel}] Level ${displayLevel}`);
-    lines.push(nameParts.join(' '));
-    lines.push(activeModifiers.length > 0
-      ? `${activeModifiers.join(', ')} — ${encounter.baseDescription}`
-      : encounter.baseDescription);
-    const dmgLabel = encounter.damageType === 'hp' ? 'DMG' : 'Mana DMG';
-    const rewardLabel = encounter.rewardType === 'xp' ? 'XP' : 'Mana';
-    lines.push(`${dmgLabel}: ${round(rawDmg * dmgMult)}  ${rewardLabel}: ${round(rawReward * rewardMult)}`);
+    const title = `[${typeLabel}] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    lines.push(title);
+    lines.push(encounter.baseDescription);
+    if (activeMods.length > 0) {
+      const indent = '  ◆ ';
+      const longestName = Math.max(...activeMods.map(m => m.name.length));
+      const arrowPad = ' '.repeat(indent.length + longestName + 2);
+      for (const mod of activeMods) {
+        const fx = modEffectSummary(mod, 'trap', encounter.damageType);
+        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
+        if (fx) lines.push(`${arrowPad}→ ${fx}`);
+      }
+    }
+    lines.push('');
+    if (encounter.damageType === 'hp') {
+      lines.push(`DMG: ${round(rawDmg * dmgMult)}`);
+    } else {
+      lines.push(`MANA DRAIN: ${round(rawDmg * dmgMult)}`);
+    }
+    lines.push('');
+    lines.push('REWARD');
+    const rewardLabel = encounter.rewardType === 'xp' ? 'XP' : 'mana';
+    lines.push(`✦ ${round(rawReward * rewardMult)} ${rewardLabel}  on disarm`);
 
   } else if (encounter.subKind === 'item') {
     const rawStat = encounter.baseStat + displayLevel * encounter.statGrowth;
 
-    const statMultipliers: number[] = [];
+    let totalMult = 1;
     const passiveEffects: string[] = [];
-    const activeModifiers: string[] = [];
+    const activeMods: typeof TREASURE_MODIFIERS[number][] = [];
 
     const applyMod = (mod: typeof TREASURE_MODIFIERS[number]) => {
-      activeModifiers.push(mod.name);
+      activeMods.push(mod);
       if ('stat_multiplier' in mod) {
-        statMultipliers.push(mod.stat_multiplier);
+        totalMult *= mod.stat_multiplier;
       } else {
-        passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP/round' : 'mana/round'}`);
+        passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'mana each hit'}`);
       }
     };
     if (displayLevel >= 3) applyMod(encounter.mod1);
     if (displayLevel >= 6) applyMod(encounter.mod2);
 
-    const totalMult = statMultipliers.reduce((a, b) => a * b, 1);
-    const nameParts = [...activeModifiers, encounter.baseName];
-    lines.push(`[TREASURE] Level ${displayLevel}`);
-    lines.push(nameParts.join(' '));
-    lines.push(activeModifiers.length > 0
-      ? `${activeModifiers.join(', ')} — ${encounter.baseDescription}`
-      : encounter.baseDescription);
-    lines.push(`${encounter.slot.toUpperCase()} +${round(rawStat * totalMult)} ${encounter.statType}`);
-    for (const pe of passiveEffects) lines.push(pe);
+    const title = `[TREASURE] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    lines.push(title);
+    lines.push(encounter.baseDescription);
+    if (activeMods.length > 0) {
+      const indent = '  ◆ ';
+      const longestName = Math.max(...activeMods.map(m => m.name.length));
+      const arrowPad = ' '.repeat(indent.length + longestName + 2); // +2 for "  " before "—"
+      for (const mod of activeMods) {
+        const fx = modEffectSummary(mod, 'treasure-item', encounter.statType);
+        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
+        if (fx) lines.push(`${arrowPad}→ ${fx}`);
+      }
+    }
+    lines.push('');
+    const statLine = `${encounter.slot.toUpperCase()}  +${round(rawStat * totalMult)} ${encounter.statType}`;
+    const extras = passiveEffects.length > 0 ? `   ${passiveEffects.join('  ')}` : '';
+    lines.push(statLine + extras);
 
   } else {
     // consumable or immediate
     const amount = encounter.baseAmount + displayLevel * encounter.amountGrowth;
-    lines.push(`[TREASURE] Level ${displayLevel}`);
-    lines.push(encounter.baseName);
+    const title = `[TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
+    lines.push(title);
     lines.push(encounter.baseDescription);
+    lines.push('');
     if (encounter.subKind === 'consumable') {
-      lines.push(`Consumable: ${effectLabel(encounter.effect, amount)}`);
+      lines.push(`${effectLabel(encounter.effect, amount)} on use`);
     } else {
-      lines.push(`On solve: ${effectLabel(encounter.effect, amount)}`);
+      lines.push(`${effectLabel(encounter.effect, amount)} on loot`);
     }
   }
 

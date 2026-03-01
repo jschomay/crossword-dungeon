@@ -53,12 +53,13 @@ describe('generateMonster', () => {
     const rng = mockRng([MONSTER_TYPES[0]]); // Rat; mods don't matter at display level 1
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 1);
-    expect(lines[0]).toContain('Level 1');
-    expect(lines[1]).toBe('Rat');
+    const all = lines.join('\n');
+    expect(all).toContain('Lv.1');
+    expect(all).toContain('Rat');
     // hp = 8 + 1*2 = 10, dmg = 2 + 1*1 = 3, xp = 8 + 1*2 = 10
-    expect(lines.some(l => l.includes('HP: 10'))).toBe(true);
-    expect(lines.some(l => l.includes('DMG: 3'))).toBe(true);
-    expect(lines.some(l => l.includes('XP: 10'))).toBe(true);
+    expect(all).toContain('HP: 10');
+    expect(all).toContain('DMG: 3');
+    expect(all).toContain('10 XP');
   });
 
   it('level 3: one modifier (mod1) applied', () => {
@@ -67,17 +68,19 @@ describe('generateMonster', () => {
     const goblin = MONSTER_TYPES[1];
     const frenzied = MONSTER_MODIFIERS[0];
     const armored = MONSTER_MODIFIERS[1];
-    const rng = mockRng([goblin, frenzied, armored]); // shuffle returns [frenzied, armored, ...]
+    const rng = mockRng([goblin, frenzied, armored]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 3);
-    expect(lines[0]).toContain('Level 3');
-    expect(lines[1]).toBe('Frenzied Goblin');
+    const all = lines.join('\n');
+    expect(all).toContain('Lv.3');
+    expect(all).toContain('Frenzied');
+    expect(all).toContain('Goblin');
     // raw_hp = 12 + 3*3 = 21, *1.0 = 21
-    expect(lines.some(l => l.includes('HP: 21'))).toBe(true);
+    expect(all).toContain('HP: 21');
     // raw_dmg = 3 + 3*1 = 6, *1.3 = round(7.8) = 8
-    expect(lines.some(l => l.includes('DMG: 8'))).toBe(true);
+    expect(all).toContain('DMG: 8');
     // raw_xp = 10 + 3*3 = 19, *1.2 = round(22.8) = 23
-    expect(lines.some(l => l.includes('XP: 23'))).toBe(true);
+    expect(all).toContain('23 XP');
   });
 
   it('level 6: both modifiers (mod1 + mod2) applied', () => {
@@ -89,14 +92,17 @@ describe('generateMonster', () => {
     const rng = mockRng([goblin, frenzied, armored]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 6);
-    expect(lines[0]).toContain('Level 6');
-    expect(lines[1]).toBe('Frenzied Armored Goblin');
+    const all = lines.join('\n');
+    expect(all).toContain('Lv.6');
+    expect(all).toContain('Frenzied');
+    expect(all).toContain('Armored');
+    expect(all).toContain('Goblin');
     // raw_hp = 12 + 6*3 = 30, *1.0 *1.4 = 42
-    expect(lines.some(l => l.includes('HP: 42'))).toBe(true);
+    expect(all).toContain('HP: 42');
     // raw_dmg = 3 + 6*1 = 9, *1.3 *1.0 = round(11.7) = 12
-    expect(lines.some(l => l.includes('DMG: 12'))).toBe(true);
+    expect(all).toContain('DMG: 12');
     // raw_xp = 10 + 6*3 = 28, *1.2 *1.3 = round(43.68) = 44
-    expect(lines.some(l => l.includes('XP: 44'))).toBe(true);
+    expect(all).toContain('44 XP');
   });
 
   it('level 5: only mod1 applied, mod2 not shown', () => {
@@ -106,7 +112,10 @@ describe('generateMonster', () => {
     const rng = mockRng([goblin, frenzied, armored]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 5);
-    expect(lines[1]).toBe('Frenzied Goblin');
+    const all = lines.join('\n');
+    expect(all).toContain('Frenzied');
+    expect(all).toContain('Goblin');
+    expect(all).not.toContain('Armored');
   });
 
   it('activatedLevel 0 shows flavor text, not encounter stats', () => {
@@ -130,13 +139,13 @@ describe('generateTrap', () => {
     expect(t.trapType).toBe('physical');
     expect(t.damageType).toBe('hp');
     expect(t.rewardType).toBe('xp');
-    const lines = formatEncounter(t, 1);
+    const all = formatEncounter(t, 1).join('\n');
     // dmg = 4 + 1*2 = 6, xp = 8 + 1*2 = 10
-    expect(lines.some(l => l.includes('DMG: 6'))).toBe(true);
-    expect(lines.some(l => l.includes('XP: 10'))).toBe(true);
+    expect(all).toContain('DMG: 6');
+    expect(all).toContain('10 XP');
   });
 
-  it('magical trap rewards mana', () => {
+  it('magical trap shows mana drain and mana reward', () => {
     // Rune Ward: damage_type=mana, base_mana=3, mana_growth=1
     const runeWard = TRAP_TYPES[2];
     const rng = mockRng([runeWard]);
@@ -144,9 +153,10 @@ describe('generateTrap', () => {
     expect(t.trapType).toBe('magical');
     expect(t.damageType).toBe('mana');
     expect(t.rewardType).toBe('mana');
-    const lines = formatEncounter(t, 1);
+    const all = formatEncounter(t, 1).join('\n');
     // reward = 3 + 1*1 = 4
-    expect(lines.some(l => l.includes('Mana: 4'))).toBe(true);
+    expect(all).toContain('MANA DRAIN');
+    expect(all).toContain('4 mana');
   });
 
   it('level 3 trap: one modifier applied', () => {
@@ -156,12 +166,13 @@ describe('generateTrap', () => {
     const ancient = TRAP_MODIFIERS[1];
     const rng = mockRng([dartTrap, hidden, ancient]);
     const t = generateTrap(rng);
-    const lines = formatEncounter(t, 3);
-    expect(lines[1]).toContain('Hidden Dart Trap');
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('Hidden');
+    expect(all).toContain('Dart Trap');
     // raw_dmg = 4 + 3*2 = 10, *1.3 = 13
-    expect(lines.some(l => l.includes('DMG: 13'))).toBe(true);
+    expect(all).toContain('DMG: 13');
     // raw_xp = 8 + 3*2 = 14, *1.2 = round(16.8) = 17
-    expect(lines.some(l => l.includes('XP: 17'))).toBe(true);
+    expect(all).toContain('17 XP');
   });
 
   it('level 6 trap: two modifiers applied', () => {
@@ -171,10 +182,24 @@ describe('generateTrap', () => {
     const ancient = TRAP_MODIFIERS[1];
     const rng = mockRng([dartTrap, hidden, ancient]);
     const t = generateTrap(rng);
-    const lines = formatEncounter(t, 6);
-    expect(lines[1]).toContain('Hidden Ancient Dart Trap');
+    const all = formatEncounter(t, 6).join('\n');
+    expect(all).toContain('Hidden');
+    expect(all).toContain('Ancient');
+    expect(all).toContain('Dart Trap');
     // raw_dmg = 4 + 6*2 = 16, *1.3 *1.2 = round(24.96) = 25
-    expect(lines.some(l => l.includes('DMG: 25'))).toBe(true);
+    expect(all).toContain('DMG: 25');
+  });
+
+  it('magical trap mod effect uses mana drain label', () => {
+    // Rune Ward (mana), mod1=Cursed (dmg_mult=1.3)
+    const runeWard = TRAP_TYPES[2];
+    const cursed = TRAP_MODIFIERS[3];
+    const hidden = TRAP_MODIFIERS[0];
+    const rng = mockRng([runeWard, cursed, hidden]);
+    const t = generateTrap(rng);
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('mana drain');
+    expect(all).not.toContain('% DMG');
   });
 });
 
@@ -187,10 +212,10 @@ describe('generateTreasure', () => {
     const t = generateTreasure(rng);
     expect(t.kind).toBe('treasure');
     expect(t.subKind).toBe('consumable');
-    const lines = formatEncounter(t, 2);
+    const all = formatEncounter(t, 2).join('\n');
     // amount = 3 + 2*2 = 7
-    expect(lines.some(l => l.includes('7'))).toBe(true);
-    expect(lines.some(l => l.includes('Consumable:'))).toBe(true);
+    expect(all).toContain('7');
+    expect(all).toContain('on use');
   });
 
   it('immediate: correct amount scaling at display level', () => {
@@ -198,10 +223,10 @@ describe('generateTreasure', () => {
     const rng = mockRng(['immediate', TREASURE_IMMEDIATE[0]]);
     const t = generateTreasure(rng);
     expect(t.subKind).toBe('immediate');
-    const lines = formatEncounter(t, 3);
+    const all = formatEncounter(t, 3).join('\n');
     // amount = 10 + 3*5 = 25
-    expect(lines.some(l => l.includes('25'))).toBe(true);
-    expect(lines.some(l => l.includes('On solve:'))).toBe(true);
+    expect(all).toContain('25');
+    expect(all).toContain('on loot');
   });
 
   it('item level 1-2: no modifiers in display', () => {
@@ -212,10 +237,11 @@ describe('generateTreasure', () => {
     const rng = mockRng(['item', sword, fine, masterwork]);
     const t = generateTreasure(rng);
     expect(t.subKind).toBe('item');
-    const lines = formatEncounter(t, 1);
-    expect(lines[1]).toBe('Sword');
+    const all = formatEncounter(t, 1).join('\n');
+    expect(all).toContain('Sword');
+    expect(all).not.toContain('Fine');
     // stat = 3 + 1*2 = 5, no multiplier
-    expect(lines.some(l => l.includes('+5 damage'))).toBe(true);
+    expect(all).toContain('+5 damage');
   });
 
   it('item level 3: mod1 multiplies stat', () => {
@@ -225,10 +251,11 @@ describe('generateTreasure', () => {
     const masterwork = TREASURE_MODIFIERS[1];
     const rng = mockRng(['item', sword, fine, masterwork]);
     const t = generateTreasure(rng);
-    const lines = formatEncounter(t, 3);
-    expect(lines[1]).toBe('Fine Sword');
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('Fine');
+    expect(all).toContain('Sword');
     // raw = 3 + 3*2 = 9, *1.2 = round(10.8) = 11
-    expect(lines.some(l => l.includes('+11 damage'))).toBe(true);
+    expect(all).toContain('+11 damage');
   });
 
   it('item level 6: mod1 and mod2 stack', () => {
@@ -238,19 +265,21 @@ describe('generateTreasure', () => {
     const masterwork = TREASURE_MODIFIERS[1];
     const rng = mockRng(['item', sword, fine, masterwork]);
     const t = generateTreasure(rng);
-    const lines = formatEncounter(t, 6);
-    expect(lines[1]).toBe('Fine Masterwork Sword');
+    const all = formatEncounter(t, 6).join('\n');
+    expect(all).toContain('Fine');
+    expect(all).toContain('Masterwork');
+    expect(all).toContain('Sword');
     // raw = 3 + 6*2 = 15, *1.2 *1.4 = round(25.2) = 25
-    expect(lines.some(l => l.includes('+25 damage'))).toBe(true);
+    expect(all).toContain('+25 damage');
   });
 
   it('item with passive modifier shows passive effect in display', () => {
-    // Sword, mod1=Regenerating (+3 HP/round)
+    // Sword, mod1=Regenerating (+3 HP each hit)
     const sword = TREASURE_ITEMS[0];
     const regenerating = TREASURE_MODIFIERS[2];
     const rng = mockRngWithFirstMod(['item', sword], regenerating);
     const t = generateTreasure(rng);
-    const lines = formatEncounter(t, 3);
-    expect(lines.some(l => l.includes('+3 HP/round'))).toBe(true);
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('+3 HP each hit');
   });
 });

@@ -22,15 +22,16 @@ body {
 }
 
 #encounter {
-  width: 200px;
+  width: 480px;
   color: #ccaa66;
   font-size: 14px;
   font-family: monospace;
-  line-height: 1.6;
+  line-height: 1.8;
   border: 1px solid #444;
-  padding: 12px;
+  padding: 16px 20px;
   min-height: 120px;
   align-self: center;
+  white-space: pre;
 }
 
 #stats {
