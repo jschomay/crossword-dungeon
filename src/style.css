@@ -9,9 +9,28 @@ body {
 
 #ui {
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+#main {
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 32px;
+}
+
+#encounter {
+  width: 200px;
+  color: #ccaa66;
+  font-size: 14px;
+  font-family: monospace;
+  line-height: 1.6;
+  border: 1px solid #444;
+  padding: 12px;
+  min-height: 120px;
+  align-self: center;
 }
 
 #stats {

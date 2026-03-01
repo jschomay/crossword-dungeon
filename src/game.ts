@@ -3,6 +3,7 @@ import demoJson from '../puzzles/demo.json';
 import { validateIpuz } from './puzzle';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
+import { generateEncounter, formatEncounter, type Encounter, type Rng } from './encounters';
 
 const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
   ArrowUp: { dx: 0, dy: -1 },
@@ -11,7 +12,7 @@ const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
   ArrowRight: { dx: 1, dy: 0 },
 };
 
-type RoomState = { activatedLevel: number; solvedLetter: string | null };
+type RoomState = { activatedLevel: number; solvedLetter: string | null; encounter: Encounter };
 
 function roomKey(x: number, y: number): string {
   return `${x},${y}`;
@@ -26,6 +27,7 @@ export default class Game {
   private playerPos: { x: number; y: number };
   private statsEl: HTMLElement;
   private cluesEl: HTMLElement;
+  private encounterEl: HTMLElement;
   private dungeonEl: HTMLElement;
   private roomStates: Map<string, RoomState> = new Map();
   private mana: number = MAX_MANA;
@@ -50,7 +52,9 @@ export default class Game {
 
     this.statsEl = document.getElementById('stats')!;
     this.cluesEl = document.getElementById('clues')!;
+    this.encounterEl = document.getElementById('encounter')!;
     this.applyTilt();
+    this.initRoomStates();
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
 
     this.render();
@@ -63,8 +67,27 @@ export default class Game {
     this.dungeonEl.style.setProperty('--dungeon-rotation', `${rotation}deg`);
   }
 
-  private restart(): void {
+  private makeRng(): Rng {
+    return {
+      getItem: <T>(arr: readonly T[]) => ROT.RNG.getItem([...arr]) as T,
+      shuffle: <T>(arr: readonly T[]) => ROT.RNG.shuffle([...arr]) as T[],
+    };
+  }
+
+  private initRoomStates(): void {
     this.roomStates = new Map();
+    const rng = this.makeRng();
+    for (const { x, y } of this.puzzle.getRooms()) {
+      this.roomStates.set(roomKey(x, y), {
+        activatedLevel: 0,
+        solvedLetter: null,
+        encounter: generateEncounter(rng),
+      });
+    }
+  }
+
+  private restart(): void {
+    this.initRoomStates();
     this.mana = MAX_MANA;
     this.gameOver = false;
     this.puzzleComplete = false;
@@ -74,9 +97,7 @@ export default class Game {
   }
 
   private getRoomState(x: number, y: number): RoomState {
-    const key = roomKey(x, y);
-    if (!this.roomStates.has(key)) this.roomStates.set(key, { activatedLevel: 0, solvedLetter: null });
-    return this.roomStates.get(key)!;
+    return this.roomStates.get(roomKey(x, y))!;
   }
 
   private countSolved(): number {
@@ -102,8 +123,7 @@ export default class Game {
       for (const nb of neighbors) {
         const nbState = this.getRoomState(nb.x, nb.y);
         if (nbState.solvedLetter !== null) continue;
-        const potential = this.puzzle.potentialLevels[nb.y][nb.x];
-        nbState.activatedLevel = Math.min(nbState.activatedLevel + 1, potential);
+        nbState.activatedLevel++;
       }
       if (this.countSolved() === this.totalRooms) {
         this.puzzleComplete = true;
@@ -150,13 +170,20 @@ export default class Game {
 
     if (this.gameOver) {
       this.cluesEl.innerHTML = 'Game over!<br>Press space to restart.';
+      this.encounterEl.innerHTML = '';
     } else if (this.puzzleComplete) {
       this.cluesEl.innerHTML = 'Puzzle complete!<br>Press space to restart.';
+      this.encounterEl.innerHTML = '';
     } else {
       const clues = this.puzzle.getCluesAt(this.playerPos);
       const lines = clues.map(({ direction, clue }) => `${direction}: ${clue}`);
       while (lines.length < 2) lines.push('&nbsp;');
       this.cluesEl.innerHTML = lines.join('<br>');
+
+      const { x, y } = this.playerPos;
+      const state = this.getRoomState(x, y);
+      const encLines = formatEncounter(state.encounter, state.activatedLevel);
+      this.encounterEl.innerHTML = encLines.join('<br>');
     }
   }
 }
