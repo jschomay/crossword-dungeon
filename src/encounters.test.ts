@@ -31,7 +31,7 @@ function mockRngWithFirstMod<T>(getItems: unknown[], firstMod: T): Rng {
       return getItems[i++] as U;
     },
     shuffle<U>(arr: readonly U[]): U[] {
-      return [firstMod as unknown as U, ...arr.filter(x => x !== firstMod)];
+      return [firstMod as unknown as U, ...arr.filter(x => x !== (firstMod as unknown))];
     },
   };
 }

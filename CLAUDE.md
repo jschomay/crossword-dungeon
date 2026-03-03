@@ -13,4 +13,4 @@ Output should be kept brief. Before making changes, succinctly outline the plan 
 
 Only read parts of the codebase or referenced code on an as-needed-basis to do the current work.
 
-After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest.
+After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest. Make sure types compile and tests pass before committing.

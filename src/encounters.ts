@@ -242,14 +242,14 @@ function modEffectSummary(
   const parts: string[] = [];
   if (context === 'monster') {
     const m = mod as typeof MONSTER_MODIFIERS[number];
-    if (m.hp_multiplier !== 1) parts.push(`+${Math.round((m.hp_multiplier - 1) * 100)}% HP`);
-    if (m.damage_multiplier !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% DMG`);
-    if (m.xp_multiplier !== 1) parts.push(`+${Math.round((m.xp_multiplier - 1) * 100)}% XP reward`);
+    if ((m.hp_multiplier as number) !== 1) parts.push(`+${Math.round((m.hp_multiplier - 1) * 100)}% HP`);
+    if ((m.damage_multiplier as number) !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% DMG`);
+    if ((m.xp_multiplier as number) !== 1) parts.push(`+${Math.round((m.xp_multiplier - 1) * 100)}% XP reward`);
   } else if (context === 'trap') {
     const m = mod as typeof TRAP_MODIFIERS[number];
     const dmgLabel = extra === 'mana' ? 'mana drain' : 'DMG';
-    if (m.damage_multiplier !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% ${dmgLabel}`);
-    if (m.reward_multiplier !== 1) parts.push(`+${Math.round((m.reward_multiplier - 1) * 100)}% reward`);
+    if ((m.damage_multiplier as number) !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% ${dmgLabel}`);
+    if ((m.reward_multiplier as number) !== 1) parts.push(`+${Math.round((m.reward_multiplier - 1) * 100)}% reward`);
   } else {
     const m = mod as typeof TREASURE_MODIFIERS[number];
     if ('stat_multiplier' in m) {
