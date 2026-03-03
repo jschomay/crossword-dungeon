@@ -3,7 +3,7 @@ import demoJson from '../puzzles/demo.json';
 import { validateIpuz } from './puzzle';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
-import { generateEncounter, formatEncounter, type Encounter, type Rng } from './encounters';
+import { generateEncounter, formatEncounter, ENCOUNTER_STYLE, UNKNOWN_COLOR, type Encounter, type Rng } from './encounters';
 
 const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
   ArrowUp: { dx: 0, dy: -1 },
@@ -183,6 +183,8 @@ export default class Game {
       const { x, y } = this.playerPos;
       const state = this.getRoomState(x, y);
       const encLines = formatEncounter(state.encounter, state.activatedLevel);
+      const style = ENCOUNTER_STYLE[state.encounter.kind];
+      this.encounterEl.style.color = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
       this.encounterEl.textContent = encLines.join('\n');
     }
   }

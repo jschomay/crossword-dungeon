@@ -80,6 +80,15 @@ export type TreasureEncounter =
 
 export type Encounter = MonsterEncounter | TrapEncounter | TreasureEncounter;
 
+// ---- Encounter style (symbol + color per kind) ----
+
+export const UNKNOWN_COLOR = '#aaaaaa';  // unactivated room '?' and flavor text
+export const ENCOUNTER_STYLE: Record<'monster' | 'trap' | 'treasure', { symbol: string; color: string }> = {
+  monster:  { symbol: '*', color: '#ff6666' },
+  trap:     { symbol: '!', color: '#cc66ff' },
+  treasure: { symbol: '$', color: '#ffaa00' },
+};
+
 // ---- Helpers ----
 
 function round(n: number): number {
@@ -280,7 +289,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
       activeMods.push(encounter.mod2);
     }
 
-    const title = `[MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    const title = `${ENCOUNTER_STYLE.monster.symbol} [MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
@@ -317,7 +326,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     }
 
     const typeLabel = encounter.trapType === 'magical' ? 'MAGICAL TRAP' : 'TRAP';
-    const title = `[${typeLabel}] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    const title = `${ENCOUNTER_STYLE.trap.symbol} [${typeLabel}] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
@@ -359,7 +368,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     if (displayLevel >= 3) applyMod(encounter.mod1);
     if (displayLevel >= 6) applyMod(encounter.mod2);
 
-    const title = `[TREASURE] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
@@ -380,7 +389,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
   } else {
     // consumable or immediate
     const amount = encounter.baseAmount + displayLevel * encounter.amountGrowth;
-    const title = `[TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
+    const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
     lines.push(title);
     lines.push(encounter.baseDescription);
     lines.push('');

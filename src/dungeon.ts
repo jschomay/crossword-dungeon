@@ -1,11 +1,11 @@
 import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
+import { ENCOUNTER_STYLE, UNKNOWN_COLOR } from './encounters';
 
 const WALL_FG = '#888888';
-const UNKNOWN_FG = '#ffff00';
-const SOLVED_FG = '#aaaaaa';
+const UNKNOWN_FG = UNKNOWN_COLOR;
+const SOLVED_FG = UNKNOWN_COLOR;
 const DOT_FG = '#4444ff';
-const PLUS_FG = '#ffaa00';
 const PLAYER_FG = '#ffffff';
 const BLACK = '#000000';
 
@@ -30,7 +30,7 @@ export default class Dungeon {
     this.displayHeight = height * 6 + 1;
   }
 
-  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>, hidePlayer = false): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer = false): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
@@ -50,7 +50,7 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null }>, hidePlayer: boolean): void {
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean): void {
     const dx = 1 + gx * 6;
     const dy = 1 + gy * 6;
 
@@ -62,6 +62,7 @@ export default class Dungeon {
     const state = roomStates.get(`${gx},${gy}`);
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
+    const encounterKind = state?.encounter.kind ?? 'monster';
     const potentialLevel = this.puzzle.potentialLevels[gy][gx];
     const hasPlayer = !hidePlayer && playerPos.x === gx && playerPos.y === gy;
 
@@ -74,6 +75,9 @@ export default class Dungeon {
             centerChar = '@'; centerFg = PLAYER_FG;
           } else if (solved !== null) {
             centerChar = solved; centerFg = SOLVED_FG;
+          } else if (activatedLevel > 0) {
+            const style = ENCOUNTER_STYLE[encounterKind];
+            centerChar = style.symbol; centerFg = style.color;
           } else {
             centerChar = '?'; centerFg = UNKNOWN_FG;
           }
@@ -91,18 +95,19 @@ export default class Dungeon {
       }
     }
 
+    const plusFg = ENCOUNTER_STYLE[encounterKind].color;
     if (solved !== null) {
       // Solved: show only activated plusses, no dots
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
-        display.draw(dx + lx, dy + ly, '+', PLUS_FG, BLACK);
+        display.draw(dx + lx, dy + ly, '+', plusFg, BLACK);
       }
     } else {
       // Unsolved: activated plusses first, then potential dots
       for (let i = 0; i < potentialLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
         if (i < activatedLevel) {
-          display.draw(dx + lx, dy + ly, '+', PLUS_FG, BLACK);
+          display.draw(dx + lx, dy + ly, '+', plusFg, BLACK);
         } else {
           display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
         }
