@@ -225,6 +225,106 @@ export function generateEncounter(rng: Rng): Encounter {
   }
 }
 
+// ---- Stat computation helpers (pure, testable) ----
+
+export function getMonsterStats(
+  enc: MonsterEncounter,
+  level: number,
+): { hp: number; dmg: number; xp: number } {
+  const rawHp = enc.baseHp + level * enc.hpGrowth;
+  const rawDmg = enc.baseDamage + level * enc.damageGrowth;
+  const rawXp = enc.baseXp + level * enc.xpGrowth;
+  let hpMult = 1, dmgMult = 1, xpMult = 1;
+  if (level >= 3) {
+    hpMult *= enc.mod1.hp_multiplier;
+    dmgMult *= enc.mod1.damage_multiplier;
+    xpMult *= enc.mod1.xp_multiplier;
+  }
+  if (level >= 6) {
+    hpMult *= enc.mod2.hp_multiplier;
+    dmgMult *= enc.mod2.damage_multiplier;
+    xpMult *= enc.mod2.xp_multiplier;
+  }
+  return {
+    hp: round(rawHp * hpMult),
+    dmg: round(rawDmg * dmgMult),
+    xp: round(rawXp * xpMult),
+  };
+}
+
+export function getTrapStats(
+  enc: TrapEncounter,
+  level: number,
+): { dmg: number; reward: number; rewardType: 'xp' | 'mana' } {
+  const rawDmg = enc.baseDamage + level * enc.damageGrowth;
+  const rawReward = enc.baseReward + level * enc.rewardGrowth;
+  let dmgMult = 1, rewardMult = 1;
+  if (level >= 3) {
+    dmgMult *= enc.mod1.damage_multiplier;
+    rewardMult *= enc.mod1.reward_multiplier;
+  }
+  if (level >= 6) {
+    dmgMult *= enc.mod2.damage_multiplier;
+    rewardMult *= enc.mod2.reward_multiplier;
+  }
+  return {
+    dmg: round(rawDmg * dmgMult),
+    reward: round(rawReward * rewardMult),
+    rewardType: enc.rewardType,
+  };
+}
+
+// ---- Combat resolution (pure, no side effects) ----
+
+export type CombatTurn = {
+  attacker: 'player' | 'monster';
+  dmg: number;
+  playerHpAfter: number;
+  monsterHpAfter: number;
+};
+
+export type CombatResult = {
+  turns: CombatTurn[];
+  playerWon: boolean;
+  xpGained: number;
+};
+
+export function resolveCombat(
+  playerDmg: number,
+  playerHp: number,
+  monsterDmg: number,
+  monsterHp: number,
+  xp: number,
+): CombatResult {
+  const turns: CombatTurn[] = [];
+  let curPlayerHp = playerHp;
+  let curMonsterHp = monsterHp;
+
+  while (curPlayerHp > 0 && curMonsterHp > 0) {
+    // Player attacks first
+    curMonsterHp -= playerDmg;
+    turns.push({
+      attacker: 'player',
+      dmg: playerDmg,
+      playerHpAfter: curPlayerHp,
+      monsterHpAfter: Math.max(0, curMonsterHp),
+    });
+    if (curMonsterHp <= 0) break;
+
+    // Monster attacks
+    curPlayerHp -= monsterDmg;
+    turns.push({
+      attacker: 'monster',
+      dmg: monsterDmg,
+      playerHpAfter: Math.max(0, curPlayerHp),
+      monsterHpAfter: curMonsterHp,
+    });
+  }
+
+  const playerWon = curMonsterHp <= 0;
+  return { turns, playerWon, xpGained: playerWon ? xp : 0 };
+}
+
 // ---- Display formatting (stats computed from displayLevel) ----
 
 const FLAVOR_TEXTS = [
@@ -270,24 +370,10 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
   const lines: string[] = [];
 
   if (encounter.kind === 'monster') {
-    const rawHp = encounter.baseHp + displayLevel * encounter.hpGrowth;
-    const rawDmg = encounter.baseDamage + displayLevel * encounter.damageGrowth;
-    const rawXp = encounter.baseXp + displayLevel * encounter.xpGrowth;
-
-    let hpMult = 1, dmgMult = 1, xpMult = 1;
+    const stats = getMonsterStats(encounter, displayLevel);
     const activeMods: typeof MONSTER_MODIFIERS[number][] = [];
-    if (displayLevel >= 3) {
-      hpMult *= encounter.mod1.hp_multiplier;
-      dmgMult *= encounter.mod1.damage_multiplier;
-      xpMult *= encounter.mod1.xp_multiplier;
-      activeMods.push(encounter.mod1);
-    }
-    if (displayLevel >= 6) {
-      hpMult *= encounter.mod2.hp_multiplier;
-      dmgMult *= encounter.mod2.damage_multiplier;
-      xpMult *= encounter.mod2.xp_multiplier;
-      activeMods.push(encounter.mod2);
-    }
+    if (displayLevel >= 3) activeMods.push(encounter.mod1);
+    if (displayLevel >= 6) activeMods.push(encounter.mod2);
 
     const title = `${ENCOUNTER_STYLE.monster.symbol} [MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
@@ -303,27 +389,16 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
       }
     }
     lines.push('');
-    lines.push(`HP: ${round(rawHp * hpMult)}   DMG: ${round(rawDmg * dmgMult)}`);
+    lines.push(`HP: ${stats.hp}   DMG: ${stats.dmg}`);
     lines.push('');
     lines.push('REWARD');
-    lines.push(`✦ ${round(rawXp * xpMult)} XP  on defeat`);
+    lines.push(`✦ ${stats.xp} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
-    const rawDmg = encounter.baseDamage + displayLevel * encounter.damageGrowth;
-    const rawReward = encounter.baseReward + displayLevel * encounter.rewardGrowth;
-
-    let dmgMult = 1, rewardMult = 1;
+    const stats = getTrapStats(encounter, displayLevel);
     const activeMods: typeof TRAP_MODIFIERS[number][] = [];
-    if (displayLevel >= 3) {
-      dmgMult *= encounter.mod1.damage_multiplier;
-      rewardMult *= encounter.mod1.reward_multiplier;
-      activeMods.push(encounter.mod1);
-    }
-    if (displayLevel >= 6) {
-      dmgMult *= encounter.mod2.damage_multiplier;
-      rewardMult *= encounter.mod2.reward_multiplier;
-      activeMods.push(encounter.mod2);
-    }
+    if (displayLevel >= 3) activeMods.push(encounter.mod1);
+    if (displayLevel >= 6) activeMods.push(encounter.mod2);
 
     const typeLabel = encounter.trapType === 'magical' ? 'MAGICAL TRAP' : 'TRAP';
     const title = `${ENCOUNTER_STYLE.trap.symbol} [${typeLabel}] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
@@ -341,14 +416,14 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     }
     lines.push('');
     if (encounter.damageType === 'hp') {
-      lines.push(`DMG: ${round(rawDmg * dmgMult)}`);
+      lines.push(`DMG: ${stats.dmg}`);
     } else {
-      lines.push(`MANA DRAIN: ${round(rawDmg * dmgMult)}`);
+      lines.push(`MANA DRAIN: ${stats.dmg}`);
     }
     lines.push('');
     lines.push('REWARD');
-    const rewardLabel = encounter.rewardType === 'xp' ? 'XP' : 'mana';
-    lines.push(`✦ ${round(rawReward * rewardMult)} ${rewardLabel}  on disarm`);
+    const rewardLabel = stats.rewardType === 'xp' ? 'XP' : 'mana';
+    lines.push(`✦ ${stats.reward} ${rewardLabel}  on disarm`);
 
   } else if (encounter.subKind === 'item') {
     const rawStat = encounter.baseStat + displayLevel * encounter.statGrowth;

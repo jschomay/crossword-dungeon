@@ -4,6 +4,9 @@ import {
   generateTrap,
   generateTreasure,
   formatEncounter,
+  getMonsterStats,
+  getTrapStats,
+  resolveCombat,
   type Rng,
 } from './encounters';
 import { MONSTER_TYPES, MONSTER_MODIFIERS } from './data/monsters';
@@ -35,6 +38,119 @@ function mockRngWithFirstMod<T>(getItems: unknown[], firstMod: T): Rng {
     },
   };
 }
+
+// ---- getMonsterStats ----
+
+describe('getMonsterStats', () => {
+  // Rat: base_hp=8 hp_growth=2, base_damage=2 damage_growth=1, base_xp=8 xp_growth=2
+  // mod1=Frenzied: hp=1.0, dmg=1.3, xp=1.2
+  // mod2=Armored:  hp=1.4, dmg=1.0, xp=1.3
+  const getRat = () => {
+    const rng = mockRng([MONSTER_TYPES[0], MONSTER_MODIFIERS[0], MONSTER_MODIFIERS[1]]);
+    return generateMonster(rng);
+  };
+
+  it('level 1: raw stats, no multipliers', () => {
+    const stats = getMonsterStats(getRat(), 1);
+    // hp=8+2=10, dmg=2+1=3, xp=8+2=10
+    expect(stats).toEqual({ hp: 10, dmg: 3, xp: 10 });
+  });
+
+  it('level 3: mod1 applied', () => {
+    const stats = getMonsterStats(getRat(), 3);
+    // raw hp=8+6=14, dmg=2+3=5, xp=8+6=14
+    // *1.0, *1.3, *1.2
+    expect(stats.hp).toBe(14);
+    expect(stats.dmg).toBe(Math.round(5 * 1.3)); // 7
+    expect(stats.xp).toBe(Math.round(14 * 1.2)); // 17
+  });
+
+  it('level 6: mod1 and mod2 applied', () => {
+    const stats = getMonsterStats(getRat(), 6);
+    // raw hp=8+12=20, dmg=2+6=8, xp=8+12=20
+    // *1.0*1.4=1.4, *1.3*1.0=1.3, *1.2*1.3=1.56
+    expect(stats.hp).toBe(Math.round(20 * 1.4)); // 28
+    expect(stats.dmg).toBe(Math.round(8 * 1.3)); // 10
+    expect(stats.xp).toBe(Math.round(20 * 1.56)); // 31
+  });
+});
+
+// ---- getTrapStats ----
+
+describe('getTrapStats', () => {
+  // Dart Trap: base_damage=4, damage_growth=2, base_xp=8, xp_growth=2
+  // mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
+  // mod2=Ancient: dmg_mult=1.2, reward_mult=1.1
+  const getDartTrap = () => {
+    const rng = mockRng([TRAP_TYPES[0], TRAP_MODIFIERS[0], TRAP_MODIFIERS[1]]);
+    return generateTrap(rng);
+  };
+
+  it('level 1: raw stats, no multipliers', () => {
+    const stats = getTrapStats(getDartTrap(), 1);
+    // dmg=4+2=6, reward=8+2=10
+    expect(stats).toEqual({ dmg: 6, reward: 10, rewardType: 'xp' });
+  });
+
+  it('level 3: mod1 applied', () => {
+    const stats = getTrapStats(getDartTrap(), 3);
+    // raw dmg=4+6=10, reward=8+6=14 ; *1.3, *1.2
+    expect(stats.dmg).toBe(Math.round(10 * 1.3)); // 13
+    expect(stats.reward).toBe(Math.round(14 * 1.2)); // 17
+    expect(stats.rewardType).toBe('xp');
+  });
+
+  it('level 6: mod1 and mod2 applied', () => {
+    const stats = getTrapStats(getDartTrap(), 6);
+    // raw dmg=4+12=16, reward=8+12=20
+    // mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
+    // mod2=Ancient: dmg_mult=1.2, reward_mult=1.3
+    expect(stats.dmg).toBe(Math.round(16 * 1.3 * 1.2)); // 25
+    expect(stats.reward).toBe(Math.round(20 * 1.2 * 1.3)); // 31
+  });
+});
+
+// ---- resolveCombat ----
+
+describe('resolveCombat', () => {
+  it('player wins when player kills monster in one hit', () => {
+    const result = resolveCombat(50, 30, 5, 10, 20);
+    expect(result.playerWon).toBe(true);
+    expect(result.xpGained).toBe(20);
+    expect(result.turns[0].attacker).toBe('player');
+    expect(result.turns[0].monsterHpAfter).toBe(0);
+    expect(result.turns.length).toBe(1);
+  });
+
+  it('monster wins when it kills player first', () => {
+    // player dmg=1, player hp=5; monster dmg=10, monster hp=100
+    // round 1: player hits for 1 (monster hp=99), monster hits for 10 (player hp=0)
+    const result = resolveCombat(1, 5, 10, 100, 50);
+    expect(result.playerWon).toBe(false);
+    expect(result.xpGained).toBe(0);
+    const lastTurn = result.turns[result.turns.length - 1];
+    expect(lastTurn.playerHpAfter).toBe(0);
+  });
+
+  it('multi-round combat, player wins', () => {
+    // player dmg=5, hp=20; monster dmg=3, hp=12
+    // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17)
+    // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=14)
+    // r3: player hits 5 (mon hp=0) -> player wins
+    const result = resolveCombat(5, 20, 3, 12, 10);
+    expect(result.playerWon).toBe(true);
+    expect(result.turns.length).toBe(5); // 3 player attacks, 2 monster attacks
+    expect(result.turns[result.turns.length - 1].monsterHpAfter).toBe(0);
+  });
+
+  it('exact-kill: player and monster hp reach 0 simultaneously', () => {
+    // player dmg=10, hp=10; monster dmg=10, hp=10
+    // player attacks: mon hp=0 -> player wins immediately
+    const result = resolveCombat(10, 10, 10, 10, 5);
+    expect(result.playerWon).toBe(true);
+    expect(result.turns.length).toBe(1);
+  });
+});
 
 // ---- Monster generation ----
 

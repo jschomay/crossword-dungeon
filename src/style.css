@@ -55,3 +55,32 @@ body {
 #dungeon {
   transform: rotate(var(--dungeon-rotation));
 }
+
+.hidden {
+  display: none !important;
+}
+
+#resolution-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+#resolution-content {
+  font-family: monospace;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #cccccc;
+  white-space: pre;
+  border: 1px solid #555;
+  padding: 24px 32px;
+  min-width: 400px;
+  max-width: 560px;
+  background: #0a0a0a;
+}
+
