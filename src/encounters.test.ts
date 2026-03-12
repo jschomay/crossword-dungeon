@@ -173,7 +173,7 @@ describe('generateMonster', () => {
     expect(all).toContain('Lv.1');
     expect(all).toContain('Rat');
     // hp = 8 + 1*2 = 10, dmg = 2 + 1*1 = 3, xp = 8 + 1*2 = 10
-    expect(all).toContain('HP: 10');
+    expect(all).toContain('HP: ██████████  10');
     expect(all).toContain('DMG: 3');
     expect(all).toContain('10 XP');
   });
@@ -192,7 +192,7 @@ describe('generateMonster', () => {
     expect(all).toContain('Frenzied');
     expect(all).toContain('Goblin');
     // raw_hp = 12 + 3*3 = 21, *1.0 = 21
-    expect(all).toContain('HP: 21');
+    expect(all).toContain('HP: ██████████  21');
     // raw_dmg = 3 + 3*1 = 6, *1.3 = round(7.8) = 8
     expect(all).toContain('DMG: 8');
     // raw_xp = 10 + 3*3 = 19, *1.2 = round(22.8) = 23
@@ -214,7 +214,7 @@ describe('generateMonster', () => {
     expect(all).toContain('Armored');
     expect(all).toContain('Goblin');
     // raw_hp = 12 + 6*3 = 30, *1.0 *1.4 = 42
-    expect(all).toContain('HP: 42');
+    expect(all).toContain('HP: ██████████  42');
     // raw_dmg = 3 + 6*1 = 9, *1.3 *1.0 = round(11.7) = 12
     expect(all).toContain('DMG: 12');
     // raw_xp = 10 + 6*3 = 28, *1.2 *1.3 = round(43.68) = 44
@@ -271,8 +271,8 @@ describe('generateTrap', () => {
     expect(t.rewardType).toBe('mana');
     const all = formatEncounter(t, 1).join('\n');
     // reward = 3 + 1*1 = 4
-    expect(all).toContain('MANA DRAIN');
-    expect(all).toContain('4 mana');
+    expect(all).toContain('DRAIN');
+    expect(all).toContain('4 MANA');
   });
 
   it('level 3 trap: one modifier applied', () => {
@@ -357,7 +357,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Sword');
     expect(all).not.toContain('Fine');
     // stat = 3 + 1*2 = 5, no multiplier
-    expect(all).toContain('+5 damage');
+    expect(all).toContain('+5 DAMAGE');
   });
 
   it('item level 3: mod1 multiplies stat', () => {
@@ -371,7 +371,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Fine');
     expect(all).toContain('Sword');
     // raw = 3 + 3*2 = 9, *1.2 = round(10.8) = 11
-    expect(all).toContain('+11 damage');
+    expect(all).toContain('+11 DAMAGE');
   });
 
   it('item level 6: mod1 and mod2 stack', () => {
@@ -386,7 +386,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Masterwork');
     expect(all).toContain('Sword');
     // raw = 3 + 6*2 = 15, *1.2 *1.4 = round(25.2) = 25
-    expect(all).toContain('+25 damage');
+    expect(all).toContain('+25 DAMAGE');
   });
 
   it('item with passive modifier shows passive effect in display', () => {

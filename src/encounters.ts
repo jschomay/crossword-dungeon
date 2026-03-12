@@ -1,3 +1,4 @@
+import { hpBar } from './utils';
 import { MONSTER_TYPES, MONSTER_MODIFIERS } from './data/monsters';
 import { TRAP_TYPES, TRAP_MODIFIERS } from './data/traps';
 import { TREASURE_ITEMS, TREASURE_CONSUMABLES, TREASURE_IMMEDIATE, TREASURE_MODIFIERS } from './data/treasures';
@@ -102,13 +103,13 @@ function pickTwo<T>(arr: readonly T[], rng: Rng): [T, T] {
 
 function effectLabel(effect: string, amount: number): string {
   switch (effect) {
-    case 'restore_hp': return `Restores ${amount} HP`;
-    case 'restore_mana': return `Restores ${amount} mana`;
-    case 'increase_max_hp': return `+${amount} max HP`;
-    case 'increase_max_mana': return `+${amount} max mana`;
-    case 'grant_xp': return `Grants ${amount} XP`;
-    case 'reveal_letter': return amount === 1 ? 'Reveals 1 letter' : `Reveals ${amount} letters`;
-    default: return `${effect}: ${amount}`;
+    case 'restore_hp':       return `+${amount} HP`;
+    case 'restore_mana':     return `+${amount} MANA`;
+    case 'increase_max_hp':  return `+${amount} max HP`;
+    case 'increase_max_mana':return `+${amount} max MANA`;
+    case 'grant_xp':         return `+${amount} XP`;
+    case 'reveal_letter':    return amount === 1 ? 'Reveals 1 letter' : `Reveals ${amount} letters`;
+    default:                 return `${effect}: ${amount}`;
   }
 }
 
@@ -361,7 +362,7 @@ function modEffectSummary(
   return parts.join(', ');
 }
 
-export function formatEncounter(encounter: Encounter, displayLevel: number): string[] {
+export function formatEncounter(encounter: Encounter, displayLevel: number, currentHp?: number): string[] {
   if (displayLevel === 0) {
     const idx = Math.abs(encounter.baseName.charCodeAt(0)) % FLAVOR_TEXTS.length;
     return [FLAVOR_TEXTS[idx]];
@@ -378,7 +379,12 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     const title = `${ENCOUNTER_STYLE.monster.symbol} [MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
     lines.push(encounter.baseDescription);
+    lines.push('');
+    const displayHp = currentHp ?? stats.hp;
+    lines.push(`HP: ${hpBar(displayHp, stats.hp)}  ${displayHp}`);
+    lines.push(`DMG: ${stats.dmg}`);
     if (activeMods.length > 0) {
+      lines.push('');
       const indent = '  ◆ ';
       const longestName = Math.max(...activeMods.map(m => m.name.length));
       const arrowPad = ' '.repeat(indent.length + longestName + 2);
@@ -389,10 +395,8 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
       }
     }
     lines.push('');
-    lines.push(`HP: ${stats.hp}   DMG: ${stats.dmg}`);
-    lines.push('');
     lines.push('REWARD');
-    lines.push(`✦ ${stats.xp} XP  on defeat`);
+    lines.push(`+ ${stats.xp} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
     const stats = getTrapStats(encounter, displayLevel);
@@ -418,12 +422,12 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
     if (encounter.damageType === 'hp') {
       lines.push(`DMG: ${stats.dmg}`);
     } else {
-      lines.push(`MANA DRAIN: ${stats.dmg}`);
+      lines.push(`DRAIN: ${stats.dmg}`);
     }
     lines.push('');
     lines.push('REWARD');
-    const rewardLabel = stats.rewardType === 'xp' ? 'XP' : 'mana';
-    lines.push(`✦ ${stats.reward} ${rewardLabel}  on disarm`);
+    const rewardLabel = stats.rewardType === 'xp' ? 'XP' : 'MANA';
+    lines.push(`+ ${stats.reward} ${rewardLabel}  on disarm`);
 
   } else if (encounter.subKind === 'item') {
     const rawStat = encounter.baseStat + displayLevel * encounter.statGrowth;
@@ -437,7 +441,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
       if ('stat_multiplier' in mod) {
         totalMult *= mod.stat_multiplier;
       } else {
-        passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'mana each hit'}`);
+        passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'MANA each hit'}`);
       }
     };
     if (displayLevel >= 3) applyMod(encounter.mod1);
@@ -457,7 +461,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number): str
       }
     }
     lines.push('');
-    const statLine = `${encounter.slot.toUpperCase()}  +${round(rawStat * totalMult)} ${encounter.statType}`;
+    const statLine = `+${round(rawStat * totalMult)} ${encounter.statType.toUpperCase()}`;
     const extras = passiveEffects.length > 0 ? `   ${passiveEffects.join('  ')}` : '';
     lines.push(statLine + extras);
 

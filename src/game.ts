@@ -1,4 +1,5 @@
 import * as ROT from '../lib/rotjs';
+import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_XP, C_DIM } from './utils';
 import demoJson from '../puzzles/demo.json';
 import { validateIpuz } from './puzzle';
 import Puzzle from './puzzle';
@@ -29,7 +30,6 @@ type RoomState = {
   solvedLetter: string | null;
   encounter: Encounter;
   incorrectGuesses: string[];
-  resolutionLog: string[];
 };
 
 function roomKey(x: number, y: number): string {
@@ -41,23 +41,19 @@ const BASE_HP = 50;
 const BASE_DMG = 10;
 const XP_PER_LEVEL = 30;
 
-function hpBar(current: number, max: number, width: number = 10): string {
-  const filled = Math.round((current / max) * width);
-  const empty = width - filled;
-  return '█'.repeat(Math.max(0, filled)) + '░'.repeat(Math.max(0, empty));
-}
 
 export default class Game {
   display: ROT.Display;
   private puzzle: Puzzle;
   private dungeon: Dungeon;
   private playerPos: { x: number; y: number };
-  private statsEl: HTMLElement;
+  private heroEl: HTMLElement;
+  private statusEl: HTMLElement;
   private cluesEl: HTMLElement;
   private encounterEl: HTMLElement;
   private dungeonEl: HTMLElement;
-  private overlayEl: HTMLElement;
-  private overlayContentEl: HTMLElement;
+  private interactionLogEl: HTMLElement;
+  private combatMonsterHp: number | null = null;
   private roomStates: Map<string, RoomState> = new Map();
   private mana: number = MAX_MANA;
   private hp: number = BASE_HP;
@@ -66,6 +62,7 @@ export default class Game {
   private level: number = 1;
   private xp: number = 0;
   private gameOver: boolean = false;
+  private gameOverReason: 'hp' | 'mana' | null = null;
   private puzzleComplete: boolean = false;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
@@ -85,11 +82,11 @@ export default class Game {
     this.dungeonEl = document.getElementById('dungeon')!;
     this.dungeonEl.appendChild(this.display.getContainer()!);
 
-    this.statsEl = document.getElementById('stats')!;
+    this.heroEl = document.getElementById('hero')!;
+    this.statusEl = document.getElementById('status')!;
     this.cluesEl = document.getElementById('clues')!;
     this.encounterEl = document.getElementById('encounter')!;
-    this.overlayEl = document.getElementById('resolution-overlay')!;
-    this.overlayContentEl = document.getElementById('resolution-content')!;
+    this.interactionLogEl = document.getElementById('interaction-log')!;
 
     this.applyTilt();
     this.initRoomStates();
@@ -121,7 +118,6 @@ export default class Game {
         solvedLetter: null,
         encounter: generateEncounter(rng),
         incorrectGuesses: [],
-        resolutionLog: [],
       });
     }
   }
@@ -137,9 +133,11 @@ export default class Game {
     this.gameOver = false;
     this.puzzleComplete = false;
     this.combatRunning = false;
+    this.combatMonsterHp = null;
+    this.gameOverReason = null;
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
     this.applyTilt();
-    this.hideOverlay();
+    this.clearLogs();
     this.render();
   }
 
@@ -167,26 +165,12 @@ export default class Game {
     }
   }
 
-  private overlayIsRestart: boolean = false;
-
-  private showOverlay(lines: string[], isRestart: boolean = false): void {
-    this.overlayIsRestart = isRestart;
-    const footer = isRestart ? '\n  [SPACE] Restart' : '\n  [SPACE] Continue';
-    this.overlayContentEl.textContent = lines.join('\n') + footer;
-    this.overlayEl.classList.remove('hidden');
+  private clearLogs(): void {
+    this.interactionLogEl.textContent = '';
   }
 
-  private hideOverlay(): void {
-    this.overlayEl.classList.add('hidden');
-  }
-
-  private handleOverlaySpace(): void {
-    if (this.overlayIsRestart) {
-      this.restart();
-    } else {
-      this.hideOverlay();
-      this.render();
-    }
+  private showInteraction(lines: string[]): void {
+    this.interactionLogEl.textContent = lines.join('\n');
   }
 
   private solveRoom(x: number, y: number, letter: string): void {
@@ -205,12 +189,14 @@ export default class Game {
 
   private triggerGameOver(): void {
     this.gameOver = true;
-    this.showOverlay(['', '  *** GAME OVER ***', '', '  You have been slain.', ''], true);
+    this.gameOverReason = 'hp';
+    this.render();
   }
 
   private triggerManaGameOver(): void {
     this.gameOver = true;
-    this.showOverlay(['', '  *** OUT OF MANA ***', '', '  You have no mana left.', ''], true);
+    this.gameOverReason = 'mana';
+    this.render();
   }
 
   private tryGuess(x: number, y: number, letter: string): void {
@@ -231,39 +217,36 @@ export default class Game {
       if (level === 0) {
         // Dark room — no encounter revealed, no damage
         logLines.push(`You cast the '${letter}' rune into the darkness...`);
-        logLines.push(`Nothing stirs. The shadows remain.`);
+        logLines.push(`It fades. Nothing changes.`);
       } else {
-        logLines.push(`You cast the '${letter}' rune... but nothing happens.`);
-        logLines.push(enc.baseDescription);
-        logLines.push('');
+        logLines.push(`You cast the '${letter}' rune... but it fades away.`);
 
         if (enc.kind === 'monster') {
           const stats = getMonsterStats(enc as MonsterEncounter, level);
           const dmgTaken = stats.dmg;
           this.hp = Math.max(0, this.hp - dmgTaken);
-          logLines.push(`The ${enc.baseName} strikes back!`);
-          logLines.push(`  -${dmgTaken} HP  (${this.hp}/${this.maxHp} remaining)`);
+          logLines.push(`The ${enc.baseName} strikes!`);
+          logLines.push(`  -${dmgTaken} HP`);
         } else if (enc.kind === 'trap') {
           const stats = getTrapStats(enc as TrapEncounter, level);
           if (enc.damageType === 'hp') {
             const dmgTaken = stats.dmg;
             this.hp = Math.max(0, this.hp - dmgTaken);
             logLines.push(`The ${enc.baseName} triggers!`);
-            logLines.push(`  -${dmgTaken} HP  (${this.hp}/${this.maxHp} remaining)`);
+            logLines.push(`  -${dmgTaken} HP`);
           } else {
             const manaDrain = Math.min(this.mana, stats.dmg);
             this.mana = Math.max(0, this.mana - manaDrain);
             logLines.push(`The ${enc.baseName} drains your mana!`);
-            logLines.push(`  -${manaDrain} mana  (${this.mana}/${MAX_MANA} remaining)`);
+            logLines.push(`  -${manaDrain} mana`);
           }
         } else {
           // treasure — mana already spent above, no extra drain
           logLines.push(`You fumble with the treasure.`);
-          logLines.push(`  -1 mana  (${this.mana}/${MAX_MANA} remaining)`);
+          logLines.push(`  -1 mana`);
         }
       }
 
-      state.resolutionLog.push(...logLines);
 
       if (this.hp <= 0) {
         this.triggerGameOver();
@@ -274,7 +257,7 @@ export default class Game {
         return;
       }
 
-      this.showOverlay(logLines);
+      this.showInteraction(logLines);
       return;
     }
 
@@ -282,19 +265,17 @@ export default class Game {
     if (level === 0) {
       // Dark room solved: no encounter, just reveal + neighbors stir
       const AWAKEN_LINES = [
-        'The rune glows. Light seeps through the cracks.',
-        'Something shifts in the rooms beyond.',
         'Nearby chambers stir at the light.',
+        'Something shifts in the rooms beyond.',
       ];
       this.solveRoom(x, y, letter);
+      const awaken = AWAKEN_LINES[x % AWAKEN_LINES.length];
       const logLines = [
-        `You inscribe the '${letter}' rune. The room illuminates.`,
-        '',
-        ...AWAKEN_LINES,
+        `The '${letter}' rune glows. Light seeps through the cracks.`,
+        awaken,
       ];
-      state.resolutionLog.push(...logLines);
       if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
-      else this.showOverlay(logLines);
+      else this.showInteraction(logLines);
       return;
     }
 
@@ -312,10 +293,10 @@ export default class Game {
       logLines.push(`You disarm the ${enc.baseName}!`);
       if (stats.rewardType === 'xp') {
         this.gainXp(stats.reward);
-        logLines.push(`  +${stats.reward} XP  (total: ${this.xp} XP)`);
+        logLines.push(`  +${stats.reward} XP`);
       } else {
         this.mana = Math.min(MAX_MANA, this.mana + stats.reward);
-        logLines.push(`  +${stats.reward} mana  (${this.mana}/${MAX_MANA})`);
+        logLines.push(`  +${stats.reward} mana`);
       }
     } else {
       logLines.push(`You claim the treasure: ${enc.baseName}!`);
@@ -324,23 +305,28 @@ export default class Game {
         const amount = enc.baseAmount + level * enc.amountGrowth;
         if (enc.effect === 'restore_hp') {
           this.hp = Math.min(this.maxHp, this.hp + amount);
-          logLines.push(`  +${amount} HP  (${this.hp}/${this.maxHp})`);
+          logLines.push(`  +${amount} HP`);
         } else if (enc.effect === 'restore_mana') {
           this.mana = Math.min(MAX_MANA, this.mana + amount);
-          logLines.push(`  +${amount} mana  (${this.mana}/${MAX_MANA})`);
+          logLines.push(`  +${amount} mana`);
         } else if (enc.effect === 'grant_xp') {
           this.gainXp(amount);
           logLines.push(`  +${amount} XP`);
-        } else {
-          logLines.push(`  Effect: ${enc.effect} (${amount})`);
+        } else if (enc.effect === 'increase_max_hp') {
+          this.maxHp += amount;
+          this.hp += amount;
+          logLines.push(`  +${amount} max HP`);
+        } else if (enc.effect === 'increase_max_mana') {
+          logLines.push(`  Your mana reserves deepen.`);
+        } else if (enc.effect === 'reveal_letter') {
+          logLines.push(`  A letter is magically revealed.`);
         }
       }
     }
 
-    state.resolutionLog.push(...logLines);
     this.solveRoom(x, y, letter);
     if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
-    else this.showOverlay(logLines);
+    else this.showInteraction(logLines);
   }
 
   private runCombatAnimation(
@@ -350,55 +336,49 @@ export default class Game {
   ): void {
     this.combatRunning = true;
     const { turns, playerWon, xpGained } = result;
-    const displayLines: string[] = [`Combat: You vs ${enc.baseName}`, ''];
 
-    // Show overlay immediately with first turn
+    const firstPlayerTurn = turns.find(t => t.attacker === 'player');
+    this.combatMonsterHp = firstPlayerTurn ? firstPlayerTurn.monsterHpAfter + firstPlayerTurn.dmg : 0;
+
+    this.showInteraction([`You fight the ${enc.baseName}!`]);
+    this.render();
+
     const showTurn = (idx: number) => {
       if (idx < turns.length) {
         const t = turns[idx];
         if (t.attacker === 'player') {
-          displayLines.push(`You strike for ${t.dmg} dmg!  Monster HP: ${t.monsterHpAfter}`);
+          this.combatMonsterHp = t.monsterHpAfter;
         } else {
-          displayLines.push(`${enc.baseName} hits for ${t.dmg}!  Your HP: ${t.playerHpAfter}`);
+          this.hp = t.playerHpAfter;
         }
-        this.showOverlay([...displayLines, '', '...']);
+        this.render();
         setTimeout(() => showTurn(idx + 1), 700);
       } else {
-        // Combat concluded
-        displayLines.push('');
-        const state = this.getRoomState(x, y);
+        this.combatMonsterHp = null;
         if (playerWon) {
-          displayLines.push(`Victory! ${enc.baseName} defeated.`);
-          displayLines.push(`  +${xpGained} XP`);
           this.gainXp(xpGained);
-          state.resolutionLog.push(...displayLines);
           this.solveRoom(x, y, letter);
           this.combatRunning = false;
+          this.showInteraction([`${enc.baseName} defeated.`, `  +${xpGained} XP`]);
           if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
-          else this.showOverlay(displayLines);
           this.render();
         } else {
           this.hp = 0;
-          displayLines.push(`You have been defeated by ${enc.baseName}!`);
-          state.resolutionLog.push(...displayLines);
           this.combatRunning = false;
           this.gameOver = true;
-          this.showOverlay([...displayLines, '', '  *** GAME OVER ***'], true);
+          this.gameOverReason = 'hp';
+          this.showInteraction([`You were defeated by the ${enc.baseName}.`]);
           this.render();
         }
       }
     };
 
-    showTurn(0);
+    setTimeout(() => showTurn(0), 700);
   }
 
   private handleKey(e: KeyboardEvent): void {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (this.combatRunning) return;
-
-    if (!this.overlayEl.classList.contains('hidden')) {
-      if (e.key === ' ') this.handleOverlaySpace();
-      return;
-    }
 
     if (this.gameOver || this.puzzleComplete) {
       if (e.key === ' ') this.restart();
@@ -408,6 +388,7 @@ export default class Game {
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
       if (this.dungeon.hasRoom(x, y)) {
+        this.clearLogs();
         this.tryGuess(x, y, e.key.toUpperCase());
         this.render();
       }
@@ -419,6 +400,7 @@ export default class Game {
     const nx = this.playerPos.x + dir.dx;
     const ny = this.playerPos.y + dir.dy;
     if (this.dungeon.hasRoom(nx, ny)) {
+      this.clearLogs();
       this.playerPos = { x: nx, y: ny };
       this.render();
     }
@@ -428,58 +410,81 @@ export default class Game {
     const ended = this.gameOver || this.puzzleComplete;
     this.dungeon.render(this.display, this.playerPos, this.roomStates, ended);
 
-    // Stats bar: HP + mana
+    // Hero panel
     const hpBarStr = hpBar(this.hp, this.maxHp);
-    const hpColor = this.hp > this.maxHp * 0.3 ? '#ff6666' : '#ff2222';
-    const manaFilled = '<span style="color:#00ffff">ᛗ</span>'.repeat(this.mana);
-    const manaEmpty = '<span style="color:#555">ᛗ</span>'.repeat(MAX_MANA - this.mana);
-    this.statsEl.innerHTML =
-      `<span style="color:${hpColor}">HP: ${hpBarStr}</span>  ${this.hp}/${this.maxHp}` +
-      `    <span style="color:#aaa">DMG: ${this.dmg}    Lv.${this.level}    XP: ${this.xp}</span>` +
-      `<br>Mana: ${manaFilled}${manaEmpty}`;
+    const manaBarStr = hpBar(this.mana, MAX_MANA);
+    this.heroEl.innerHTML =
+      `<span style="color:#aaa">Adventurer</span>  <span style="color:#777">Lv.${this.level}</span>\n` +
+      `\n` +
+      `<span style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.maxHp}</span>\n` +
+      `<span style="color:${C_MANA}">Mana: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${MAX_MANA}</span>\n` +
+      `<span style="color:${C_DMG}">DMG:  ${this.dmg}</span>\n` +
+      `<span style="color:${C_XP}">XP:   ${this.xp}</span>`;
 
+    // Status panel: game over / puzzle complete
     if (this.gameOver) {
-      this.cluesEl.innerHTML = 'Game over!<br>Press space to restart.';
-      this.encounterEl.innerHTML = '';
+      const reason = this.gameOverReason === 'mana'
+        ? 'You have exhausted your magic.'
+        : 'You have been slain.';
+      this.statusEl.innerHTML =
+        `<span style="color:#ff3333;font-size:20px">GAME OVER</span><br>` +
+        `<span style="color:#888">${reason}</span><br><br>` +
+        `<span style="color:#aaa">[SPACE] Restart</span>`;
+      this.statusEl.classList.remove('hidden');
+      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
+      this.encounterEl.classList.add('hidden');
     } else if (this.puzzleComplete) {
-      this.cluesEl.innerHTML = 'Puzzle complete!<br>Press space to restart.';
-      this.encounterEl.innerHTML = '';
+      this.statusEl.innerHTML =
+        `<span style="color:#44ff88;font-size:20px">PUZZLE COMPLETE</span><br><br>` +
+        `<span style="color:#aaa">[SPACE] Restart</span>`;
+      this.statusEl.classList.remove('hidden');
+      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
+      this.encounterEl.classList.add('hidden');
     } else {
+      this.statusEl.classList.add('hidden');
+      this.encounterEl.classList.remove('hidden');
       const clues = this.puzzle.getCluesAt(this.playerPos);
       const lines = clues.map(({ direction, clue }) => `${direction}: ${clue}`);
       while (lines.length < 2) lines.push('&nbsp;');
       this.cluesEl.innerHTML = lines.join('<br>');
+    }
 
+    if (!this.gameOver && !this.puzzleComplete) {
       const { x, y } = this.playerPos;
       const state = this.getRoomState(x, y);
       const style = ENCOUNTER_STYLE[state.encounter.kind];
+      this.encounterEl.style.color = '';
 
       if (state.solvedLetter !== null) {
-        // Solved room: header + single flavor line
         const enc = state.encounter;
         const level = state.activatedLevel;
-        const headerLines = level > 0 ? formatEncounter(enc, level).slice(0, 1) : [];
         let flavorLine: string;
         if (level === 0) {
-          flavorLine = `The room is quiet. Light filters through.`;
+          flavorLine = `An empty room.`;
         } else if (enc.kind === 'monster') {
-          flavorLine = `You slew the ${enc.baseName}.`;
+          flavorLine = `Defeated.`;
         } else if (enc.kind === 'trap') {
-          flavorLine = `You disarmed the ${enc.baseName}.`;
+          flavorLine = `Disarmed.`;
         } else {
-          flavorLine = `You claimed the ${enc.baseName}.`;
+          flavorLine = `Claimed.`;
         }
-        this.encounterEl.style.color = level > 0 ? style.color : UNKNOWN_COLOR;
-        this.encounterEl.textContent = [...headerLines, ...(headerLines.length ? [''] : []), flavorLine].join('\n');
+        if (level > 0) {
+          const heading = formatEncounter(enc, level).slice(0, 1);
+          this.encounterEl.innerHTML =
+            `<span style="color:${style.color}">${esc(heading[0])}</span>\n\n` +
+            `<span style="color:${C_DIM}">${esc(flavorLine)}</span>`;
+        } else {
+          this.encounterEl.innerHTML = `<span style="color:${C_DIM}">${esc(flavorLine)}</span>`;
+        }
       } else {
-        const encLines = formatEncounter(state.encounter, state.activatedLevel);
-        // Append incorrect guess attempts at the bottom
+        const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined);
         const guesses = state.incorrectGuesses;
-        const guessLine = guesses.length > 0
-          ? `\nRunes tried: ${guesses.join(' ')}`
-          : '';
-        this.encounterEl.style.color = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
-        this.encounterEl.textContent = encLines.join('\n') + guessLine;
+        const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
+        let html = renderEncounterHtml(encLines, titleColor);
+        if (guesses.length > 0) {
+          html += `\n<span style="color:${C_DIM}">Runes tried: ${esc(guesses.join(' '))}</span>`;
+        }
+        this.encounterEl.innerHTML = html;
       }
     }
   }

@@ -7,16 +7,17 @@
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <div id="resolution-overlay" class="hidden">
-    <div id="resolution-content"></div>
-  </div>
   <div id="ui">
     <div id="main">
-      <div id="stats"></div>
       <div id="dungeon"></div>
       <div id="clues"></div>
     </div>
-    <div id="encounter"></div>
+    <div id="sidebar">
+      <div id="status" class="hidden"></div>
+      <div id="hero"></div>
+      <div id="encounter"></div>
+      <div id="interaction-log"></div>
+    </div>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
