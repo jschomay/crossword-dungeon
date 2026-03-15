@@ -54,6 +54,12 @@ export default class Game {
   private dungeonEl: HTMLElement;
   private interactionLogEl: HTMLElement;
   private combatMonsterHp: number | null = null;
+  private prevHp: number = BASE_HP;
+  private prevMana: number = MAX_MANA;
+  private prevDmg: number = BASE_DMG;
+  private prevXp: number = 0;
+  private prevLevel: number = 1;
+  private prevCombatMonsterHp: number | null = null;
   private roomStates: Map<string, RoomState> = new Map();
   private mana: number = MAX_MANA;
   private hp: number = BASE_HP;
@@ -341,7 +347,6 @@ export default class Game {
     this.combatMonsterHp = firstPlayerTurn ? firstPlayerTurn.monsterHpAfter + firstPlayerTurn.dmg : 0;
 
     this.showInteraction([`You fight the ${enc.baseName}!`]);
-    this.render();
 
     const showTurn = (idx: number) => {
       if (idx < turns.length) {
@@ -413,13 +418,18 @@ export default class Game {
     // Hero panel
     const hpBarStr = hpBar(this.hp, this.maxHp);
     const manaBarStr = hpBar(this.mana, MAX_MANA);
+    const hpFlash    = this.hp    !== this.prevHp    ? ' class="flash"' : '';
+    const manaFlash  = this.mana  !== this.prevMana  ? ' class="flash"' : '';
+    const dmgFlash   = this.dmg   !== this.prevDmg   ? ' class="flash"' : '';
+    const xpFlash    = this.xp    !== this.prevXp    ? ' class="flash"' : '';
+    const lvlFlash   = this.level !== this.prevLevel ? ' class="flash"' : '';
     this.heroEl.innerHTML =
-      `<span style="color:#aaa">Adventurer</span>  <span style="color:#777">Lv.${this.level}</span>\n` +
+      `<span style="color:#aaa">Adventurer</span>  <span${lvlFlash} style="color:#777">Lv.${this.level}</span>\n` +
       `\n` +
-      `<span style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.maxHp}</span>\n` +
-      `<span style="color:${C_MANA}">Mana: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${MAX_MANA}</span>\n` +
-      `<span style="color:${C_DMG}">DMG:  ${this.dmg}</span>\n` +
-      `<span style="color:${C_XP}">XP:   ${this.xp}</span>`;
+      `<span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.maxHp}</span>\n` +
+      `<span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${MAX_MANA}</span>\n` +
+      `<span${dmgFlash} style="color:${C_DMG}">DMG:  ${this.dmg}</span>\n` +
+      `<span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}</span>`;
 
     // Status panel: game over / puzzle complete
     if (this.gameOver) {
@@ -480,12 +490,20 @@ export default class Game {
         const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined);
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
-        let html = renderEncounterHtml(encLines, titleColor);
+        const flashMonsterHp = this.combatMonsterHp !== this.prevCombatMonsterHp;
+        let html = renderEncounterHtml(encLines, titleColor, flashMonsterHp ? line => line.startsWith('HP:') : undefined);
         if (guesses.length > 0) {
           html += `\n<span style="color:${C_DIM}">Runes tried: ${esc(guesses.join(' '))}</span>`;
         }
         this.encounterEl.innerHTML = html;
       }
     }
+
+    this.prevHp              = this.hp;
+    this.prevMana            = this.mana;
+    this.prevDmg             = this.dmg;
+    this.prevXp              = this.xp;
+    this.prevLevel           = this.level;
+    this.prevCombatMonsterHp = this.combatMonsterHp;
   }
 }

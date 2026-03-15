@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hpBar, colorLine, C_HP, C_MANA, C_DMG, C_XP, C_DIM } from './utils';
+import { hpBar, colorLine, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_XP, C_DIM } from './utils';
 
 // ---- hpBar ----
 
@@ -106,5 +106,28 @@ describe('colorLine', () => {
 
   it('escapes HTML special chars', () => {
     expect(colorLine('HP: <test> & "more"', title, false)).toContain('&lt;test&gt; &amp;');
+  });
+
+  it('flash=true adds class="flash" to span', () => {
+    expect(colorLine('HP: ██████████  10', title, false, true)).toContain('class="flash"');
+  });
+
+  it('flash=false (default) omits class', () => {
+    expect(colorLine('HP: ██████████  10', title, false, false)).not.toContain('class=');
+  });
+});
+
+describe('renderEncounterHtml flash predicate', () => {
+  it('flashes lines matching predicate', () => {
+    const lines = ['* [MONSTER] Rat  Lv.1', 'HP: ██████████  10', 'DMG: 3'];
+    const html = renderEncounterHtml(lines, '#aaa', line => line.startsWith('HP:'));
+    const parts = html.split('\n');
+    expect(parts[1]).toContain('class="flash"');
+    expect(parts[2]).not.toContain('class=');
+  });
+
+  it('no predicate — no flash classes', () => {
+    const lines = ['* [MONSTER] Rat  Lv.1', 'HP: ██████████  10'];
+    expect(renderEncounterHtml(lines, '#aaa')).not.toContain('class=');
   });
 });

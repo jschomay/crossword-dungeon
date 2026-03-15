@@ -1,3 +1,12 @@
+@keyframes flash {
+  0%, 100% { filter: none; }
+  20%      { filter: saturate(0) brightness(100); }
+}
+
+.flash {
+  animation: flash 0.2s ease-out;
+}
+
 body {
   background: black;
   display: flex;
