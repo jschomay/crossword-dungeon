@@ -52,26 +52,26 @@ describe('getMonsterStats', () => {
 
   it('level 1: raw stats, no multipliers', () => {
     const stats = getMonsterStats(getRat(), 1);
-    // hp=8+2=10, dmg=2+1=3, xp=8+2=10
-    expect(stats).toEqual({ hp: 10, dmg: 3, xp: 10 });
+    // hp=8+(0)*2=8, dmg=2+(0)*1=2, xp=8+(0)*2=8
+    expect(stats).toEqual({ hp: 8, dmg: 2, xp: 8 });
   });
 
   it('level 3: mod1 applied', () => {
     const stats = getMonsterStats(getRat(), 3);
-    // raw hp=8+6=14, dmg=2+3=5, xp=8+6=14
+    // raw hp=8+(2)*2=12, dmg=2+(2)*1=4, xp=8+(2)*2=12
     // *1.0, *1.3, *1.2
-    expect(stats.hp).toBe(14);
-    expect(stats.dmg).toBe(Math.round(5 * 1.3)); // 7
-    expect(stats.xp).toBe(Math.round(14 * 1.2)); // 17
+    expect(stats.hp).toBe(12);
+    expect(stats.dmg).toBe(Math.round(4 * 1.3)); // 5
+    expect(stats.xp).toBe(Math.round(12 * 1.2)); // 14
   });
 
   it('level 6: mod1 and mod2 applied', () => {
     const stats = getMonsterStats(getRat(), 6);
-    // raw hp=8+12=20, dmg=2+6=8, xp=8+12=20
+    // raw hp=8+(5)*2=18, dmg=2+(5)*1=7, xp=8+(5)*2=18
     // *1.0*1.4=1.4, *1.3*1.0=1.3, *1.2*1.3=1.56
-    expect(stats.hp).toBe(Math.round(20 * 1.4)); // 28
-    expect(stats.dmg).toBe(Math.round(8 * 1.3)); // 10
-    expect(stats.xp).toBe(Math.round(20 * 1.56)); // 31
+    expect(stats.hp).toBe(Math.round(18 * 1.4)); // 25
+    expect(stats.dmg).toBe(Math.round(7 * 1.3)); // 9
+    expect(stats.xp).toBe(Math.round(18 * 1.56)); // 28
   });
 });
 
@@ -88,25 +88,25 @@ describe('getTrapStats', () => {
 
   it('level 1: raw stats, no multipliers', () => {
     const stats = getTrapStats(getDartTrap(), 1);
-    // dmg=4+2=6, reward=8+2=10
-    expect(stats).toEqual({ dmg: 6, reward: 10, rewardType: 'xp' });
+    // dmg=4+(0)*2=4, reward=8+(0)*2=8
+    expect(stats).toEqual({ dmg: 4, reward: 8, rewardType: 'xp' });
   });
 
   it('level 3: mod1 applied', () => {
     const stats = getTrapStats(getDartTrap(), 3);
-    // raw dmg=4+6=10, reward=8+6=14 ; *1.3, *1.2
-    expect(stats.dmg).toBe(Math.round(10 * 1.3)); // 13
-    expect(stats.reward).toBe(Math.round(14 * 1.2)); // 17
+    // raw dmg=4+(2)*2=8, reward=8+(2)*2=12 ; *1.3, *1.2
+    expect(stats.dmg).toBe(Math.round(8 * 1.3)); // 10
+    expect(stats.reward).toBe(Math.round(12 * 1.2)); // 14
     expect(stats.rewardType).toBe('xp');
   });
 
   it('level 6: mod1 and mod2 applied', () => {
     const stats = getTrapStats(getDartTrap(), 6);
-    // raw dmg=4+12=16, reward=8+12=20
+    // raw dmg=4+(5)*2=14, reward=8+(5)*2=18
     // mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
     // mod2=Ancient: dmg_mult=1.2, reward_mult=1.3
-    expect(stats.dmg).toBe(Math.round(16 * 1.3 * 1.2)); // 25
-    expect(stats.reward).toBe(Math.round(20 * 1.2 * 1.3)); // 31
+    expect(stats.dmg).toBe(Math.round(14 * 1.3 * 1.2)); // 22
+    expect(stats.reward).toBe(Math.round(18 * 1.2 * 1.3)); // 28
   });
 });
 
@@ -172,10 +172,10 @@ describe('generateMonster', () => {
     const all = lines.join('\n');
     expect(all).toContain('Lv.1');
     expect(all).toContain('Rat');
-    // hp = 8 + 1*2 = 10, dmg = 2 + 1*1 = 3, xp = 8 + 1*2 = 10
-    expect(all).toContain('HP: ██████████  10');
-    expect(all).toContain('DMG: 3');
-    expect(all).toContain('10 XP');
+    // hp = 8+(0)*2 = 8, dmg = 2+(0)*1 = 2, xp = 8+(0)*2 = 8
+    expect(all).toContain('HP: ██████████  8');
+    expect(all).toContain('DMG: 2');
+    expect(all).toContain('8 XP');
   });
 
   it('level 3: one modifier (mod1) applied', () => {
@@ -191,12 +191,12 @@ describe('generateMonster', () => {
     expect(all).toContain('Lv.3');
     expect(all).toContain('Frenzied');
     expect(all).toContain('Goblin');
-    // raw_hp = 12 + 3*3 = 21, *1.0 = 21
-    expect(all).toContain('HP: ██████████  21');
-    // raw_dmg = 3 + 3*1 = 6, *1.3 = round(7.8) = 8
-    expect(all).toContain('DMG: 8');
-    // raw_xp = 10 + 3*3 = 19, *1.2 = round(22.8) = 23
-    expect(all).toContain('23 XP');
+    // raw_hp = 12+(2)*3 = 18, *1.0 = 18
+    expect(all).toContain('HP: ██████████  18');
+    // raw_dmg = 3+(2)*1 = 5, *1.3 = round(6.5) = 7
+    expect(all).toContain('DMG: 7');
+    // raw_xp = 10+(2)*3 = 16, *1.2 = round(19.2) = 19
+    expect(all).toContain('19 XP');
   });
 
   it('level 6: both modifiers (mod1 + mod2) applied', () => {
@@ -213,12 +213,12 @@ describe('generateMonster', () => {
     expect(all).toContain('Frenzied');
     expect(all).toContain('Armored');
     expect(all).toContain('Goblin');
-    // raw_hp = 12 + 6*3 = 30, *1.0 *1.4 = 42
-    expect(all).toContain('HP: ██████████  42');
-    // raw_dmg = 3 + 6*1 = 9, *1.3 *1.0 = round(11.7) = 12
-    expect(all).toContain('DMG: 12');
-    // raw_xp = 10 + 6*3 = 28, *1.2 *1.3 = round(43.68) = 44
-    expect(all).toContain('44 XP');
+    // raw_hp = 12+(5)*3 = 27, *1.0 *1.4 = round(37.8) = 38
+    expect(all).toContain('HP: ██████████  38');
+    // raw_dmg = 3+(5)*1 = 8, *1.3 *1.0 = round(10.4) = 10
+    expect(all).toContain('DMG: 10');
+    // raw_xp = 10+(5)*3 = 25, *1.2 *1.3 = round(39) = 39
+    expect(all).toContain('39 XP');
   });
 
   it('level 5: only mod1 applied, mod2 not shown', () => {
@@ -256,9 +256,9 @@ describe('generateTrap', () => {
     expect(t.damageType).toBe('hp');
     expect(t.rewardType).toBe('xp');
     const all = formatEncounter(t, 1).join('\n');
-    // dmg = 4 + 1*2 = 6, xp = 8 + 1*2 = 10
-    expect(all).toContain('DMG: 6');
-    expect(all).toContain('10 XP');
+    // dmg = 4+(0)*2 = 4, xp = 8+(0)*2 = 8
+    expect(all).toContain('DMG: 4');
+    expect(all).toContain('8 XP');
   });
 
   it('magical trap shows mana drain and mana reward', () => {
@@ -270,9 +270,9 @@ describe('generateTrap', () => {
     expect(t.damageType).toBe('mana');
     expect(t.rewardType).toBe('mana');
     const all = formatEncounter(t, 1).join('\n');
-    // reward = 3 + 1*1 = 4
+    // reward = 3+(0)*1 = 3
     expect(all).toContain('DRAIN');
-    expect(all).toContain('4 MANA');
+    expect(all).toContain('3 MANA');
   });
 
   it('level 3 trap: one modifier applied', () => {
@@ -285,10 +285,10 @@ describe('generateTrap', () => {
     const all = formatEncounter(t, 3).join('\n');
     expect(all).toContain('Hidden');
     expect(all).toContain('Dart Trap');
-    // raw_dmg = 4 + 3*2 = 10, *1.3 = 13
-    expect(all).toContain('DMG: 13');
-    // raw_xp = 8 + 3*2 = 14, *1.2 = round(16.8) = 17
-    expect(all).toContain('17 XP');
+    // raw_dmg = 4+(2)*2 = 8, *1.3 = round(10.4) = 10
+    expect(all).toContain('DMG: 10');
+    // raw_xp = 8+(2)*2 = 12, *1.2 = round(14.4) = 14
+    expect(all).toContain('14 XP');
   });
 
   it('level 6 trap: two modifiers applied', () => {
@@ -302,8 +302,8 @@ describe('generateTrap', () => {
     expect(all).toContain('Hidden');
     expect(all).toContain('Ancient');
     expect(all).toContain('Dart Trap');
-    // raw_dmg = 4 + 6*2 = 16, *1.3 *1.2 = round(24.96) = 25
-    expect(all).toContain('DMG: 25');
+    // raw_dmg = 4+(5)*2 = 14, *1.3 *1.2 = round(21.84) = 22
+    expect(all).toContain('DMG: 22');
   });
 
   it('magical trap mod effect uses mana drain label', () => {
@@ -314,7 +314,7 @@ describe('generateTrap', () => {
     const rng = mockRng([runeWard, cursed, hidden]);
     const t = generateTrap(rng);
     const all = formatEncounter(t, 3).join('\n');
-    expect(all).toContain('mana drain');
+    expect(all).toContain('MANA drain');
     expect(all).not.toContain('% DMG');
   });
 });

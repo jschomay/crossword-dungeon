@@ -39,7 +39,6 @@ function roomKey(x: number, y: number): string {
 const MAX_MANA = 10;
 const BASE_HP = 50;
 const BASE_DMG = 10;
-const XP_PER_LEVEL = 30;
 
 
 export default class Game {
@@ -161,14 +160,6 @@ export default class Game {
 
   private gainXp(amount: number): void {
     this.xp += amount;
-    const xpNeeded = this.level * XP_PER_LEVEL;
-    if (this.xp >= xpNeeded) {
-      this.xp -= xpNeeded;
-      this.level++;
-      this.dmg += 2;
-      this.maxHp += 10;
-      this.hp = Math.min(this.hp + 10, this.maxHp);
-    }
   }
 
   private clearLogs(): void {

@@ -104,7 +104,5 @@ The player must carefully solve the rooms in an order that maximizes rewards and
 
 - Items don't make sense, why different swords with same basic effect? Amulets = + max hp or mana (maybe defense too?)
 - do we need a defence/armor stat?
-- Flash stat changes
-- Level 1 shouldn't apply any level ups
 - monster mods should add armor
 - consider potion awards

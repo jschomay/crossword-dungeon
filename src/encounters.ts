@@ -232,9 +232,9 @@ export function getMonsterStats(
   enc: MonsterEncounter,
   level: number,
 ): { hp: number; dmg: number; xp: number } {
-  const rawHp = enc.baseHp + level * enc.hpGrowth;
-  const rawDmg = enc.baseDamage + level * enc.damageGrowth;
-  const rawXp = enc.baseXp + level * enc.xpGrowth;
+  const rawHp = enc.baseHp + (level - 1) * enc.hpGrowth;
+  const rawDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
+  const rawXp = enc.baseXp + (level - 1) * enc.xpGrowth;
   let hpMult = 1, dmgMult = 1, xpMult = 1;
   if (level >= 3) {
     hpMult *= enc.mod1.hp_multiplier;
@@ -257,8 +257,8 @@ export function getTrapStats(
   enc: TrapEncounter,
   level: number,
 ): { dmg: number; reward: number; rewardType: 'xp' | 'mana' } {
-  const rawDmg = enc.baseDamage + level * enc.damageGrowth;
-  const rawReward = enc.baseReward + level * enc.rewardGrowth;
+  const rawDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
+  const rawReward = enc.baseReward + (level - 1) * enc.rewardGrowth;
   let dmgMult = 1, rewardMult = 1;
   if (level >= 3) {
     dmgMult *= enc.mod1.damage_multiplier;
@@ -348,9 +348,8 @@ function modEffectSummary(
     if ((m.xp_multiplier as number) !== 1) parts.push(`+${Math.round((m.xp_multiplier - 1) * 100)}% XP reward`);
   } else if (context === 'trap') {
     const m = mod as typeof TRAP_MODIFIERS[number];
-    const dmgLabel = extra === 'mana' ? 'mana drain' : 'DMG';
+    const dmgLabel = extra === 'mana' ? 'MANA drain' : 'DMG';
     if ((m.damage_multiplier as number) !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% ${dmgLabel}`);
-    if ((m.reward_multiplier as number) !== 1) parts.push(`+${Math.round((m.reward_multiplier - 1) * 100)}% reward`);
   } else {
     const m = mod as typeof TREASURE_MODIFIERS[number];
     if ('stat_multiplier' in m) {
