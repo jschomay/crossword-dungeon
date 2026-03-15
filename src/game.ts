@@ -36,7 +36,7 @@ function roomKey(x: number, y: number): string {
   return `${x},${y}`;
 }
 
-const MAX_MANA = 10;
+const BASE_MANA = 10;
 const BASE_HP = 50;
 const BASE_DMG = 10;
 
@@ -54,13 +54,14 @@ export default class Game {
   private interactionLogEl: HTMLElement;
   private combatMonsterHp: number | null = null;
   private prevHp: number = BASE_HP;
-  private prevMana: number = MAX_MANA;
+  private maxMana: number = BASE_MANA;
+  private prevMana: number = BASE_MANA;
   private prevDmg: number = BASE_DMG;
   private prevXp: number = 0;
   private prevLevel: number = 1;
   private prevCombatMonsterHp: number | null = null;
   private roomStates: Map<string, RoomState> = new Map();
-  private mana: number = MAX_MANA;
+  private mana: number = BASE_MANA;
   private hp: number = BASE_HP;
   private maxHp: number = BASE_HP;
   private dmg: number = BASE_DMG;
@@ -129,7 +130,8 @@ export default class Game {
 
   private restart(): void {
     this.initRoomStates();
-    this.mana = MAX_MANA;
+    this.mana = BASE_MANA;
+    this.maxMana = BASE_MANA;
     this.hp = BASE_HP;
     this.maxHp = BASE_HP;
     this.dmg = BASE_DMG;
@@ -234,13 +236,12 @@ export default class Game {
           } else {
             const manaDrain = Math.min(this.mana, stats.dmg);
             this.mana = Math.max(0, this.mana - manaDrain);
-            logLines.push(`The ${enc.baseName} drains your mana!`);
-            logLines.push(`  -${manaDrain} mana`);
+            logLines.push(`The ${enc.baseName} drains your MANA!`);
+            logLines.push(`  -${manaDrain} MANA`);
           }
         } else {
           // treasure — mana already spent above, no extra drain
           logLines.push(`You fumble with the treasure.`);
-          logLines.push(`  -1 mana`);
         }
       }
 
@@ -292,29 +293,31 @@ export default class Game {
         this.gainXp(stats.reward);
         logLines.push(`  +${stats.reward} XP`);
       } else {
-        this.mana = Math.min(MAX_MANA, this.mana + stats.reward);
-        logLines.push(`  +${stats.reward} mana`);
+        this.mana = Math.min(this.maxMana, this.mana + stats.reward);
+        logLines.push(`  +${stats.reward} MANA`);
       }
     } else {
       logLines.push(`You claim the treasure: ${enc.baseName}!`);
       // Immediate treasures grant their effect; simplified for now
       if (enc.subKind === 'immediate') {
-        const amount = enc.baseAmount + level * enc.amountGrowth;
+        const amount = enc.baseAmount + (level - 1) * enc.amountGrowth;
         if (enc.effect === 'restore_hp') {
           this.hp = Math.min(this.maxHp, this.hp + amount);
           logLines.push(`  +${amount} HP`);
         } else if (enc.effect === 'restore_mana') {
-          this.mana = Math.min(MAX_MANA, this.mana + amount);
-          logLines.push(`  +${amount} mana`);
+          this.mana = Math.min(this.maxMana, this.mana + amount);
+          logLines.push(`  +${amount} MANA`);
         } else if (enc.effect === 'grant_xp') {
           this.gainXp(amount);
           logLines.push(`  +${amount} XP`);
         } else if (enc.effect === 'increase_max_hp') {
           this.maxHp += amount;
-          this.hp += amount;
+          this.hp = Math.min(this.hp + amount, this.maxHp);
           logLines.push(`  +${amount} max HP`);
         } else if (enc.effect === 'increase_max_mana') {
-          logLines.push(`  Your mana reserves deepen.`);
+          this.maxMana += amount;
+          this.mana = Math.min(this.mana + amount, this.maxMana);
+          logLines.push(`  +${amount} max MANA`);
         } else if (enc.effect === 'reveal_letter') {
           logLines.push(`  A letter is magically revealed.`);
         }
@@ -408,7 +411,7 @@ export default class Game {
 
     // Hero panel
     const hpBarStr = hpBar(this.hp, this.maxHp);
-    const manaBarStr = hpBar(this.mana, MAX_MANA);
+    const manaBarStr = hpBar(this.mana, this.maxMana);
     const hpFlash    = this.hp    !== this.prevHp    ? ' class="flash"' : '';
     const manaFlash  = this.mana  !== this.prevMana  ? ' class="flash"' : '';
     const dmgFlash   = this.dmg   !== this.prevDmg   ? ' class="flash"' : '';
@@ -418,7 +421,7 @@ export default class Game {
       `<span style="color:#aaa">Adventurer</span>  <span${lvlFlash} style="color:#777">Lv.${this.level}</span>\n` +
       `\n` +
       `<span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.maxHp}</span>\n` +
-      `<span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${MAX_MANA}</span>\n` +
+      `<span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.maxMana}</span>\n` +
       `<span${dmgFlash} style="color:${C_DMG}">DMG:  ${this.dmg}</span>\n` +
       `<span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}</span>`;
 

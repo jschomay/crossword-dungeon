@@ -329,20 +329,54 @@ describe('generateTreasure', () => {
     expect(t.kind).toBe('treasure');
     expect(t.subKind).toBe('consumable');
     const all = formatEncounter(t, 2).join('\n');
-    // amount = 3 + 2*2 = 7
-    expect(all).toContain('7');
-    expect(all).toContain('on use');
+    // amount = 3 + (2-1)*2 = 5
+    expect(all).toContain('+5 HP on use');
   });
 
-  it('immediate: correct amount scaling at display level', () => {
+  it('immediate restore_hp: correct label and scaling', () => {
     // Healing Shrine: base_amount=10, amount_growth=5
     const rng = mockRng(['immediate', TREASURE_IMMEDIATE[0]]);
     const t = generateTreasure(rng);
     expect(t.subKind).toBe('immediate');
     const all = formatEncounter(t, 3).join('\n');
-    // amount = 10 + 3*5 = 25
-    expect(all).toContain('25');
-    expect(all).toContain('on loot');
+    // amount = 10 + (3-1)*5 = 20
+    expect(all).toContain('+20 HP on loot');
+  });
+
+  it('immediate restore_mana: correct label and scaling', () => {
+    // Mana Well: base_amount=5, amount_growth=2
+    const rng = mockRng(['immediate', TREASURE_IMMEDIATE[1]]);
+    const t = generateTreasure(rng);
+    const all = formatEncounter(t, 3).join('\n');
+    // amount = 5 + (3-1)*2 = 9
+    expect(all).toContain('+9 MANA on loot');
+  });
+
+  it('immediate increase_max_hp: correct label and scaling', () => {
+    // Blessed Fountain: base_amount=2, amount_growth=2
+    const rng = mockRng(['immediate', TREASURE_IMMEDIATE[2]]);
+    const t = generateTreasure(rng);
+    const all = formatEncounter(t, 2).join('\n');
+    // amount = 2 + (2-1)*2 = 4
+    expect(all).toContain('+4 max HP on loot');
+  });
+
+  it('immediate increase_max_mana: correct label and scaling', () => {
+    // Arcane Nexus: base_amount=2, amount_growth=2
+    const rng = mockRng(['immediate', TREASURE_IMMEDIATE[3]]);
+    const t = generateTreasure(rng);
+    const all = formatEncounter(t, 2).join('\n');
+    // amount = 2 + (2-1)*2 = 4
+    expect(all).toContain('+4 max MANA on loot');
+  });
+
+  it('immediate grant_xp: correct label and scaling', () => {
+    // Experience Tome: base_amount=10, amount_growth=10
+    const rng = mockRng(['immediate', TREASURE_IMMEDIATE[4]]);
+    const t = generateTreasure(rng);
+    const all = formatEncounter(t, 2).join('\n');
+    // amount = 10 + (2-1)*10 = 20
+    expect(all).toContain('+20 XP on loot');
   });
 
   it('item level 1-2: no modifiers in display', () => {
@@ -356,8 +390,8 @@ describe('generateTreasure', () => {
     const all = formatEncounter(t, 1).join('\n');
     expect(all).toContain('Sword');
     expect(all).not.toContain('Fine');
-    // stat = 3 + 1*2 = 5, no multiplier
-    expect(all).toContain('+5 DAMAGE');
+    // stat = 3 + (1-1)*2 = 3, no multiplier
+    expect(all).toContain('+3 DAMAGE');
   });
 
   it('item level 3: mod1 multiplies stat', () => {
@@ -370,8 +404,8 @@ describe('generateTreasure', () => {
     const all = formatEncounter(t, 3).join('\n');
     expect(all).toContain('Fine');
     expect(all).toContain('Sword');
-    // raw = 3 + 3*2 = 9, *1.2 = round(10.8) = 11
-    expect(all).toContain('+11 DAMAGE');
+    // raw = 3 + (3-1)*2 = 7, *1.2 = round(8.4) = 8
+    expect(all).toContain('+8 DAMAGE');
   });
 
   it('item level 6: mod1 and mod2 stack', () => {
@@ -385,8 +419,8 @@ describe('generateTreasure', () => {
     expect(all).toContain('Fine');
     expect(all).toContain('Masterwork');
     expect(all).toContain('Sword');
-    // raw = 3 + 6*2 = 15, *1.2 *1.4 = round(25.2) = 25
-    expect(all).toContain('+25 DAMAGE');
+    // raw = 3 + (6-1)*2 = 13, *1.2 *1.4 = round(21.84) = 22
+    expect(all).toContain('+22 DAMAGE');
   });
 
   it('item with passive modifier shows passive effect in display', () => {

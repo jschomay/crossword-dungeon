@@ -429,7 +429,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(`+ ${stats.reward} ${rewardLabel}  on disarm`);
 
   } else if (encounter.subKind === 'item') {
-    const rawStat = encounter.baseStat + displayLevel * encounter.statGrowth;
+    const rawStat = encounter.baseStat + (displayLevel - 1) * encounter.statGrowth;
 
     let totalMult = 1;
     const passiveEffects: string[] = [];
@@ -466,7 +466,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
 
   } else {
     // consumable or immediate
-    const amount = encounter.baseAmount + displayLevel * encounter.amountGrowth;
+    const amount = encounter.baseAmount + (displayLevel - 1) * encounter.amountGrowth;
     const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
     lines.push(title);
     lines.push(encounter.baseDescription);
