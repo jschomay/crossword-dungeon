@@ -351,6 +351,22 @@ export default class Game {
             logLines.push(`The ${enc.baseName} drains your MANA!`);
             logLines.push(`  -${manaDrain} MANA`);
           }
+          const fx = stats.sideEffects;
+          if (fx.manaDrain > 0) {
+            const drained = Math.min(this.mana, fx.manaDrain);
+            this.mana = Math.max(0, this.mana - drained);
+            logLines.push(`  -${drained} MANA (drained)`);
+          }
+          if (fx.maxHpReduce > 0) {
+            this.maxHp = Math.max(1, this.maxHp - fx.maxHpReduce);
+            this.hp = Math.min(this.hp, this.effectiveMaxHp());
+            logLines.push(`  -${fx.maxHpReduce} max HP (permanent)`);
+          }
+          if (fx.maxManaReduce > 0) {
+            this.maxMana = Math.max(1, this.maxMana - fx.maxManaReduce);
+            this.mana = Math.min(this.mana, this.effectiveMaxMana());
+            logLines.push(`  -${fx.maxManaReduce} max MANA (permanent)`);
+          }
         } else {
           // treasure — mana already spent above, no extra drain
           logLines.push(`You fumble with the treasure.`);
@@ -403,10 +419,11 @@ export default class Game {
           dmg: this.effectiveDmg(),
           hp: this.hp,
           def: this.effectiveDef(),
+          mana: this.mana,
           hpPerRound:   equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0),
           manaPerRound: equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0),
         },
-        { dmg: stats.dmg, hp: stats.hp, xp: stats.xp },
+        { dmg: stats.dmg, hp: stats.hp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
       );
       this.runCombatAnimation(enc as MonsterEncounter, result, preamble);
       return;
@@ -490,7 +507,7 @@ export default class Game {
     preamble?: string,
   ): void {
     this.combatRunning = true;
-    const { turns, playerWon, xpGained } = result;
+    const { turns, playerWon, manaGameOver, xpGained } = result;
 
     const firstPlayerTurn = turns.find(t => t.attacker === 'player');
     this.combatMonsterHp = firstPlayerTurn ? firstPlayerTurn.monsterHpAfter + firstPlayerTurn.dmg : 0;
@@ -508,7 +525,7 @@ export default class Game {
           this.combatMonsterHp = t.monsterHpAfter;
         } else {
           this.hp = t.playerHpAfter;
-          this.mana = Math.min(this.effectiveMaxMana(), this.mana + t.manaGained);
+          this.mana = t.playerManaAfter;
         }
         this.render();
         setTimeout(() => showTurn(idx + 1), 700);
@@ -523,6 +540,9 @@ export default class Game {
           this.showInteraction(lines);
           if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
           this.render();
+        } else if (manaGameOver) {
+          this.combatRunning = false;
+          this.triggerManaGameOver();
         } else {
           this.hp = 0;
           this.combatRunning = false;

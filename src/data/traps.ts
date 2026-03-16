@@ -62,9 +62,8 @@ export const TRAP_TYPES = [
 ] as const;
 
 export const TRAP_MODIFIERS = [
-  { name: 'Hidden', description: 'Expertly concealed', damage_multiplier: 1.3, reward_multiplier: 1.2 },
-  { name: 'Ancient', description: 'Weathered but still deadly', damage_multiplier: 1.2, reward_multiplier: 1.3 },
-  { name: 'Corroded', description: 'Rusted and infectious', damage_multiplier: 1.4, reward_multiplier: 1.25 },
-  { name: 'Cursed', description: 'Imbued with dark magic', damage_multiplier: 1.3, reward_multiplier: 1.4 },
-  { name: 'Volatile', description: 'Unstable and dangerous', damage_multiplier: 1.5, reward_multiplier: 1.5 },
+  { name: 'Volatile',  description: 'Unstable and explosive', dmg_bonus: 3, mana_drain: 0, max_hp_reduce: 0, max_mana_reduce: 0 },
+  { name: 'Draining',  description: 'Leeches magical reserves', dmg_bonus: 0, mana_drain: 4, max_hp_reduce: 0, max_mana_reduce: 0 },
+  { name: 'Wasting',   description: 'Weakens the body permanently', dmg_bonus: 0, mana_drain: 0, max_hp_reduce: 2, max_mana_reduce: 0 },
+  { name: 'Cursed',    description: 'Imbued with dark magic', dmg_bonus: 0, mana_drain: 0, max_hp_reduce: 0, max_mana_reduce: 2 },
 ] as const;

@@ -26,8 +26,9 @@ export const TREASURE_IMMEDIATE = [
 ] as const;
 
 export const TREASURE_MODIFIERS = [
-  { name: 'Fine', description: 'Well-crafted and balanced', stat_multiplier: 1.2 },
-  { name: 'Masterwork', description: 'Created by a skilled artisan', stat_multiplier: 1.4 },
-  { name: 'Regenerating', description: 'Slowly mends wounds', passive_effect: 'hp_per_combat_round' as const, passive_amount: 3 },
-  { name: 'Arcane', description: 'Infused with magical energy', passive_effect: 'mana_per_combat_round' as const, passive_amount: 2 },
+  { name: 'Fine',         description: 'Well-crafted and balanced',          stat_multiplier: 1.5 },
+  { name: 'Regenerating', description: 'Slowly mends wounds',                passive_effect: 'hp_per_combat_round' as const,   passive_amount: 3 },
+  { name: 'Arcane',       description: 'Infused with magical energy',        passive_effect: 'mana_per_combat_round' as const,  passive_amount: 2 },
+  { name: 'Fortifying',   description: 'Strengthens the body while worn',    bonus_effect: 'max_hp' as const,   bonus_amount: 5 },
+  { name: 'Imbued',       description: 'Suffused with greater magical capacity', bonus_effect: 'max_mana' as const, bonus_amount: 4 },
 ] as const;

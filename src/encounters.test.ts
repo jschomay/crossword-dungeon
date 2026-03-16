@@ -43,36 +43,71 @@ function mockRngWithFirstMod<T>(getItems: unknown[], firstMod: T): Rng {
 // ---- getMonsterStats ----
 
 describe('getMonsterStats', () => {
-  // Rat: base_hp=8 hp_growth=2, base_damage=2 damage_growth=1, base_xp=8 xp_growth=2
-  // mod1=Frenzied: hp=1.0, dmg=1.3, xp=1.2
-  // mod2=Armored:  hp=1.4, dmg=1.0, xp=1.3
+  // Rat: base_hp=8 hp_growth=2, base_damage=2 damage_growth=1, base_def=0 def_growth=0, base_xp=8 xp_growth=2
+  // mod1=Frenzied: dmg_bonus=2, hp_bonus=0, def_bonus=0, mana_drain=0
+  // mod2=Armored:  dmg_bonus=0, hp_bonus=0, def_bonus=2, mana_drain=0
   const getRat = () => {
     const rng = mockRng([MONSTER_TYPES[0], MONSTER_MODIFIERS[0], MONSTER_MODIFIERS[1]]);
     return generateMonster(rng);
   };
 
-  it('level 1: raw stats, no multipliers', () => {
+  it('level 1: raw stats, no modifiers', () => {
     const stats = getMonsterStats(getRat(), 1);
-    // hp=8+(0)*2=8, dmg=2+(0)*1=2, xp=8+(0)*2=8
-    expect(stats).toEqual({ hp: 8, dmg: 2, xp: 8 });
+    // hp=8, dmg=2, def=0, xp=8, manaDrain=0
+    expect(stats).toEqual({ hp: 8, dmg: 2, def: 0, xp: 8, manaDrain: 0 });
   });
 
   it('level 3: mod1 applied', () => {
     const stats = getMonsterStats(getRat(), 3);
-    // raw hp=8+(2)*2=12, dmg=2+(2)*1=4, xp=8+(2)*2=12
-    // *1.0, *1.3, *1.2
+    // raw hp=8+(2)*2=12, dmg=2+(2)*1=4, def=0, xp=8+(2)*2=12
+    // Frenzied: +2 dmg
     expect(stats.hp).toBe(12);
-    expect(stats.dmg).toBe(Math.round(4 * 1.3)); // 5
-    expect(stats.xp).toBe(Math.round(12 * 1.2)); // 14
+    expect(stats.dmg).toBe(6); // 4+2
+    expect(stats.def).toBe(0);
+    expect(stats.xp).toBe(12);
+    expect(stats.manaDrain).toBe(0);
   });
 
   it('level 6: mod1 and mod2 applied', () => {
+    // getRat uses mod1=Frenzied(dmg+2), mod2=Huge(hp+6)
     const stats = getMonsterStats(getRat(), 6);
-    // raw hp=8+(5)*2=18, dmg=2+(5)*1=7, xp=8+(5)*2=18
-    // *1.0*1.4=1.4, *1.3*1.0=1.3, *1.2*1.3=1.56
-    expect(stats.hp).toBe(Math.round(18 * 1.4)); // 25
-    expect(stats.dmg).toBe(Math.round(7 * 1.3)); // 9
-    expect(stats.xp).toBe(Math.round(18 * 1.56)); // 28
+    // raw hp=8+(5)*2=18, dmg=2+(5)*1=7, def=0, xp=18
+    // Frenzied: +2 dmg; Huge: +6 hp
+    expect(stats.hp).toBe(24); // 18+6
+    expect(stats.dmg).toBe(9); // 7+2
+    expect(stats.def).toBe(0);
+    expect(stats.xp).toBe(18);
+    expect(stats.manaDrain).toBe(0);
+  });
+
+  it('Armored mod adds def bonus', () => {
+    // Orc: base_def=1, def_growth=1; mod1=Armored (def_bonus=2)
+    const rng = mockRngWithFirstMod([MONSTER_TYPES[3]], MONSTER_MODIFIERS[2]); // Armored first
+    const m = generateMonster(rng);
+    const stats = getMonsterStats(m, 3);
+    // base_def = 1 + (3-1)*1 = 3, +2 bonus = 5
+    expect(stats.def).toBe(5);
+  });
+
+  it('Leech mod adds manaDrain', () => {
+    // Rat; mod1=Leech (mana_drain=2)
+    const rng = mockRngWithFirstMod([MONSTER_TYPES[0]], MONSTER_MODIFIERS[3]); // Leech first
+    const m = generateMonster(rng);
+    const stats = getMonsterStats(m, 3);
+    expect(stats.manaDrain).toBe(2);
+    expect(stats.dmg).toBe(4); // no dmg bonus from Leech
+  });
+
+  it('two Leech mods stack manaDrain', () => {
+    // mod1=Leech, mod2=Leech
+    const leech = MONSTER_MODIFIERS[3];
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]) { return arr[0] as T; },
+      shuffle<T>() { return [leech as unknown as T, leech as unknown as T]; },
+    };
+    const m = generateMonster(rng);
+    const stats = getMonsterStats(m, 6);
+    expect(stats.manaDrain).toBe(4); // 2+2
   });
 });
 
@@ -80,34 +115,75 @@ describe('getMonsterStats', () => {
 
 describe('getTrapStats', () => {
   // Dart Trap: base_damage=4, damage_growth=2, base_xp=8, xp_growth=2
-  // mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
-  // mod2=Ancient: dmg_mult=1.2, reward_mult=1.1
+  // mod1=Volatile: dmg_bonus=3, mana_drain=0, max_hp_reduce=0, max_mana_reduce=0
+  // mod2=Draining: dmg_bonus=0, mana_drain=4, max_hp_reduce=0, max_mana_reduce=0
   const getDartTrap = () => {
     const rng = mockRng([TRAP_TYPES[0], TRAP_MODIFIERS[0], TRAP_MODIFIERS[1]]);
     return generateTrap(rng);
   };
 
-  it('level 1: raw stats, no multipliers', () => {
+  it('level 1: raw stats, no modifiers', () => {
     const stats = getTrapStats(getDartTrap(), 1);
-    // dmg=4+(0)*2=4, reward=8+(0)*2=8
-    expect(stats).toEqual({ dmg: 4, reward: 8, rewardType: 'xp' });
+    // dmg=4, reward=8, no side effects
+    expect(stats.dmg).toBe(4);
+    expect(stats.reward).toBe(8);
+    expect(stats.rewardType).toBe('xp');
+    expect(stats.sideEffects).toEqual({ manaDrain: 0, maxHpReduce: 0, maxManaReduce: 0 });
   });
 
   it('level 3: mod1 applied', () => {
     const stats = getTrapStats(getDartTrap(), 3);
-    // raw dmg=4+(2)*2=8, reward=8+(2)*2=12 ; *1.3, *1.2
-    expect(stats.dmg).toBe(Math.round(8 * 1.3)); // 10
-    expect(stats.reward).toBe(Math.round(12 * 1.2)); // 14
+    // raw dmg=4+(2)*2=8 + Volatile dmg_bonus=3 = 11; reward flat=12
+    expect(stats.dmg).toBe(11);
+    expect(stats.reward).toBe(12);
     expect(stats.rewardType).toBe('xp');
+    expect(stats.sideEffects.manaDrain).toBe(0);
   });
 
-  it('level 6: mod1 and mod2 applied', () => {
+  it('level 6: two modifiers applied', () => {
     const stats = getTrapStats(getDartTrap(), 6);
-    // raw dmg=4+(5)*2=14, reward=8+(5)*2=18
-    // mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
-    // mod2=Ancient: dmg_mult=1.2, reward_mult=1.3
-    expect(stats.dmg).toBe(Math.round(14 * 1.3 * 1.2)); // 22
-    expect(stats.reward).toBe(Math.round(18 * 1.2 * 1.3)); // 28
+    // raw dmg=4+(5)*2=14 + Volatile(3) + Draining(0) = 17; reward flat=18
+    expect(stats.dmg).toBe(17);
+    expect(stats.reward).toBe(18);
+    expect(stats.sideEffects.manaDrain).toBe(4); // Draining
+  });
+
+  it('Wasting mod reduces max HP', () => {
+    // Dart Trap, mod1=Wasting (max_hp_reduce=2)
+    const rng = mockRngWithFirstMod([TRAP_TYPES[0]], TRAP_MODIFIERS[2]);
+    const t = generateTrap(rng);
+    const stats = getTrapStats(t, 3);
+    expect(stats.sideEffects.maxHpReduce).toBe(2);
+    expect(stats.sideEffects.maxManaReduce).toBe(0);
+    expect(stats.sideEffects.manaDrain).toBe(0);
+  });
+
+  it('Cursed mod reduces max MANA', () => {
+    // Dart Trap, mod1=Cursed (max_mana_reduce=2)
+    const rng = mockRngWithFirstMod([TRAP_TYPES[0]], TRAP_MODIFIERS[3]);
+    const t = generateTrap(rng);
+    const stats = getTrapStats(t, 3);
+    expect(stats.sideEffects.maxManaReduce).toBe(2);
+    expect(stats.sideEffects.maxHpReduce).toBe(0);
+  });
+
+  it('stacked side effects accumulate across two mods', () => {
+    // shuffle puts Wasting first, then Cursed second → mod1=Wasting, mod2=Cursed
+    let shuffleCall = 0;
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]) { return arr[0] as T; }, // always Dart Trap
+      shuffle<T>(arr: readonly T[]) {
+        shuffleCall++;
+        // put Wasting at 0, Cursed at 1
+        const wasting = TRAP_MODIFIERS[2] as unknown as T;
+        const cursed  = TRAP_MODIFIERS[3] as unknown as T;
+        return [wasting, cursed, ...arr.filter(x => x !== (wasting as unknown) && x !== (cursed as unknown))];
+      },
+    };
+    const t = generateTrap(rng);
+    const stats = getTrapStats(t, 6);
+    expect(stats.sideEffects.maxHpReduce).toBe(2);
+    expect(stats.sideEffects.maxManaReduce).toBe(2);
   });
 });
 
@@ -115,7 +191,7 @@ describe('getTrapStats', () => {
 
 describe('resolveCombat', () => {
   it('player wins when player kills monster in one hit', () => {
-    const result = resolveCombat({ dmg: 50, hp: 30 }, { dmg: 5, hp: 10, xp: 20 });
+    const result = resolveCombat({ dmg: 50, hp: 30 }, { dmg: 5, hp: 10, xp: 20, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(true);
     expect(result.xpGained).toBe(20);
     expect(result.turns[0].attacker).toBe('player');
@@ -126,7 +202,7 @@ describe('resolveCombat', () => {
   it('monster wins when it kills player first', () => {
     // player dmg=1, player hp=5; monster dmg=10, monster hp=100
     // round 1: player hits for 1 (monster hp=99), monster hits for 10 (player hp=0)
-    const result = resolveCombat({ dmg: 1, hp: 5 }, { dmg: 10, hp: 100, xp: 50 });
+    const result = resolveCombat({ dmg: 1, hp: 5 }, { dmg: 10, hp: 100, xp: 50, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(false);
     expect(result.xpGained).toBe(0);
     const lastTurn = result.turns[result.turns.length - 1];
@@ -138,7 +214,7 @@ describe('resolveCombat', () => {
     // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17)
     // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=14)
     // r3: player hits 5 (mon hp=0) -> player wins
-    const result = resolveCombat({ dmg: 5, hp: 20 }, { dmg: 3, hp: 12, xp: 10 });
+    const result = resolveCombat({ dmg: 5, hp: 20 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(true);
     expect(result.turns.length).toBe(5); // 3 player attacks, 2 monster attacks
     expect(result.turns[result.turns.length - 1].monsterHpAfter).toBe(0);
@@ -147,9 +223,67 @@ describe('resolveCombat', () => {
   it('exact-kill: player and monster hp reach 0 simultaneously', () => {
     // player dmg=10, hp=10; monster dmg=10, hp=10
     // player attacks: mon hp=0 -> player wins immediately
-    const result = resolveCombat({ dmg: 10, hp: 10 }, { dmg: 10, hp: 10, xp: 5 });
+    const result = resolveCombat({ dmg: 10, hp: 10 }, { dmg: 10, hp: 10, xp: 5, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(true);
     expect(result.turns.length).toBe(1);
+  });
+
+  it('monster def reduces player damage, minimum 1', () => {
+    // player dmg=5, monster def=3 -> effective=2
+    const result = resolveCombat({ dmg: 5, hp: 30 }, { dmg: 2, hp: 10, xp: 5, def: 3, manaDrain: 0 });
+    expect(result.turns[0].dmg).toBe(2); // 5-3=2
+    expect(result.playerWon).toBe(true);
+  });
+
+  it('monster def cannot reduce player damage below 1', () => {
+    // player dmg=2, monster def=5 -> clamped to 1
+    const result = resolveCombat({ dmg: 2, hp: 30 }, { dmg: 1, hp: 3, xp: 5, def: 5, manaDrain: 0 });
+    expect(result.turns[0].dmg).toBe(1);
+    expect(result.playerWon).toBe(true);
+  });
+
+  it('Leech: manaDrained recorded on monster attack turns', () => {
+    // monster has manaDrain=3; player takes 2 rounds to kill it
+    const result = resolveCombat({ dmg: 5, hp: 20 }, { dmg: 2, hp: 8, xp: 5, def: 0, manaDrain: 3 });
+    const monsterTurns = result.turns.filter(t => t.attacker === 'monster');
+    expect(monsterTurns.length).toBeGreaterThan(0);
+    monsterTurns.forEach(t => expect(t.manaDrained).toBe(3));
+  });
+
+  it('Leech: player attack turns have manaDrained=0', () => {
+    const result = resolveCombat({ dmg: 5, hp: 20 }, { dmg: 2, hp: 8, xp: 5, def: 0, manaDrain: 3 });
+    const playerTurns = result.turns.filter(t => t.attacker === 'player');
+    playerTurns.forEach(t => expect(t.manaDrained).toBe(0));
+  });
+
+  it('mana hitting 0 mid-combat triggers manaGameOver', () => {
+    // player mana=4, monster drains 3/hit; after 2 monster hits mana=0
+    // player dmg=5, hp=30, monster hp=20 (takes 4 hits) so mana runs out first
+    const result = resolveCombat({ dmg: 5, hp: 30, mana: 4 }, { dmg: 1, hp: 20, xp: 10, def: 0, manaDrain: 3 });
+    expect(result.manaGameOver).toBe(true);
+    expect(result.playerWon).toBe(false);
+    expect(result.xpGained).toBe(0);
+  });
+
+  it('manaGameOver is false when player wins before mana runs out', () => {
+    // player kills monster in one hit, mana never drained
+    const result = resolveCombat({ dmg: 50, hp: 30, mana: 5 }, { dmg: 1, hp: 5, xp: 10, def: 0, manaDrain: 3 });
+    expect(result.playerWon).toBe(true);
+    expect(result.manaGameOver).toBe(false);
+  });
+
+  it('manaGameOver is false when player dies to HP first', () => {
+    // no mana drain, player dies to damage
+    const result = resolveCombat({ dmg: 1, hp: 5, mana: 20 }, { dmg: 10, hp: 100, xp: 10, def: 0, manaDrain: 0 });
+    expect(result.playerWon).toBe(false);
+    expect(result.manaGameOver).toBe(false);
+  });
+
+  it('playerManaAfter tracked on monster turns', () => {
+    // player mana=10, manaDrain=3; after first monster turn mana=7
+    const result = resolveCombat({ dmg: 5, hp: 20, mana: 10 }, { dmg: 1, hp: 20, xp: 5, def: 0, manaDrain: 3 });
+    const firstMonsterTurn = result.turns.find(t => t.attacker === 'monster')!;
+    expect(firstMonsterTurn.playerManaAfter).toBe(7); // 10-3
   });
 });
 
@@ -157,7 +291,7 @@ describe('resolveCombat', () => {
 
 describe('passive effects', () => {
   it('getTreasureItemStats: Regenerating mod gives hpPerRound', () => {
-    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[2]); // Regenerating first
+    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[2]], TREASURE_MODIFIERS[1]); // Regenerating=index 1 first
     const enc = generateTreasure(rng);
     expect(enc.subKind).toBe('item');
     const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
@@ -166,11 +300,48 @@ describe('passive effects', () => {
   });
 
   it('getTreasureItemStats: Arcane mod gives manaPerRound', () => {
-    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[3]); // Arcane first
+    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[2]); // Arcane=index 2 first
     const enc = generateTreasure(rng);
     const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
     expect(stats.manaPerRound).toBe(2);
     expect(stats.hpPerRound).toBe(0);
+  });
+
+  it('getTreasureItemStats: Fortifying mod adds maxHpBonus', () => {
+    // Fortifying=index 3, bonus_effect=max_hp, bonus_amount=5
+    const rng = mockRngWithFirstMod(['item', TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[3]);
+    const enc = generateTreasure(rng);
+    const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
+    expect(stats.maxHpBonus).toBe(5);
+    expect(stats.maxManaBonus).toBe(0);
+    expect(stats.hpPerRound).toBe(0);
+  });
+
+  it('getTreasureItemStats: Imbued mod adds maxManaBonus', () => {
+    // Imbued=index 4, bonus_effect=max_mana, bonus_amount=4
+    const rng = mockRngWithFirstMod(['item', TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[4]);
+    const enc = generateTreasure(rng);
+    const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
+    expect(stats.maxManaBonus).toBe(4);
+    expect(stats.maxHpBonus).toBe(0);
+    expect(stats.manaPerRound).toBe(0);
+  });
+
+  it('Fortifying stacks with item base max_hp stat', () => {
+    // Amulet of Vitality: base_max_hp_bonus=5, growth=2; Fortifying adds +5
+    const rng = mockRngWithFirstMod(['item', TREASURE_ITEMS[8], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[3]);
+    const enc = generateTreasure(rng);
+    const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
+    // base = 5 + (3-1)*2 = 9, +5 Fortifying = 14
+    expect(stats.maxHpBonus).toBe(14);
+  });
+
+  it('Fortifying/Imbued display shows equipped bonus in formatEncounter', () => {
+    const rng = mockRngWithFirstMod(['item', TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[3]);
+    const enc = generateTreasure(rng);
+    const all = formatEncounter(enc, 3).join('\n');
+    expect(all).toContain('Fortifying');
+    expect(all).toContain('+5 max HP while equipped');
   });
 
   it('resolveCombat: hpPerRound heals player each round after monster attacks', () => {
@@ -178,13 +349,13 @@ describe('passive effects', () => {
     // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
     // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
     // r3: player hits 5 (mon hp=0) -> player wins
-    const result = resolveCombat({ dmg: 5, hp: 20, hpPerRound: 3 }, { dmg: 3, hp: 12, xp: 10 });
+    const result = resolveCombat({ dmg: 5, hp: 20, hpPerRound: 3 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(true);
     expect(result.turns[1].playerHpAfter).toBe(20); // healed back to full after regen
   });
 
   it('resolveCombat: manaPerRound tracked per turn', () => {
-    const result = resolveCombat({ dmg: 5, hp: 20, manaPerRound: 2 }, { dmg: 3, hp: 12, xp: 10 });
+    const result = resolveCombat({ dmg: 5, hp: 20, manaPerRound: 2 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
     expect(result.turns[1].manaGained).toBe(2);
   });
 });
@@ -193,23 +364,23 @@ describe('passive effects', () => {
 
 describe('generateMonster', () => {
   it('stores base stats and always rolls two mods', () => {
-    const rng = mockRng([MONSTER_TYPES[0], MONSTER_MODIFIERS[0], MONSTER_MODIFIERS[1]]);
+    const rng = mockRng([MONSTER_TYPES[0]]);
     const m = generateMonster(rng);
     expect(m.kind).toBe('monster');
     expect(m.baseName).toBe('Rat');
+    // shuffle returns array as-is, so mod1=MONSTER_MODIFIERS[0]=Frenzied, mod2=MONSTER_MODIFIERS[1]=Huge
     expect(m.mod1.name).toBe('Frenzied');
-    expect(m.mod2.name).toBe('Armored');
+    expect(m.mod2.name).toBe('Huge');
   });
 
   it('level 1: no modifiers applied in display, correct stats', () => {
-    // Rat: base_hp=8 hp_growth=2, base_damage=2 damage_growth=1, base_xp=8 xp_growth=2
-    const rng = mockRng([MONSTER_TYPES[0]]); // Rat; mods don't matter at display level 1
+    // Rat: base_hp=8, base_damage=2, base_def=0, base_xp=8
+    const rng = mockRng([MONSTER_TYPES[0]]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 1);
     const all = lines.join('\n');
     expect(all).toContain('Lv.1');
     expect(all).toContain('Rat');
-    // hp = 8+(0)*2 = 8, dmg = 2+(0)*1 = 2, xp = 8+(0)*2 = 8
     expect(all).toContain('HP: ██████████  8');
     expect(all).toContain('DMG: 2');
     expect(all).toContain('8 XP');
@@ -217,7 +388,7 @@ describe('generateMonster', () => {
 
   it('level 3: one modifier (mod1) applied', () => {
     // Goblin: base_hp=12 hp_growth=3, base_dmg=3 dmg_growth=1, base_xp=10 xp_growth=3
-    // mod1=Frenzied: hp_mult=1.0, dmg_mult=1.3, xp_mult=1.2
+    // mod1=Frenzied: dmg_bonus=2
     const goblin = MONSTER_TYPES[1];
     const frenzied = MONSTER_MODIFIERS[0];
     const armored = MONSTER_MODIFIERS[1];
@@ -228,40 +399,37 @@ describe('generateMonster', () => {
     expect(all).toContain('Lv.3');
     expect(all).toContain('Frenzied');
     expect(all).toContain('Goblin');
-    // raw_hp = 12+(2)*3 = 18, *1.0 = 18
+    // hp = 12+(2)*3 = 18 (no hp bonus)
     expect(all).toContain('HP: ██████████  18');
-    // raw_dmg = 3+(2)*1 = 5, *1.3 = round(6.5) = 7
+    // dmg = 3+(2)*1 = 5, +2 bonus = 7
     expect(all).toContain('DMG: 7');
-    // raw_xp = 10+(2)*3 = 16, *1.2 = round(19.2) = 19
-    expect(all).toContain('19 XP');
+    // xp = 10+(2)*3 = 16 (flat)
+    expect(all).toContain('16 XP');
   });
 
   it('level 6: both modifiers (mod1 + mod2) applied', () => {
-    // Goblin, mod1=Frenzied (hp_mult=1.0, dmg_mult=1.3, xp_mult=1.2)
-    //         mod2=Armored  (hp_mult=1.4, dmg_mult=1.0, xp_mult=1.3)
+    // Goblin, shuffle as-is: mod1=Frenzied (dmg_bonus=2), mod2=Huge (hp_bonus=6)
     const goblin = MONSTER_TYPES[1];
-    const frenzied = MONSTER_MODIFIERS[0];
-    const armored = MONSTER_MODIFIERS[1];
-    const rng = mockRng([goblin, frenzied, armored]);
+    const rng = mockRng([goblin]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 6);
     const all = lines.join('\n');
     expect(all).toContain('Lv.6');
     expect(all).toContain('Frenzied');
-    expect(all).toContain('Armored');
+    expect(all).toContain('Huge');
     expect(all).toContain('Goblin');
-    // raw_hp = 12+(5)*3 = 27, *1.0 *1.4 = round(37.8) = 38
-    expect(all).toContain('HP: ██████████  38');
-    // raw_dmg = 3+(5)*1 = 8, *1.3 *1.0 = round(10.4) = 10
+    // hp = 12+(5)*3 = 27, +6 (Huge) = 33
+    expect(all).toContain('HP: ██████████  33');
+    // dmg = 3+(5)*1 = 8, +2 (Frenzied) = 10
     expect(all).toContain('DMG: 10');
-    // raw_xp = 10+(5)*3 = 25, *1.2 *1.3 = round(39) = 39
-    expect(all).toContain('39 XP');
+    // xp = 10+(5)*3 = 25 (flat)
+    expect(all).toContain('25 XP');
   });
 
   it('level 5: only mod1 applied, mod2 not shown', () => {
     const goblin = MONSTER_TYPES[1];
     const frenzied = MONSTER_MODIFIERS[0];
-    const armored = MONSTER_MODIFIERS[1];
+    const armored = MONSTER_MODIFIERS[2]; // Armored is index 2
     const rng = mockRng([goblin, frenzied, armored]);
     const m = generateMonster(rng);
     const lines = formatEncounter(m, 5);
@@ -313,46 +481,72 @@ describe('generateTrap', () => {
   });
 
   it('level 3 trap: one modifier applied', () => {
-    // Dart Trap, mod1=Hidden: dmg_mult=1.3, reward_mult=1.2
+    // Dart Trap, mod1=Volatile (dmg_bonus=3), mod2=Draining (mana_drain=4)
     const dartTrap = TRAP_TYPES[0];
-    const hidden = TRAP_MODIFIERS[0];
-    const ancient = TRAP_MODIFIERS[1];
-    const rng = mockRng([dartTrap, hidden, ancient]);
+    const volatile_ = TRAP_MODIFIERS[0];
+    const draining = TRAP_MODIFIERS[1];
+    const rng = mockRng([dartTrap, volatile_, draining]);
     const t = generateTrap(rng);
     const all = formatEncounter(t, 3).join('\n');
-    expect(all).toContain('Hidden');
+    expect(all).toContain('Volatile');
     expect(all).toContain('Dart Trap');
-    // raw_dmg = 4+(2)*2 = 8, *1.3 = round(10.4) = 10
-    expect(all).toContain('DMG: 10');
-    // raw_xp = 8+(2)*2 = 12, *1.2 = round(14.4) = 14
-    expect(all).toContain('14 XP');
+    // raw_dmg = 4+(2)*2 = 8, +3 bonus = 11
+    expect(all).toContain('DMG: 11');
+    // reward flat = 8+(2)*2 = 12
+    expect(all).toContain('12 XP');
   });
 
   it('level 6 trap: two modifiers applied', () => {
-    // Dart Trap, mod1=Hidden (dmg_mult=1.3), mod2=Ancient (dmg_mult=1.2)
+    // Dart Trap, mod1=Volatile (dmg_bonus=3), mod2=Draining (mana_drain=4)
     const dartTrap = TRAP_TYPES[0];
-    const hidden = TRAP_MODIFIERS[0];
-    const ancient = TRAP_MODIFIERS[1];
-    const rng = mockRng([dartTrap, hidden, ancient]);
+    const volatile_ = TRAP_MODIFIERS[0];
+    const draining = TRAP_MODIFIERS[1];
+    const rng = mockRng([dartTrap, volatile_, draining]);
     const t = generateTrap(rng);
     const all = formatEncounter(t, 6).join('\n');
-    expect(all).toContain('Hidden');
-    expect(all).toContain('Ancient');
+    expect(all).toContain('Volatile');
+    expect(all).toContain('Draining');
     expect(all).toContain('Dart Trap');
-    // raw_dmg = 4+(5)*2 = 14, *1.3 *1.2 = round(21.84) = 22
-    expect(all).toContain('DMG: 22');
+    // raw_dmg = 4+(5)*2 = 14, +3 = 17
+    expect(all).toContain('DMG: 17');
+    // Draining side effect shown in mod list
+    expect(all).toContain('drains 4 MANA');
   });
 
   it('magical trap mod effect uses mana drain label', () => {
-    // Rune Ward (mana), mod1=Cursed (dmg_mult=1.3)
+    // Rune Ward (mana), mod1=Wasting (max_hp_reduce=2)
     const runeWard = TRAP_TYPES[2];
-    const cursed = TRAP_MODIFIERS[3];
-    const hidden = TRAP_MODIFIERS[0];
-    const rng = mockRng([runeWard, cursed, hidden]);
+    const wasting = TRAP_MODIFIERS[2];
+    const volatile_ = TRAP_MODIFIERS[0];
+    const rng = mockRng([runeWard, wasting, volatile_]);
     const t = generateTrap(rng);
     const all = formatEncounter(t, 3).join('\n');
-    expect(all).toContain('MANA drain');
+    expect(all).toContain('DRAIN');
     expect(all).not.toContain('% DMG');
+  });
+
+  it('Wasting mod shows max HP reduction in display', () => {
+    const rng = mockRngWithFirstMod([TRAP_TYPES[0]], TRAP_MODIFIERS[2]);
+    const t = generateTrap(rng);
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('Wasting');
+    expect(all).toContain('-2 max HP');
+  });
+
+  it('Cursed mod shows max MANA reduction in display', () => {
+    const rng = mockRngWithFirstMod([TRAP_TYPES[0]], TRAP_MODIFIERS[3]);
+    const t = generateTrap(rng);
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('Cursed');
+    expect(all).toContain('-2 max MANA');
+  });
+
+  it('Draining mod shows mana drain in display', () => {
+    const rng = mockRngWithFirstMod([TRAP_TYPES[0]], TRAP_MODIFIERS[1]);
+    const t = generateTrap(rng);
+    const all = formatEncounter(t, 3).join('\n');
+    expect(all).toContain('Draining');
+    expect(all).toContain('drains 4 MANA');
   });
 });
 
@@ -417,11 +611,11 @@ describe('generateTreasure', () => {
   });
 
   it('item level 1-2: no modifiers in display', () => {
-    // Sword: base_damage_bonus=3, damage_bonus_growth=2; mod1=Fine, mod2=Masterwork
+    // Sword: base_damage_bonus=3, damage_bonus_growth=2; mod1=Fine, mod2=Regenerating
     const sword = TREASURE_ITEMS[0];
-    const fine = TREASURE_MODIFIERS[0];
-    const masterwork = TREASURE_MODIFIERS[1];
-    const rng = mockRng(['item', sword, fine, masterwork]);
+    const fine = TREASURE_MODIFIERS[0];       // Fine: stat_multiplier=1.5
+    const regen = TREASURE_MODIFIERS[1];      // Regenerating
+    const rng = mockRng(['item', sword, fine, regen]);
     const t = generateTreasure(rng);
     expect(t.subKind).toBe('item');
     const all = formatEncounter(t, 1).join('\n');
@@ -432,38 +626,39 @@ describe('generateTreasure', () => {
   });
 
   it('item level 3: mod1 multiplies stat', () => {
-    // Sword, mod1=Fine (stat_multiplier=1.2)
+    // Sword, mod1=Fine (stat_multiplier=1.5)
     const sword = TREASURE_ITEMS[0];
     const fine = TREASURE_MODIFIERS[0];
-    const masterwork = TREASURE_MODIFIERS[1];
-    const rng = mockRng(['item', sword, fine, masterwork]);
+    const regen = TREASURE_MODIFIERS[1];
+    const rng = mockRng(['item', sword, fine, regen]);
     const t = generateTreasure(rng);
     const all = formatEncounter(t, 3).join('\n');
     expect(all).toContain('Fine');
     expect(all).toContain('Sword');
-    // raw = 3 + (3-1)*2 = 7, *1.2 = round(8.4) = 8
-    expect(all).toContain('+8 DMG');
+    // raw = 3 + (3-1)*2 = 7, *1.5 = round(10.5) = 11
+    expect(all).toContain('+11 DMG');
   });
 
-  it('item level 6: mod1 and mod2 stack', () => {
-    // Sword, mod1=Fine (1.2), mod2=Masterwork (1.4)
+  it('item level 6: mod1 Fine and mod2 Regenerating stack', () => {
+    // Sword, mod1=Fine (1.5x), mod2=Regenerating (+3 HP/hit)
     const sword = TREASURE_ITEMS[0];
     const fine = TREASURE_MODIFIERS[0];
-    const masterwork = TREASURE_MODIFIERS[1];
-    const rng = mockRng(['item', sword, fine, masterwork]);
+    const regen = TREASURE_MODIFIERS[1];
+    const rng = mockRng(['item', sword, fine, regen]);
     const t = generateTreasure(rng);
     const all = formatEncounter(t, 6).join('\n');
     expect(all).toContain('Fine');
-    expect(all).toContain('Masterwork');
+    expect(all).toContain('Regenerating');
     expect(all).toContain('Sword');
-    // raw = 3 + (6-1)*2 = 13, *1.2 *1.4 = round(21.84) = 22
-    expect(all).toContain('+22 DMG');
+    // raw = 3 + (6-1)*2 = 13, *1.5 = round(19.5) = 20
+    expect(all).toContain('+20 DMG');
+    expect(all).toContain('+3 HP each hit');
   });
 
   it('item with passive modifier shows passive effect in display', () => {
     // Sword, mod1=Regenerating (+3 HP each hit)
     const sword = TREASURE_ITEMS[0];
-    const regenerating = TREASURE_MODIFIERS[2];
+    const regenerating = TREASURE_MODIFIERS[1]; // index 1 now
     const rng = mockRngWithFirstMod(['item', sword], regenerating);
     const t = generateTreasure(rng);
     const all = formatEncounter(t, 3).join('\n');

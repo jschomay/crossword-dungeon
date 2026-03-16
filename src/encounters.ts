@@ -20,6 +20,8 @@ export type MonsterEncounter = {
   hpGrowth: number;
   baseDamage: number;
   damageGrowth: number;
+  baseDef: number;
+  defGrowth: number;
   baseXp: number;
   xpGrowth: number;
   mod1: typeof MONSTER_MODIFIERS[number];
@@ -39,6 +41,12 @@ export type TrapEncounter = {
   rewardType: 'xp' | 'mana';
   mod1: typeof TRAP_MODIFIERS[number];
   mod2: typeof TRAP_MODIFIERS[number];
+};
+
+export type TrapSideEffects = {
+  manaDrain: number;
+  maxHpReduce: number;
+  maxManaReduce: number;
 };
 
 export type TreasureItemEncounter = {
@@ -136,6 +144,8 @@ export function generateMonster(rng: Rng): MonsterEncounter {
     hpGrowth: base.hp_growth,
     baseDamage: base.base_damage,
     damageGrowth: base.damage_growth,
+    baseDef: base.base_def,
+    defGrowth: base.def_growth,
     baseXp: base.base_xp,
     xpGrowth: base.xp_growth,
     mod1,
@@ -244,47 +254,50 @@ export function generateEncounter(rng: Rng): Encounter {
 export function getMonsterStats(
   enc: MonsterEncounter,
   level: number,
-): { hp: number; dmg: number; xp: number } {
-  const rawHp = enc.baseHp + (level - 1) * enc.hpGrowth;
-  const rawDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
-  const rawXp = enc.baseXp + (level - 1) * enc.xpGrowth;
-  let hpMult = 1, dmgMult = 1, xpMult = 1;
-  if (level >= 3) {
-    hpMult *= enc.mod1.hp_multiplier;
-    dmgMult *= enc.mod1.damage_multiplier;
-    xpMult *= enc.mod1.xp_multiplier;
-  }
-  if (level >= 6) {
-    hpMult *= enc.mod2.hp_multiplier;
-    dmgMult *= enc.mod2.damage_multiplier;
-    xpMult *= enc.mod2.xp_multiplier;
-  }
+): { hp: number; dmg: number; def: number; xp: number; manaDrain: number } {
+  const baseHp  = enc.baseHp  + (level - 1) * enc.hpGrowth;
+  const baseDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
+  const baseDef = enc.baseDef + (level - 1) * enc.defGrowth;
+  const baseXp  = enc.baseXp  + (level - 1) * enc.xpGrowth;
+  let hpBonus = 0, dmgBonus = 0, defBonus = 0, manaDrain = 0;
+  const applyMod = (mod: typeof MONSTER_MODIFIERS[number]) => {
+    hpBonus   += mod.hp_bonus;
+    dmgBonus  += mod.dmg_bonus;
+    defBonus  += mod.def_bonus;
+    manaDrain += mod.mana_drain;
+  };
+  if (level >= 3) applyMod(enc.mod1);
+  if (level >= 6) applyMod(enc.mod2);
   return {
-    hp: round(rawHp * hpMult),
-    dmg: round(rawDmg * dmgMult),
-    xp: round(rawXp * xpMult),
+    hp:  round(baseHp  + hpBonus),
+    dmg: round(baseDmg + dmgBonus),
+    def: round(baseDef + defBonus),
+    xp:  round(baseXp),
+    manaDrain,
   };
 }
 
 export function getTrapStats(
   enc: TrapEncounter,
   level: number,
-): { dmg: number; reward: number; rewardType: 'xp' | 'mana' } {
-  const rawDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
-  const rawReward = enc.baseReward + (level - 1) * enc.rewardGrowth;
-  let dmgMult = 1, rewardMult = 1;
-  if (level >= 3) {
-    dmgMult *= enc.mod1.damage_multiplier;
-    rewardMult *= enc.mod1.reward_multiplier;
-  }
-  if (level >= 6) {
-    dmgMult *= enc.mod2.damage_multiplier;
-    rewardMult *= enc.mod2.reward_multiplier;
-  }
+): { dmg: number; reward: number; rewardType: 'xp' | 'mana'; sideEffects: TrapSideEffects } {
+  const baseDmg    = enc.baseDamage + (level - 1) * enc.damageGrowth;
+  const baseReward = enc.baseReward + (level - 1) * enc.rewardGrowth;
+  let dmgBonus = 0;
+  const sideEffects: TrapSideEffects = { manaDrain: 0, maxHpReduce: 0, maxManaReduce: 0 };
+  const applyMod = (mod: typeof TRAP_MODIFIERS[number]) => {
+    dmgBonus                  += mod.dmg_bonus;
+    sideEffects.manaDrain     += mod.mana_drain;
+    sideEffects.maxHpReduce   += mod.max_hp_reduce;
+    sideEffects.maxManaReduce += mod.max_mana_reduce;
+  };
+  if (level >= 3) applyMod(enc.mod1);
+  if (level >= 6) applyMod(enc.mod2);
   return {
-    dmg: round(rawDmg * dmgMult),
-    reward: round(rawReward * rewardMult),
+    dmg: round(baseDmg + dmgBonus),
+    reward: round(baseReward),
     rewardType: enc.rewardType,
+    sideEffects,
   };
 }
 
@@ -314,14 +327,21 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
   const passiveEffects: string[] = [];
   let hpPerRound = 0;
   let manaPerRound = 0;
+  let bonusMaxHp = 0;
+  let bonusMaxMana = 0;
   const applyMod = (mod: typeof TREASURE_MODIFIERS[number]) => {
     modNames.push(mod.name);
     if ('stat_multiplier' in mod) {
       mult *= mod.stat_multiplier;
-    } else {
+    } else if ('passive_effect' in mod) {
       passiveEffects.push(passiveLabel(mod.passive_effect, mod.passive_amount));
       if (mod.passive_effect === 'hp_per_combat_round')   hpPerRound   += mod.passive_amount;
       if (mod.passive_effect === 'mana_per_combat_round') manaPerRound += mod.passive_amount;
+    } else {
+      // bonus_effect: equipped bonus to max_hp or max_mana
+      passiveEffects.push(`+${mod.bonus_amount} max ${mod.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} equipped`);
+      if (mod.bonus_effect === 'max_hp')   bonusMaxHp   += mod.bonus_amount;
+      if (mod.bonus_effect === 'max_mana') bonusMaxMana += mod.bonus_amount;
     }
   };
   if (level >= 3) applyMod(enc.mod1);
@@ -335,8 +355,8 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
     passiveEffects,
     damageBonus:  enc.statType === 'damage'   ? stat : 0,
     defenseBonus: enc.statType === 'defense'  ? stat : 0,
-    maxHpBonus:   enc.statType === 'max_hp'   ? stat : 0,
-    maxManaBonus: enc.statType === 'max_mana' ? stat : 0,
+    maxHpBonus:   (enc.statType === 'max_hp'   ? stat : 0) + bonusMaxHp,
+    maxManaBonus: (enc.statType === 'max_mana' ? stat : 0) + bonusMaxMana,
     hpPerRound,
     manaPerRound,
   };
@@ -355,7 +375,9 @@ export type CombatPlayerStats = {
 export type CombatMonsterStats = {
   dmg: number;
   hp: number;
+  def: number;
   xp: number;
+  manaDrain: number;
 };
 
 export type CombatTurn = {
@@ -364,48 +386,63 @@ export type CombatTurn = {
   playerHpAfter: number;
   monsterHpAfter: number;
   manaGained: number;
+  manaDrained: number;
+  playerManaAfter: number;
 };
 
 export type CombatResult = {
   turns: CombatTurn[];
   playerWon: boolean;
+  manaGameOver: boolean;
   xpGained: number;
 };
 
-export function resolveCombat(player: CombatPlayerStats, monster: CombatMonsterStats): CombatResult {
-  const { dmg: playerDmg, hp: playerHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0 } = player;
-  const { dmg: monsterDmg, hp: monsterHp, xp } = monster;
+export function resolveCombat(
+  player: CombatPlayerStats & { mana?: number },
+  monster: CombatMonsterStats,
+): CombatResult {
+  const { dmg: playerDmg, hp: playerHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity } = player;
+  const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0 } = monster;
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
   let curMonsterHp = monsterHp;
+  let curMana = startMana;
+  const effectivePlayerDmg  = Math.max(1, playerDmg - monsterDef);
   const effectiveMonsterDmg = Math.max(0, monsterDmg - playerDef);
 
-  while (curPlayerHp > 0 && curMonsterHp > 0) {
-    // Player attacks first
-    curMonsterHp -= playerDmg;
+  while (curPlayerHp > 0 && curMonsterHp > 0 && curMana > 0) {
+    // Player attacks first (reduced by monster def, minimum 1)
+    curMonsterHp -= effectivePlayerDmg;
     turns.push({
       attacker: 'player',
-      dmg: playerDmg,
+      dmg: effectivePlayerDmg,
       playerHpAfter: curPlayerHp,
       monsterHpAfter: Math.max(0, curMonsterHp),
       manaGained: 0,
+      manaDrained: 0,
+      playerManaAfter: curMana,
     });
     if (curMonsterHp <= 0) break;
 
-    // Monster attacks (reduced by def), then passive regen
+    // Monster attacks (reduced by player def), then passive regen; leech drains mana
     curPlayerHp -= effectiveMonsterDmg;
     curPlayerHp = Math.min(playerHp, curPlayerHp + hpPerRound);
+    curMana = Math.min(startMana, curMana + manaPerRound);
+    curMana = Math.max(0, curMana - manaDrain);
     turns.push({
       attacker: 'monster',
       dmg: effectiveMonsterDmg,
       playerHpAfter: Math.max(0, curPlayerHp),
       monsterHpAfter: curMonsterHp,
       manaGained: manaPerRound,
+      manaDrained: manaDrain,
+      playerManaAfter: curMana,
     });
   }
 
   const playerWon = curMonsterHp <= 0;
-  return { turns, playerWon, xpGained: playerWon ? xp : 0 };
+  const manaGameOver = !playerWon && curMana <= 0 && curPlayerHp > 0;
+  return { turns, playerWon, manaGameOver, xpGained: playerWon ? xp : 0 };
 }
 
 // ---- Display formatting (stats computed from displayLevel) ----
@@ -425,20 +462,26 @@ function modEffectSummary(
   const parts: string[] = [];
   if (context === 'monster') {
     const m = mod as typeof MONSTER_MODIFIERS[number];
-    if ((m.hp_multiplier as number) !== 1) parts.push(`+${Math.round((m.hp_multiplier - 1) * 100)}% HP`);
-    if ((m.damage_multiplier as number) !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% DMG`);
-    if ((m.xp_multiplier as number) !== 1) parts.push(`+${Math.round((m.xp_multiplier - 1) * 100)}% XP reward`);
+    if (m.dmg_bonus  > 0) parts.push(`+${m.dmg_bonus} DMG`);
+    if (m.hp_bonus   > 0) parts.push(`+${m.hp_bonus} HP`);
+    if (m.def_bonus  > 0) parts.push(`+${m.def_bonus} DEF`);
+    if (m.mana_drain > 0) parts.push(`drains ${m.mana_drain} MANA on hit`);
   } else if (context === 'trap') {
     const m = mod as typeof TRAP_MODIFIERS[number];
     const dmgLabel = extra === 'mana' ? 'MANA drain' : 'DMG';
-    if ((m.damage_multiplier as number) !== 1) parts.push(`+${Math.round((m.damage_multiplier - 1) * 100)}% ${dmgLabel}`);
+    if (m.dmg_bonus        > 0) parts.push(`+${m.dmg_bonus} ${dmgLabel}`);
+    if (m.mana_drain       > 0) parts.push(`drains ${m.mana_drain} MANA`);
+    if (m.max_hp_reduce    > 0) parts.push(`-${m.max_hp_reduce} max HP`);
+    if (m.max_mana_reduce  > 0) parts.push(`-${m.max_mana_reduce} max MANA`);
   } else {
     const m = mod as typeof TREASURE_MODIFIERS[number];
     if ('stat_multiplier' in m) {
       const statLabel = extra ? statTypeLabel(extra as TreasureItemEncounter['statType']) : 'stat';
       parts.push(`+${Math.round((m.stat_multiplier - 1) * 100)}% ${statLabel}`);
+    } else if ('passive_effect' in m) {
+      parts.push(`+${m.passive_amount} ${m.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'MANA each hit'}`);
     } else {
-      parts.push(`+${m.passive_amount} ${m.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'mana each hit'}`);
+      parts.push(`+${m.bonus_amount} max ${m.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} while equipped`);
     }
   }
   return parts.join(', ');
@@ -464,7 +507,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push('');
     const displayHp = currentHp ?? stats.hp;
     lines.push(`HP: ${hpBar(displayHp, stats.hp)}  ${displayHp}`);
-    lines.push(`DMG: ${stats.dmg}`);
+    lines.push(`DMG: ${stats.dmg}` + (stats.def > 0 ? `   DEF: ${stats.def}` : ''));
     if (activeMods.length > 0) {
       lines.push('');
       const indent = '  ◆ ';
@@ -522,8 +565,10 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
       activeMods.push(mod);
       if ('stat_multiplier' in mod) {
         totalMult *= mod.stat_multiplier;
-      } else {
+      } else if ('passive_effect' in mod) {
         passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'MANA each hit'}`);
+      } else {
+        passiveEffects.push(`+${mod.bonus_amount} max ${mod.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} equipped`);
       }
     };
     if (displayLevel >= 3) applyMod(encounter.mod1);
