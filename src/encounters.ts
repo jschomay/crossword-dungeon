@@ -47,7 +47,7 @@ export type TreasureItemEncounter = {
   baseName: string;
   baseDescription: string;
   slot: 'weapon' | 'armor' | 'amulet';
-  statType: 'damage' | 'defense' | 'hp';
+  statType: 'damage' | 'defense' | 'max_hp' | 'max_mana';
   baseStat: number;
   statGrowth: number;
   mod1: typeof TREASURE_MODIFIERS[number];
@@ -59,9 +59,10 @@ export type TreasureConsumableEncounter = {
   subKind: 'consumable';
   baseName: string;
   baseDescription: string;
-  effect: string;
-  baseAmount: number;
-  amountGrowth: number;
+  effect: 'restore_hp' | 'restore_mana' | 'reveal_letter';
+  restoreAmount: number;
+  baseQuantity: number;
+  quantityGrowth: number;
 };
 
 export type TreasureImmediateEncounter = {
@@ -110,6 +111,15 @@ function effectLabel(effect: string, amount: number): string {
     case 'grant_xp':         return `+${amount} XP`;
     case 'reveal_letter':    return amount === 1 ? 'Reveals 1 letter' : `Reveals ${amount} letters`;
     default:                 return `${effect}: ${amount}`;
+  }
+}
+
+function statTypeLabel(statType: TreasureItemEncounter['statType']): string {
+  switch (statType) {
+    case 'damage':   return 'DMG';
+    case 'defense':  return 'DEF';
+    case 'max_hp':   return 'max HP';
+    case 'max_mana': return 'max MANA';
   }
 }
 
@@ -170,8 +180,9 @@ export function generateTreasure(rng: Rng): TreasureEncounter {
       baseName: base.name,
       baseDescription: base.description,
       effect: base.effect,
-      baseAmount: base.base_amount,
-      amountGrowth: base.amount_growth,
+      restoreAmount: base.restore_amount,
+      baseQuantity: base.base_quantity,
+      quantityGrowth: base.quantity_growth,
     };
   }
 
@@ -192,15 +203,17 @@ export function generateTreasure(rng: Rng): TreasureEncounter {
   const base = rng.getItem(TREASURE_ITEMS);
   const [mod1, mod2] = pickTwo(TREASURE_MODIFIERS, rng);
 
-  let statType: 'damage' | 'defense' | 'hp';
+  let statType: TreasureItemEncounter['statType'];
   let baseStat: number;
   let statGrowth: number;
   if ('base_damage_bonus' in base) {
     statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
   } else if ('base_defense_bonus' in base) {
     statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
+  } else if ('base_max_hp_bonus' in base) {
+    statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
   } else {
-    statType = 'hp'; baseStat = base.base_hp_bonus; statGrowth = base.hp_bonus_growth;
+    statType = 'max_mana'; baseStat = base.base_max_mana_bonus; statGrowth = base.max_mana_bonus_growth;
   }
 
   return {
@@ -275,6 +288,49 @@ export function getTrapStats(
   };
 }
 
+export type TreasureItemStats = {
+  slot: 'weapon' | 'armor' | 'amulet';
+  name: string;
+  modNames: string[];
+  passiveEffects: string[];
+  damageBonus: number;
+  defenseBonus: number;
+  maxHpBonus: number;
+  maxManaBonus: number;
+};
+
+function passiveLabel(effect: string, amount: number): string {
+  if (effect === 'hp_per_combat_round')   return `+${amount} HP/hit`;
+  if (effect === 'mana_per_combat_round') return `+${amount} MP/hit`;
+  return `+${amount} ${effect}`;
+}
+
+export function getTreasureItemStats(enc: TreasureItemEncounter, level: number): TreasureItemStats {
+  let stat = enc.baseStat + (level - 1) * enc.statGrowth;
+  let mult = 1;
+  const modNames: string[] = [];
+  const passiveEffects: string[] = [];
+  const applyMod = (mod: typeof TREASURE_MODIFIERS[number]) => {
+    modNames.push(mod.name);
+    if ('stat_multiplier' in mod) mult *= mod.stat_multiplier;
+    else passiveEffects.push(passiveLabel(mod.passive_effect, mod.passive_amount));
+  };
+  if (level >= 3) applyMod(enc.mod1);
+  if (level >= 6) applyMod(enc.mod2);
+  stat = round(stat * mult);
+
+  return {
+    slot: enc.slot,
+    name: enc.baseName,
+    modNames,
+    passiveEffects,
+    damageBonus:  enc.statType === 'damage'   ? stat : 0,
+    defenseBonus: enc.statType === 'defense'  ? stat : 0,
+    maxHpBonus:   enc.statType === 'max_hp'   ? stat : 0,
+    maxManaBonus: enc.statType === 'max_mana' ? stat : 0,
+  };
+}
+
 // ---- Combat resolution (pure, no side effects) ----
 
 export type CombatTurn = {
@@ -296,10 +352,12 @@ export function resolveCombat(
   monsterDmg: number,
   monsterHp: number,
   xp: number,
+  playerDef: number = 0,
 ): CombatResult {
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
   let curMonsterHp = monsterHp;
+  const effectiveMonsterDmg = Math.max(0, monsterDmg - playerDef);
 
   while (curPlayerHp > 0 && curMonsterHp > 0) {
     // Player attacks first
@@ -312,11 +370,11 @@ export function resolveCombat(
     });
     if (curMonsterHp <= 0) break;
 
-    // Monster attacks
-    curPlayerHp -= monsterDmg;
+    // Monster attacks (reduced by def)
+    curPlayerHp -= effectiveMonsterDmg;
     turns.push({
       attacker: 'monster',
-      dmg: monsterDmg,
+      dmg: effectiveMonsterDmg,
       playerHpAfter: Math.max(0, curPlayerHp),
       monsterHpAfter: curMonsterHp,
     });
@@ -353,7 +411,8 @@ function modEffectSummary(
   } else {
     const m = mod as typeof TREASURE_MODIFIERS[number];
     if ('stat_multiplier' in m) {
-      parts.push(`+${Math.round((m.stat_multiplier - 1) * 100)}% ${extra ?? 'stat'}`);
+      const statLabel = extra ? statTypeLabel(extra as TreasureItemEncounter['statType']) : 'stat';
+      parts.push(`+${Math.round((m.stat_multiplier - 1) * 100)}% ${statLabel}`);
     } else {
       parts.push(`+${m.passive_amount} ${m.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'mana each hit'}`);
     }
@@ -452,7 +511,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     if (activeMods.length > 0) {
       const indent = '  ◆ ';
       const longestName = Math.max(...activeMods.map(m => m.name.length));
-      const arrowPad = ' '.repeat(indent.length + longestName + 2); // +2 for "  " before "—"
+      const arrowPad = ' '.repeat(indent.length + longestName + 2);
       for (const mod of activeMods) {
         const fx = modEffectSummary(mod, 'treasure-item', encounter.statType);
         lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
@@ -460,22 +519,24 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
       }
     }
     lines.push('');
-    const statLine = `+${round(rawStat * totalMult)} ${encounter.statType.toUpperCase()}`;
+    const statLine = `+${round(rawStat * totalMult)} ${statTypeLabel(encounter.statType)}`;
     const extras = passiveEffects.length > 0 ? `   ${passiveEffects.join('  ')}` : '';
     lines.push(statLine + extras);
 
+  } else if (encounter.subKind === 'consumable') {
+    const quantity = encounter.baseQuantity + Math.floor((displayLevel - 1) * encounter.quantityGrowth);
+    const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${encounter.baseName} ×${quantity}  Lv.${displayLevel}`;
+    lines.push(title);
+    lines.push(encounter.baseDescription);
+
   } else {
-    // consumable or immediate
+    // immediate
     const amount = encounter.baseAmount + (displayLevel - 1) * encounter.amountGrowth;
     const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
     lines.push(title);
     lines.push(encounter.baseDescription);
     lines.push('');
-    if (encounter.subKind === 'consumable') {
-      lines.push(`${effectLabel(encounter.effect, amount)} on use`);
-    } else {
-      lines.push(`${effectLabel(encounter.effect, amount)} on loot`);
-    }
+    lines.push(`${effectLabel(encounter.effect, amount)} on loot`);
   }
 
   return lines;

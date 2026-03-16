@@ -7,6 +7,7 @@ export function hpBar(current: number, max: number, width: number = 10): string 
 export const C_HP   = '#ff6666';
 export const C_MANA = '#44bbcc';
 export const C_DMG  = '#ff8833';
+export const C_DEF  = '#44cc88';
 export const C_XP   = '#9966ff';
 export const C_DIM  = '#888';
 

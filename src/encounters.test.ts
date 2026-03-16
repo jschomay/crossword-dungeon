@@ -322,15 +322,15 @@ describe('generateTrap', () => {
 // ---- Treasure generation ----
 
 describe('generateTreasure', () => {
-  it('consumable: correct amount scaling at display level', () => {
-    // Health Potion: base_amount=3, amount_growth=2
+  it('consumable: fixed restore amount + quantity at display level', () => {
+    // Health Potion: restore_amount=20, base_quantity=1, quantity_growth=0.5
     const rng = mockRng(['consumable', TREASURE_CONSUMABLES[0]]);
     const t = generateTreasure(rng);
     expect(t.kind).toBe('treasure');
     expect(t.subKind).toBe('consumable');
     const all = formatEncounter(t, 2).join('\n');
-    // amount = 3 + (2-1)*2 = 5
-    expect(all).toContain('+5 HP on use');
+    // quantity = 1 + floor((2-1)*0.5) = 1, shown in title
+    expect(all).toContain('Health Potion ×1');
   });
 
   it('immediate restore_hp: correct label and scaling', () => {
@@ -391,7 +391,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Sword');
     expect(all).not.toContain('Fine');
     // stat = 3 + (1-1)*2 = 3, no multiplier
-    expect(all).toContain('+3 DAMAGE');
+    expect(all).toContain('+3 DMG');
   });
 
   it('item level 3: mod1 multiplies stat', () => {
@@ -405,7 +405,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Fine');
     expect(all).toContain('Sword');
     // raw = 3 + (3-1)*2 = 7, *1.2 = round(8.4) = 8
-    expect(all).toContain('+8 DAMAGE');
+    expect(all).toContain('+8 DMG');
   });
 
   it('item level 6: mod1 and mod2 stack', () => {
@@ -420,7 +420,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Masterwork');
     expect(all).toContain('Sword');
     // raw = 3 + (6-1)*2 = 13, *1.2 *1.4 = round(21.84) = 22
-    expect(all).toContain('+22 DAMAGE');
+    expect(all).toContain('+22 DMG');
   });
 
   it('item with passive modifier shows passive effect in display', () => {

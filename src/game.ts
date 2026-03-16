@@ -1,5 +1,5 @@
 import * as ROT from '../lib/rotjs';
-import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_XP, C_DIM } from './utils';
+import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
 import demoJson from '../puzzles/demo.json';
 import { validateIpuz } from './puzzle';
 import Puzzle from './puzzle';
@@ -9,12 +9,16 @@ import {
   formatEncounter,
   getMonsterStats,
   getTrapStats,
+  getTreasureItemStats,
   resolveCombat,
   ENCOUNTER_STYLE,
   UNKNOWN_COLOR,
   type Encounter,
   type MonsterEncounter,
   type TrapEncounter,
+  type TreasureEncounter,
+  type TreasureItemEncounter,
+  type TreasureItemStats,
   type Rng,
 } from './encounters';
 
@@ -39,7 +43,27 @@ function roomKey(x: number, y: number): string {
 const BASE_MANA = 10;
 const BASE_HP = 50;
 const BASE_DMG = 10;
+const XP_PER_LEVEL = 50;
 
+// ---- Inventory list rendering ----
+
+function equipLine(item: TreasureItemStats): string {
+  const fullName = [...item.modNames, item.name].join(' ');
+  const parts: string[] = [];
+  if (item.damageBonus > 0)  parts.push(`+${item.damageBonus} DMG`);
+  if (item.defenseBonus > 0) parts.push(`+${item.defenseBonus} DEF`);
+  if (item.maxHpBonus > 0)   parts.push(`+${item.maxHpBonus} max HP`);
+  if (item.maxManaBonus > 0) parts.push(`+${item.maxManaBonus} max MANA`);
+  parts.push(...item.passiveEffects);
+  return `◆ ${fullName} (${parts.join(', ')})`;
+}
+
+
+type Equipped = {
+  weapon: TreasureItemStats | null;
+  armor: TreasureItemStats | null;
+  amulet: TreasureItemStats | null;
+};
 
 export default class Game {
   display: ROT.Display;
@@ -57,6 +81,7 @@ export default class Game {
   private maxMana: number = BASE_MANA;
   private prevMana: number = BASE_MANA;
   private prevDmg: number = BASE_DMG;
+  private prevDef: number = 0;
   private prevXp: number = 0;
   private prevLevel: number = 1;
   private prevCombatMonsterHp: number | null = null;
@@ -72,6 +97,10 @@ export default class Game {
   private puzzleComplete: boolean = false;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
+  private equipped: Equipped = { weapon: null, armor: null, amulet: null };
+  private hpPotions: number = 0;
+  private manaPotions: number = 0;
+  private revealScrolls: number = 0;
 
   constructor() {
     const ipuz = validateIpuz(demoJson);
@@ -137,6 +166,10 @@ export default class Game {
     this.dmg = BASE_DMG;
     this.level = 1;
     this.xp = 0;
+    this.equipped = { weapon: null, armor: null, amulet: null };
+    this.hpPotions = 0;
+    this.manaPotions = 0;
+    this.revealScrolls = 0;
     this.gameOver = false;
     this.puzzleComplete = false;
     this.combatRunning = false;
@@ -160,8 +193,81 @@ export default class Game {
     return count;
   }
 
-  private gainXp(amount: number): void {
+  // ---- Effective stat helpers ----
+
+  private effectiveDmg(): number {
+    return this.dmg
+      + (this.equipped.weapon?.damageBonus ?? 0)
+      + (this.equipped.amulet?.damageBonus ?? 0);
+  }
+
+  private effectiveDef(): number {
+    return (this.equipped.armor?.defenseBonus ?? 0)
+      + (this.equipped.amulet?.defenseBonus ?? 0);
+  }
+
+  private effectiveMaxHp(): number {
+    return this.maxHp + (this.equipped.amulet?.maxHpBonus ?? 0);
+  }
+
+  private effectiveMaxMana(): number {
+    return this.maxMana + (this.equipped.amulet?.maxManaBonus ?? 0);
+  }
+
+  // ---- Inventory ----
+
+  private equipItem(item: TreasureItemStats): void {
+    this.equipped[item.slot] = item;
+    // Cap current HP/mana in case effective max decreased
+    this.hp = Math.min(this.hp, this.effectiveMaxHp());
+    this.mana = Math.min(this.mana, this.effectiveMaxMana());
+  }
+
+  private useConsumable(slot: 1 | 2 | 3): void {
+    if (this.combatRunning) return;
+
+    if (slot === 1) {
+      if (this.hpPotions <= 0) return;
+      this.hpPotions--;
+      const restored = Math.min(20, this.effectiveMaxHp() - this.hp);
+      this.hp = Math.min(this.hp + 20, this.effectiveMaxHp());
+      this.showInteraction([`Heal used.`, `  +${restored} HP`]);
+    } else if (slot === 2) {
+      if (this.manaPotions <= 0) return;
+      this.manaPotions--;
+      const restored = Math.min(10, this.effectiveMaxMana() - this.mana);
+      this.mana = Math.min(this.mana + 10, this.effectiveMaxMana());
+      this.showInteraction([`Restore used.`, `  +${restored} MANA`]);
+    } else {
+      if (this.revealScrolls <= 0) return;
+      const rooms = this.puzzle.getRooms();
+      const unsolved = rooms.filter(r => this.getRoomState(r.x, r.y).solvedLetter === null);
+      if (unsolved.length === 0) return;
+      this.revealScrolls--;
+      const target = ROT.RNG.getItem(unsolved)!;
+      const letter = this.puzzle.ipuz.solution[target.y][target.x] as string;
+      this.solveRoom(target.x, target.y, letter);
+      this.showInteraction([`Inscribe used.`, `  '${letter}' inscribed.`]);
+      if (this.puzzleComplete) { this.render(); return; }
+    }
+    this.render();
+  }
+
+  // ---- XP / leveling ----
+
+  private gainXp(amount: number): boolean {
     this.xp += amount;
+    if (this.xp >= XP_PER_LEVEL) {
+      this.xp -= XP_PER_LEVEL;
+      this.level++;
+      this.maxHp += 10;
+      this.maxMana += 5;
+      this.dmg += 1;
+      this.hp = this.effectiveMaxHp();
+      this.mana = this.effectiveMaxMana();
+      return true;
+    }
+    return false;
   }
 
   private clearLogs(): void {
@@ -222,14 +328,14 @@ export default class Game {
 
         if (enc.kind === 'monster') {
           const stats = getMonsterStats(enc as MonsterEncounter, level);
-          const dmgTaken = stats.dmg;
+          const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
           this.hp = Math.max(0, this.hp - dmgTaken);
           logLines.push(`The ${enc.baseName} strikes!`);
           logLines.push(`  -${dmgTaken} HP`);
         } else if (enc.kind === 'trap') {
           const stats = getTrapStats(enc as TrapEncounter, level);
           if (enc.damageType === 'hp') {
-            const dmgTaken = stats.dmg;
+            const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
             this.hp = Math.max(0, this.hp - dmgTaken);
             logLines.push(`The ${enc.baseName} triggers!`);
             logLines.push(`  -${dmgTaken} HP`);
@@ -279,54 +385,82 @@ export default class Game {
 
     if (enc.kind === 'monster') {
       const stats = getMonsterStats(enc as MonsterEncounter, level);
-      const result = resolveCombat(this.dmg, this.hp, stats.dmg, stats.hp, stats.xp);
+      const result = resolveCombat(this.effectiveDmg(), this.hp, stats.dmg, stats.hp, stats.xp, this.effectiveDef());
       this.runCombatAnimation(x, y, letter, enc as MonsterEncounter, result);
       return;
     }
 
     // Trap or treasure — instant resolve
-    const logLines: string[] = [];
-    if (enc.kind === 'trap') {
-      const stats = getTrapStats(enc as TrapEncounter, level);
-      logLines.push(`You disarm the ${enc.baseName}!`);
-      if (stats.rewardType === 'xp') {
-        this.gainXp(stats.reward);
-        logLines.push(`  +${stats.reward} XP`);
-      } else {
-        this.mana = Math.min(this.maxMana, this.mana + stats.reward);
-        logLines.push(`  +${stats.reward} MANA`);
-      }
-    } else {
-      logLines.push(`You claim the treasure: ${enc.baseName}!`);
-      // Immediate treasures grant their effect; simplified for now
-      if (enc.subKind === 'immediate') {
-        const amount = enc.baseAmount + (level - 1) * enc.amountGrowth;
-        if (enc.effect === 'restore_hp') {
-          this.hp = Math.min(this.maxHp, this.hp + amount);
-          logLines.push(`  +${amount} HP`);
-        } else if (enc.effect === 'restore_mana') {
-          this.mana = Math.min(this.maxMana, this.mana + amount);
-          logLines.push(`  +${amount} MANA`);
-        } else if (enc.effect === 'grant_xp') {
-          this.gainXp(amount);
-          logLines.push(`  +${amount} XP`);
-        } else if (enc.effect === 'increase_max_hp') {
-          this.maxHp += amount;
-          this.hp = Math.min(this.hp + amount, this.maxHp);
-          logLines.push(`  +${amount} max HP`);
-        } else if (enc.effect === 'increase_max_mana') {
-          this.maxMana += amount;
-          this.mana = Math.min(this.mana + amount, this.maxMana);
-          logLines.push(`  +${amount} max MANA`);
-        } else if (enc.effect === 'reveal_letter') {
-          logLines.push(`  A letter is magically revealed.`);
-        }
-      }
-    }
+    const logLines = enc.kind === 'trap'
+      ? this.resolveTrap(enc as TrapEncounter, level)
+      : this.resolveTreasure(enc as TreasureEncounter, level);
 
     this.solveRoom(x, y, letter);
     if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
     else this.showInteraction(logLines);
+  }
+
+  private resolveTrap(enc: TrapEncounter, level: number): string[] {
+    const stats = getTrapStats(enc, level);
+    const lines = [`You disarm the ${enc.baseName}!`];
+    if (stats.rewardType === 'xp') {
+      const leveledUp = this.gainXp(stats.reward);
+      lines.push(`+${stats.reward} XP`);
+      if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+    } else {
+      this.mana = Math.min(this.effectiveMaxMana(), this.mana + stats.reward);
+      lines.push(`+${stats.reward} MANA`);
+    }
+    return lines;
+  }
+
+  private resolveTreasure(enc: TreasureEncounter, level: number): string[] {
+    const lines = [`You claim the treasure: ${enc.baseName}!`];
+    if (enc.subKind === 'immediate') {
+      const amount = enc.baseAmount + (level - 1) * enc.amountGrowth;
+      if (enc.effect === 'restore_hp') {
+        this.hp = Math.min(this.effectiveMaxHp(), this.hp + amount);
+        lines.push(`+${amount} HP`);
+      } else if (enc.effect === 'restore_mana') {
+        this.mana = Math.min(this.effectiveMaxMana(), this.mana + amount);
+        lines.push(`+${amount} MANA`);
+      } else if (enc.effect === 'grant_xp') {
+        const leveledUp = this.gainXp(amount);
+        lines.push(`+${amount} XP`);
+        if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+      } else if (enc.effect === 'increase_max_hp') {
+        this.maxHp += amount;
+        this.hp = Math.min(this.hp + amount, this.effectiveMaxHp());
+        lines.push(`+${amount} max HP`);
+      } else if (enc.effect === 'increase_max_mana') {
+        this.maxMana += amount;
+        this.mana = Math.min(this.mana + amount, this.effectiveMaxMana());
+        lines.push(`+${amount} max MANA`);
+      } else if (enc.effect === 'reveal_letter') {
+        lines.push(`A letter is magically revealed.`);
+      }
+    } else if (enc.subKind === 'item') {
+      const item = getTreasureItemStats(enc as TreasureItemEncounter, level);
+      this.equipItem(item);
+      lines.push(`Equipped: ${item.name}`);
+      if (item.damageBonus > 0)  lines.push(`+${item.damageBonus} DMG`);
+      if (item.defenseBonus > 0) lines.push(`+${item.defenseBonus} DEF`);
+      if (item.maxHpBonus > 0)   lines.push(`+${item.maxHpBonus} max HP`);
+      if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
+    } else if (enc.subKind === 'consumable') {
+      const quantity = enc.baseQuantity + Math.floor((level - 1) * enc.quantityGrowth);
+      if (enc.effect === 'restore_hp') {
+        this.hpPotions += quantity;
+        lines.push(`+${quantity} Health Potion${quantity > 1 ? 's' : ''}`);
+      } else if (enc.effect === 'restore_mana') {
+        this.manaPotions += quantity;
+        lines.push(`+${quantity} Mana Potion${quantity > 1 ? 's' : ''}`);
+      } else if (enc.effect === 'reveal_letter') {
+        this.revealScrolls += quantity;
+        lines.push(`+${quantity} Letter Reveal Scroll${quantity > 1 ? 's' : ''}`);
+      }
+    }
+    return lines;
   }
 
   private runCombatAnimation(
@@ -355,10 +489,12 @@ export default class Game {
       } else {
         this.combatMonsterHp = null;
         if (playerWon) {
-          this.gainXp(xpGained);
+          const leveledUp = this.gainXp(xpGained);
           this.solveRoom(x, y, letter);
           this.combatRunning = false;
-          this.showInteraction([`${enc.baseName} defeated.`, `  +${xpGained} XP`]);
+          const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
+          if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+          this.showInteraction(lines);
           if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
           this.render();
         } else {
@@ -383,6 +519,10 @@ export default class Game {
       if (e.key === ' ') this.restart();
       return;
     }
+
+    if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
+    if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
+    if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
 
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
@@ -410,20 +550,63 @@ export default class Game {
     this.dungeon.render(this.display, this.playerPos, this.roomStates, ended);
 
     // Hero panel
-    const hpBarStr = hpBar(this.hp, this.maxHp);
-    const manaBarStr = hpBar(this.mana, this.maxMana);
+    const hpBarStr = hpBar(this.hp, this.effectiveMaxHp());
+    const manaBarStr = hpBar(this.mana, this.effectiveMaxMana());
+    const effDmg = this.effectiveDmg();
+    const effDef = this.effectiveDef();
     const hpFlash    = this.hp    !== this.prevHp    ? ' class="flash"' : '';
     const manaFlash  = this.mana  !== this.prevMana  ? ' class="flash"' : '';
-    const dmgFlash   = this.dmg   !== this.prevDmg   ? ' class="flash"' : '';
+    const dmgFlash   = effDmg    !== this.prevDmg   ? ' class="flash"' : '';
+    const defFlash   = effDef    !== this.prevDef   ? ' class="flash"' : '';
     const xpFlash    = this.xp    !== this.prevXp    ? ' class="flash"' : '';
     const lvlFlash   = this.level !== this.prevLevel ? ' class="flash"' : '';
+
+    // Equipment lines (only show held items)
+    const equipLines = ([this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+      .filter((item): item is TreasureItemStats => item !== null)
+      .map(item => esc(equipLine(item)))
+    ).join('\n');
+
+    // Consumable item boxes
+    const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:30%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
+    const itemBox = (key: string, label: string, effect: string, count: number) =>
+      `<div style="${boxStyle}"><span style="color:#aaa">[${key}] ${esc(label)} ×${count}</span><br>` +
+      `<span style="color:#777">${esc(effect)}</span></div>`;
+
+    const bagHtml =
+      `<div style="display:flex;justify-content:space-between;width:100%">` +
+      itemBox('1', 'Heal',      '+20 HP',   this.hpPotions) +
+      itemBox('2', 'Restore',   '+10 MANA', this.manaPotions) +
+      itemBox('3', 'Inscribe',  'Reveal letter', this.revealScrolls) +
+      `</div>`;
+
     this.heroEl.innerHTML =
-      `<span style="color:#aaa">Adventurer</span>  <span${lvlFlash} style="color:#777">Lv.${this.level}</span>\n` +
+      `<div style="display:flex;align-items:baseline;gap:12px">` +
+        `<span style="color:#aaa">Adventurer</span>` +
+        `<span${lvlFlash} style="color:#777">Lv.${this.level}</span>` +
+      `</div>` +
+      `<div style="display:flex;gap:32px;margin-top:4px">` +
+        `<div>` +
+          `<div><span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.effectiveMaxHp()}</span></div>` +
+          `<div><span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.effectiveMaxMana()}</span></div>` +
+        `</div>` +
+        `<div>` +
+          `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
+          `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
+          `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}</span></div>` +
+        `</div>` +
+      `</div>` +
       `\n` +
-      `<span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.maxHp}</span>\n` +
-      `<span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.maxMana}</span>\n` +
-      `<span${dmgFlash} style="color:${C_DMG}">DMG:  ${this.dmg}</span>\n` +
-      `<span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}</span>`;
+      (equipLines ? `<span style="color:${C_DIM}">${equipLines}</span>\n\n` : '') +
+      bagHtml;
+
+    this.prevHp              = this.hp;
+    this.prevMana            = this.mana;
+    this.prevDmg             = effDmg;
+    this.prevDef             = effDef;
+    this.prevXp              = this.xp;
+    this.prevLevel           = this.level;
+    this.prevCombatMonsterHp = this.combatMonsterHp;
 
     // Status panel: game over / puzzle complete
     if (this.gameOver) {
@@ -492,12 +675,5 @@ export default class Game {
         this.encounterEl.innerHTML = html;
       }
     }
-
-    this.prevHp              = this.hp;
-    this.prevMana            = this.mana;
-    this.prevDmg             = this.dmg;
-    this.prevXp              = this.xp;
-    this.prevLevel           = this.level;
-    this.prevCombatMonsterHp = this.combatMonsterHp;
   }
 }
