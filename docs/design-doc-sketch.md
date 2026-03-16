@@ -97,14 +97,3 @@ Reaching 0 HP or 0 mana ends the run.
 
 The player must carefully solve the rooms in an order that maximizes rewards and avoids leveling-up a monster or trap room beyond their ability to withstand it.
 
-
----
-
-### Temp notes (no need to check in)
-
-- come back to item passive effects
-- come back to item pick up dialog
-- come back to level up effect pick dialog
-
-- monster mods 1 for each stat, no xp bonus, add mana drain 
-- traps can have 1 of each too (dmg, drain, and poison/tap remove max hp/mana)
