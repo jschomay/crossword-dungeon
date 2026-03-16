@@ -419,14 +419,18 @@ export default class Game {
     if (enc.kind === 'monster') {
       const stats = getMonsterStats(enc as MonsterEncounter, level);
       const equippedItems = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet];
+      const manaPerRound = equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0);
+      const hpPerRound   = equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0);
       const result = resolveCombat(
         {
           dmg: this.effectiveDmg(),
           hp: this.hp,
+          maxHp: this.effectiveMaxHp(),
           def: this.effectiveDef(),
           mana: this.mana,
-          hpPerRound:   equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0),
-          manaPerRound: equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0),
+          maxMana: this.effectiveMaxMana(),
+          hpPerRound,
+          manaPerRound,
         },
         { dmg: stats.dmg, hp: stats.hp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
       );
@@ -526,12 +530,9 @@ export default class Game {
     const showTurn = (idx: number) => {
       if (idx < turns.length) {
         const t = turns[idx];
-        if (t.attacker === 'player') {
-          this.combatMonsterHp = t.monsterHpAfter;
-        } else {
-          this.hp = t.playerHpAfter;
-          this.mana = t.playerManaAfter;
-        }
+        this.combatMonsterHp = t.monsterHpAfter;
+        this.hp = t.playerHpAfter;
+        this.mana = t.playerManaAfter;
         this.render();
         setTimeout(() => showTurn(idx + 1), 700);
       } else {

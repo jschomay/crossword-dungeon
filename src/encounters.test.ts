@@ -344,19 +344,22 @@ describe('passive effects', () => {
     expect(all).toContain('+5 max HP');
   });
 
-  it('resolveCombat: hpPerRound heals player each round after monster attacks', () => {
+  it('resolveCombat: hpPerRound heals player on player attack turn', () => {
     // player dmg=5, hp=20; monster dmg=3, hp=12; hpPerRound=3
-    // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
-    // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
-    // r3: player hits 5 (mon hp=0) -> player wins
-    const result = resolveCombat({ dmg: 5, hp: 20, hpPerRound: 3 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
+    // turn 0 (player): hits 5 (mon hp=7), regen +3 (pl stays 20, capped at max)
+    // turn 1 (monster): hits 3 (pl hp=17)
+    // turn 2 (player): hits 5 (mon hp=2), regen +3 (pl hp=20)
+    // turn 3 (monster): hits 3 (pl hp=17)
+    // turn 4 (player): hits 5 (mon hp=0) -> player wins
+    const result = resolveCombat({ dmg: 5, hp: 20, maxHp: 20, hpPerRound: 3 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
     expect(result.playerWon).toBe(true);
-    expect(result.turns[1].playerHpAfter).toBe(20); // healed back to full after regen
+    expect(result.turns[0].manaGained).toBe(0); // player turn: no manaGained from regen here
+    expect(result.turns[2].playerHpAfter).toBe(20); // healed back to full on player turn 2
   });
 
   it('resolveCombat: manaPerRound tracked per turn', () => {
     const result = resolveCombat({ dmg: 5, hp: 20, manaPerRound: 2 }, { dmg: 3, hp: 12, xp: 10, def: 0, manaDrain: 0 });
-    expect(result.turns[1].manaGained).toBe(2);
+    expect(result.turns[0].manaGained).toBe(2); // regen on player turn now
   });
 });
 

@@ -366,6 +366,7 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
 export type CombatPlayerStats = {
   dmg: number;
   hp: number;
+  maxHp?: number;
   def?: number;
   hpPerRound?: number;
   manaPerRound?: number;
@@ -397,10 +398,12 @@ export type CombatResult = {
 };
 
 export function resolveCombat(
-  player: CombatPlayerStats & { mana?: number },
+  player: CombatPlayerStats & { mana?: number; maxMana?: number },
   monster: CombatMonsterStats,
 ): CombatResult {
-  const { dmg: playerDmg, hp: playerHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity } = player;
+  const { dmg: playerDmg, hp: playerHp, maxHp: playerMaxHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity, maxMana: playerMaxMana } = player;
+  const hpCap = playerMaxHp ?? playerHp;
+  const manaCap = playerMaxMana ?? Infinity;
   const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0 } = monster;
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
@@ -410,30 +413,30 @@ export function resolveCombat(
   const effectiveMonsterDmg = Math.max(0, monsterDmg - playerDef);
 
   while (curPlayerHp > 0 && curMonsterHp > 0 && curMana > 0) {
-    // Player attacks first (reduced by monster def, minimum 1)
+    // Player attacks first (reduced by monster def, minimum 1); passive regen on hit
     curMonsterHp -= effectivePlayerDmg;
+    curPlayerHp = Math.min(hpCap, curPlayerHp + hpPerRound);
+    curMana = Math.min(manaCap, curMana + manaPerRound);
     turns.push({
       attacker: 'player',
       dmg: effectivePlayerDmg,
       playerHpAfter: curPlayerHp,
       monsterHpAfter: Math.max(0, curMonsterHp),
-      manaGained: 0,
+      manaGained: manaPerRound,
       manaDrained: 0,
       playerManaAfter: curMana,
     });
     if (curMonsterHp <= 0) break;
 
-    // Monster attacks (reduced by player def), then passive regen; leech drains mana
+    // Monster attacks (reduced by player def); leech drains mana
     curPlayerHp -= effectiveMonsterDmg;
-    curPlayerHp = Math.min(playerHp, curPlayerHp + hpPerRound);
-    curMana = Math.min(startMana, curMana + manaPerRound);
     curMana = Math.max(0, curMana - manaDrain);
     turns.push({
       attacker: 'monster',
       dmg: effectiveMonsterDmg,
       playerHpAfter: Math.max(0, curPlayerHp),
       monsterHpAfter: curMonsterHp,
-      manaGained: manaPerRound,
+      manaGained: 0,
       manaDrained: manaDrain,
       playerManaAfter: curMana,
     });
