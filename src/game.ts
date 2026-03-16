@@ -434,7 +434,7 @@ export default class Game {
         },
         { dmg: stats.dmg, hp: stats.hp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
       );
-      this.runCombatAnimation(enc as MonsterEncounter, result, preamble);
+      this.runCombatAnimation(enc as MonsterEncounter, result, stats.hp, preamble);
       return;
     }
 
@@ -513,13 +513,13 @@ export default class Game {
   private runCombatAnimation(
     enc: MonsterEncounter,
     result: ReturnType<typeof resolveCombat>,
+    initialMonsterHp: number,
     preamble?: string,
   ): void {
     this.combatRunning = true;
     const { turns, playerWon, manaGameOver, xpGained } = result;
 
-    const firstPlayerTurn = turns.find(t => t.attacker === 'player');
-    this.combatMonsterHp = firstPlayerTurn ? firstPlayerTurn.monsterHpAfter + firstPlayerTurn.dmg : 0;
+    this.combatMonsterHp = initialMonsterHp;
 
     const openingLines = preamble
       ? [preamble, `You fight the ${enc.baseName}!`]
@@ -694,7 +694,7 @@ export default class Game {
       const style = ENCOUNTER_STYLE[state.encounter.kind];
       this.encounterEl.style.color = '';
 
-      if (state.solvedLetter !== null) {
+      if (state.solvedLetter !== null && !this.combatRunning) {
         const enc = state.encounter;
         const level = state.activatedLevel;
         let flavorLine: string;
