@@ -240,25 +240,25 @@ export default class Game {
       this.showInteraction([`Restore used.`, `  +${restored} MANA`]);
     } else {
       if (this.revealScrolls <= 0) return;
-      const rooms = this.puzzle.getRooms();
-      const unsolved = rooms.filter(r => this.getRoomState(r.x, r.y).solvedLetter === null);
-      if (unsolved.length === 0) return;
+      const { x, y } = this.playerPos;
+      if (!this.dungeon.hasRoom(x, y)) return;
+      const state = this.getRoomState(x, y);
+      if (state.solvedLetter !== null) return;
       this.revealScrolls--;
-      const target = ROT.RNG.getItem(unsolved)!;
-      const letter = this.puzzle.ipuz.solution[target.y][target.x] as string;
-      this.solveRoom(target.x, target.y, letter);
-      this.showInteraction([`Inscribe used.`, `  '${letter}' inscribed.`]);
-      if (this.puzzleComplete) { this.render(); return; }
+      const letter = this.puzzle.ipuz.solution[y][x] as string;
+      // resolveCorrectGuess handles its own render; return to avoid double render
+      this.resolveCorrectGuess(x, y, letter, state.encounter, state.activatedLevel, `You inscribe the '${letter}' rune.`);
+      return;
     }
-    this.render();
+    this.render();  // slots 1 and 2 render here
   }
 
   // ---- XP / leveling ----
 
   private gainXp(amount: number): boolean {
     this.xp += amount;
-    if (this.xp >= XP_PER_LEVEL) {
-      this.xp -= XP_PER_LEVEL;
+    const threshold = this.level * XP_PER_LEVEL;
+    if (this.xp >= threshold) {
       this.level++;
       this.maxHp += 10;
       this.maxMana += 5;
@@ -278,7 +278,7 @@ export default class Game {
     this.interactionLogEl.textContent = lines.join('\n');
   }
 
-  private solveRoom(x: number, y: number, letter: string): void {
+  private markRoomSolved(x: number, y: number, letter: string): void {
     const state = this.getRoomState(x, y);
     state.solvedLetter = letter;
     const neighbors = this.puzzle.getWordNeighbors({ x, y });
@@ -287,9 +287,15 @@ export default class Game {
       if (nbState.solvedLetter !== null) continue;
       nbState.activatedLevel++;
     }
-    if (this.countSolved() === this.totalRooms) {
-      this.puzzleComplete = true;
-    }
+  }
+
+  private checkPuzzleComplete(): void {
+    if (this.countSolved() === this.totalRooms) this.puzzleComplete = true;
+  }
+
+  private solveRoom(x: number, y: number, letter: string): void {
+    this.markRoomSolved(x, y, letter);
+    this.checkPuzzleComplete();
   }
 
   private triggerGameOver(): void {
@@ -383,10 +389,26 @@ export default class Game {
       return;
     }
 
+    this.resolveCorrectGuess(x, y, letter, enc, level);
+  }
+
+  private resolveCorrectGuess(x: number, y: number, letter: string, enc: Encounter, level: number, preamble?: string): void {
+    this.markRoomSolved(x, y, letter);
+
     if (enc.kind === 'monster') {
       const stats = getMonsterStats(enc as MonsterEncounter, level);
-      const result = resolveCombat(this.effectiveDmg(), this.hp, stats.dmg, stats.hp, stats.xp, this.effectiveDef());
-      this.runCombatAnimation(x, y, letter, enc as MonsterEncounter, result);
+      const equippedItems = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet];
+      const result = resolveCombat(
+        {
+          dmg: this.effectiveDmg(),
+          hp: this.hp,
+          def: this.effectiveDef(),
+          hpPerRound:   equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0),
+          manaPerRound: equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0),
+        },
+        { dmg: stats.dmg, hp: stats.hp, xp: stats.xp },
+      );
+      this.runCombatAnimation(enc as MonsterEncounter, result, preamble);
       return;
     }
 
@@ -395,9 +417,10 @@ export default class Game {
       ? this.resolveTrap(enc as TrapEncounter, level)
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
-    this.solveRoom(x, y, letter);
+    if (preamble) logLines.unshift(preamble);
+    this.checkPuzzleComplete();
     if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
-    else this.showInteraction(logLines);
+    else { this.showInteraction(logLines); this.render(); }
   }
 
   private resolveTrap(enc: TrapEncounter, level: number): string[] {
@@ -436,8 +459,6 @@ export default class Game {
         this.maxMana += amount;
         this.mana = Math.min(this.mana + amount, this.effectiveMaxMana());
         lines.push(`+${amount} max MANA`);
-      } else if (enc.effect === 'reveal_letter') {
-        lines.push(`A letter is magically revealed.`);
       }
     } else if (enc.subKind === 'item') {
       const item = getTreasureItemStats(enc as TreasureItemEncounter, level);
@@ -464,9 +485,9 @@ export default class Game {
   }
 
   private runCombatAnimation(
-    x: number, y: number, letter: string,
     enc: MonsterEncounter,
     result: ReturnType<typeof resolveCombat>,
+    preamble?: string,
   ): void {
     this.combatRunning = true;
     const { turns, playerWon, xpGained } = result;
@@ -474,7 +495,11 @@ export default class Game {
     const firstPlayerTurn = turns.find(t => t.attacker === 'player');
     this.combatMonsterHp = firstPlayerTurn ? firstPlayerTurn.monsterHpAfter + firstPlayerTurn.dmg : 0;
 
-    this.showInteraction([`You fight the ${enc.baseName}!`]);
+    const openingLines = preamble
+      ? [preamble, `You fight the ${enc.baseName}!`]
+      : [`You fight the ${enc.baseName}!`];
+    this.showInteraction(openingLines);
+    this.render();
 
     const showTurn = (idx: number) => {
       if (idx < turns.length) {
@@ -483,6 +508,7 @@ export default class Game {
           this.combatMonsterHp = t.monsterHpAfter;
         } else {
           this.hp = t.playerHpAfter;
+          this.mana = Math.min(this.effectiveMaxMana(), this.mana + t.manaGained);
         }
         this.render();
         setTimeout(() => showTurn(idx + 1), 700);
@@ -490,7 +516,7 @@ export default class Game {
         this.combatMonsterHp = null;
         if (playerWon) {
           const leveledUp = this.gainXp(xpGained);
-          this.solveRoom(x, y, letter);
+          this.checkPuzzleComplete();
           this.combatRunning = false;
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
@@ -545,39 +571,33 @@ export default class Game {
     }
   }
 
-  private render(): void {
-    const ended = this.gameOver || this.puzzleComplete;
-    this.dungeon.render(this.display, this.playerPos, this.roomStates, ended);
-
-    // Hero panel
-    const hpBarStr = hpBar(this.hp, this.effectiveMaxHp());
+  private renderHeroPanel(): void {
+    const hpBarStr   = hpBar(this.hp,   this.effectiveMaxHp());
     const manaBarStr = hpBar(this.mana, this.effectiveMaxMana());
     const effDmg = this.effectiveDmg();
     const effDef = this.effectiveDef();
-    const hpFlash    = this.hp    !== this.prevHp    ? ' class="flash"' : '';
-    const manaFlash  = this.mana  !== this.prevMana  ? ' class="flash"' : '';
-    const dmgFlash   = effDmg    !== this.prevDmg   ? ' class="flash"' : '';
-    const defFlash   = effDef    !== this.prevDef   ? ' class="flash"' : '';
-    const xpFlash    = this.xp    !== this.prevXp    ? ' class="flash"' : '';
-    const lvlFlash   = this.level !== this.prevLevel ? ' class="flash"' : '';
+    const flash = (cur: number, prev: number) => cur !== prev ? ' class="flash"' : '';
+    const hpFlash   = flash(this.hp,    this.prevHp);
+    const manaFlash = flash(this.mana,  this.prevMana);
+    const dmgFlash  = flash(effDmg,     this.prevDmg);
+    const defFlash  = flash(effDef,     this.prevDef);
+    const xpFlash   = flash(this.xp,    this.prevXp);
+    const lvlFlash  = flash(this.level, this.prevLevel);
 
-    // Equipment lines (only show held items)
-    const equipLines = ([this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+    const equipLines = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
       .filter((item): item is TreasureItemStats => item !== null)
       .map(item => esc(equipLine(item)))
-    ).join('\n');
+      .join('\n');
 
-    // Consumable item boxes
     const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:30%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
     const itemBox = (key: string, label: string, effect: string, count: number) =>
       `<div style="${boxStyle}"><span style="color:#aaa">[${key}] ${esc(label)} ×${count}</span><br>` +
       `<span style="color:#777">${esc(effect)}</span></div>`;
-
     const bagHtml =
       `<div style="display:flex;justify-content:space-between;width:100%">` +
-      itemBox('1', 'Heal',      '+20 HP',   this.hpPotions) +
-      itemBox('2', 'Restore',   '+10 MANA', this.manaPotions) +
-      itemBox('3', 'Inscribe',  'Reveal letter', this.revealScrolls) +
+      itemBox('1', 'Heal',     '+20 HP',        this.hpPotions) +
+      itemBox('2', 'Restore',  '+10 MANA',      this.manaPotions) +
+      itemBox('3', 'Inscribe', 'Reveal letter', this.revealScrolls) +
       `</div>`;
 
     this.heroEl.innerHTML =
@@ -593,7 +613,7 @@ export default class Game {
         `<div>` +
           `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
           `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
-          `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}</span></div>` +
+          `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
         `</div>` +
       `</div>` +
       `\n` +
@@ -607,6 +627,12 @@ export default class Game {
     this.prevXp              = this.xp;
     this.prevLevel           = this.level;
     this.prevCombatMonsterHp = this.combatMonsterHp;
+  }
+
+  private render(): void {
+    const ended = this.gameOver || this.puzzleComplete;
+    this.dungeon.render(this.display, this.playerPos, this.roomStates, ended);
+    this.renderHeroPanel();
 
     // Status panel: game over / puzzle complete
     if (this.gameOver) {

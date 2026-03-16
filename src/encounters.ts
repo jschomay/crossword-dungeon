@@ -297,6 +297,8 @@ export type TreasureItemStats = {
   defenseBonus: number;
   maxHpBonus: number;
   maxManaBonus: number;
+  hpPerRound: number;
+  manaPerRound: number;
 };
 
 function passiveLabel(effect: string, amount: number): string {
@@ -310,10 +312,17 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
   let mult = 1;
   const modNames: string[] = [];
   const passiveEffects: string[] = [];
+  let hpPerRound = 0;
+  let manaPerRound = 0;
   const applyMod = (mod: typeof TREASURE_MODIFIERS[number]) => {
     modNames.push(mod.name);
-    if ('stat_multiplier' in mod) mult *= mod.stat_multiplier;
-    else passiveEffects.push(passiveLabel(mod.passive_effect, mod.passive_amount));
+    if ('stat_multiplier' in mod) {
+      mult *= mod.stat_multiplier;
+    } else {
+      passiveEffects.push(passiveLabel(mod.passive_effect, mod.passive_amount));
+      if (mod.passive_effect === 'hp_per_combat_round')   hpPerRound   += mod.passive_amount;
+      if (mod.passive_effect === 'mana_per_combat_round') manaPerRound += mod.passive_amount;
+    }
   };
   if (level >= 3) applyMod(enc.mod1);
   if (level >= 6) applyMod(enc.mod2);
@@ -328,16 +337,33 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
     defenseBonus: enc.statType === 'defense'  ? stat : 0,
     maxHpBonus:   enc.statType === 'max_hp'   ? stat : 0,
     maxManaBonus: enc.statType === 'max_mana' ? stat : 0,
+    hpPerRound,
+    manaPerRound,
   };
 }
 
 // ---- Combat resolution (pure, no side effects) ----
+
+export type CombatPlayerStats = {
+  dmg: number;
+  hp: number;
+  def?: number;
+  hpPerRound?: number;
+  manaPerRound?: number;
+};
+
+export type CombatMonsterStats = {
+  dmg: number;
+  hp: number;
+  xp: number;
+};
 
 export type CombatTurn = {
   attacker: 'player' | 'monster';
   dmg: number;
   playerHpAfter: number;
   monsterHpAfter: number;
+  manaGained: number;
 };
 
 export type CombatResult = {
@@ -346,14 +372,9 @@ export type CombatResult = {
   xpGained: number;
 };
 
-export function resolveCombat(
-  playerDmg: number,
-  playerHp: number,
-  monsterDmg: number,
-  monsterHp: number,
-  xp: number,
-  playerDef: number = 0,
-): CombatResult {
+export function resolveCombat(player: CombatPlayerStats, monster: CombatMonsterStats): CombatResult {
+  const { dmg: playerDmg, hp: playerHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0 } = player;
+  const { dmg: monsterDmg, hp: monsterHp, xp } = monster;
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
   let curMonsterHp = monsterHp;
@@ -367,16 +388,19 @@ export function resolveCombat(
       dmg: playerDmg,
       playerHpAfter: curPlayerHp,
       monsterHpAfter: Math.max(0, curMonsterHp),
+      manaGained: 0,
     });
     if (curMonsterHp <= 0) break;
 
-    // Monster attacks (reduced by def)
+    // Monster attacks (reduced by def), then passive regen
     curPlayerHp -= effectiveMonsterDmg;
+    curPlayerHp = Math.min(playerHp, curPlayerHp + hpPerRound);
     turns.push({
       attacker: 'monster',
       dmg: effectiveMonsterDmg,
       playerHpAfter: Math.max(0, curPlayerHp),
       monsterHpAfter: curMonsterHp,
+      manaGained: manaPerRound,
     });
   }
 

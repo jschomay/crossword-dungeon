@@ -102,7 +102,9 @@ The player must carefully solve the rooms in an order that maximizes rewards and
 
 ### Temp notes (no need to check in)
 
-- Items don't make sense, why different swords with same basic effect? Amulets = + max hp or mana (maybe defense too?)
-- do we need a defence/armor stat?
-- monster mods should add armor
-- consider potion awards
+- come back to item passive effects
+- come back to item pick up dialog
+- come back to level up effect pick dialog
+
+- monster mods 1 for each stat, no xp bonus, add mana drain 
+- traps can have 1 of each too (dmg, drain, and poison/tap remove max hp/mana)

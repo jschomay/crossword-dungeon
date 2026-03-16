@@ -6,6 +6,7 @@ import {
   formatEncounter,
   getMonsterStats,
   getTrapStats,
+  getTreasureItemStats,
   resolveCombat,
   type Rng,
 } from './encounters';
@@ -114,7 +115,7 @@ describe('getTrapStats', () => {
 
 describe('resolveCombat', () => {
   it('player wins when player kills monster in one hit', () => {
-    const result = resolveCombat(50, 30, 5, 10, 20);
+    const result = resolveCombat({ dmg: 50, hp: 30 }, { dmg: 5, hp: 10, xp: 20 });
     expect(result.playerWon).toBe(true);
     expect(result.xpGained).toBe(20);
     expect(result.turns[0].attacker).toBe('player');
@@ -125,7 +126,7 @@ describe('resolveCombat', () => {
   it('monster wins when it kills player first', () => {
     // player dmg=1, player hp=5; monster dmg=10, monster hp=100
     // round 1: player hits for 1 (monster hp=99), monster hits for 10 (player hp=0)
-    const result = resolveCombat(1, 5, 10, 100, 50);
+    const result = resolveCombat({ dmg: 1, hp: 5 }, { dmg: 10, hp: 100, xp: 50 });
     expect(result.playerWon).toBe(false);
     expect(result.xpGained).toBe(0);
     const lastTurn = result.turns[result.turns.length - 1];
@@ -137,7 +138,7 @@ describe('resolveCombat', () => {
     // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17)
     // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=14)
     // r3: player hits 5 (mon hp=0) -> player wins
-    const result = resolveCombat(5, 20, 3, 12, 10);
+    const result = resolveCombat({ dmg: 5, hp: 20 }, { dmg: 3, hp: 12, xp: 10 });
     expect(result.playerWon).toBe(true);
     expect(result.turns.length).toBe(5); // 3 player attacks, 2 monster attacks
     expect(result.turns[result.turns.length - 1].monsterHpAfter).toBe(0);
@@ -146,9 +147,45 @@ describe('resolveCombat', () => {
   it('exact-kill: player and monster hp reach 0 simultaneously', () => {
     // player dmg=10, hp=10; monster dmg=10, hp=10
     // player attacks: mon hp=0 -> player wins immediately
-    const result = resolveCombat(10, 10, 10, 10, 5);
+    const result = resolveCombat({ dmg: 10, hp: 10 }, { dmg: 10, hp: 10, xp: 5 });
     expect(result.playerWon).toBe(true);
     expect(result.turns.length).toBe(1);
+  });
+});
+
+// ---- Passive effects ----
+
+describe('passive effects', () => {
+  it('getTreasureItemStats: Regenerating mod gives hpPerRound', () => {
+    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[2]); // Regenerating first
+    const enc = generateTreasure(rng);
+    expect(enc.subKind).toBe('item');
+    const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
+    expect(stats.hpPerRound).toBe(3);
+    expect(stats.manaPerRound).toBe(0);
+  });
+
+  it('getTreasureItemStats: Arcane mod gives manaPerRound', () => {
+    const rng = mockRngWithFirstMod([TREASURE_ITEMS[0], TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]], TREASURE_MODIFIERS[3]); // Arcane first
+    const enc = generateTreasure(rng);
+    const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
+    expect(stats.manaPerRound).toBe(2);
+    expect(stats.hpPerRound).toBe(0);
+  });
+
+  it('resolveCombat: hpPerRound heals player each round after monster attacks', () => {
+    // player dmg=5, hp=20; monster dmg=3, hp=12; hpPerRound=3
+    // r1: player hits 5 (mon hp=7), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
+    // r2: player hits 5 (mon hp=2), monster hits 3 (pl hp=17), regen +3 (pl hp=20)
+    // r3: player hits 5 (mon hp=0) -> player wins
+    const result = resolveCombat({ dmg: 5, hp: 20, hpPerRound: 3 }, { dmg: 3, hp: 12, xp: 10 });
+    expect(result.playerWon).toBe(true);
+    expect(result.turns[1].playerHpAfter).toBe(20); // healed back to full after regen
+  });
+
+  it('resolveCombat: manaPerRound tracked per turn', () => {
+    const result = resolveCombat({ dmg: 5, hp: 20, manaPerRound: 2 }, { dmg: 3, hp: 12, xp: 10 });
+    expect(result.turns[1].manaGained).toBe(2);
   });
 });
 
