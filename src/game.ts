@@ -97,6 +97,7 @@ export default class Game {
   private puzzleComplete: boolean = false;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
+  private pendingItem: TreasureItemStats | null = null;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
   private hpPotions: number = 0;
   private manaPotions: number = 0;
@@ -166,6 +167,7 @@ export default class Game {
     this.dmg = BASE_DMG;
     this.level = 1;
     this.xp = 0;
+    this.pendingItem = null;
     this.equipped = { weapon: null, armor: null, amulet: null };
     this.hpPotions = 0;
     this.manaPotions = 0;
@@ -221,6 +223,34 @@ export default class Game {
     // Cap current HP/mana in case effective max decreased
     this.hp = Math.min(this.hp, this.effectiveMaxHp());
     this.mana = Math.min(this.mana, this.effectiveMaxMana());
+  }
+
+  private itemStatLines(item: TreasureItemStats): string[] {
+    const lines: string[] = [];
+    if (item.damageBonus > 0)  lines.push(`+${item.damageBonus} DMG`);
+    if (item.defenseBonus > 0) lines.push(`+${item.defenseBonus} DEF`);
+    if (item.maxHpBonus > 0)   lines.push(`+${item.maxHpBonus} max HP`);
+    if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
+    for (const e of item.passiveEffects) lines.push(e);
+    return lines;
+  }
+
+  private showEquipDialog(item: TreasureItemStats): void {
+    const current = this.equipped[item.slot];
+    const newName = [...item.modNames, item.name].join(' ');
+    const newStats = this.itemStatLines(item).join(', ') || 'no bonuses';
+    let html = `<span style="color:#ffcc44;font-size:16px">Found: ${esc(newName)}</span><br>`;
+    html += `<span style="color:#aaa">${esc(newStats)}</span><br><br>`;
+    if (current) {
+      const curName = [...current.modNames, current.name].join(' ');
+      const curStats = this.itemStatLines(current).join(', ') || 'no bonuses';
+      html += `<span style="color:#888">Replaces: ${esc(curName)}</span><br>`;
+      html += `<span style="color:#666">${esc(curStats)}</span><br><br>`;
+    } else {
+      html += `<span style="color:#888">${esc(item.slot)} slot is empty</span><br><br>`;
+    }
+    html += `<span style="color:#aaa">[Y] Equip  [N] Discard</span>`;
+    this.statusEl.innerHTML = html;
   }
 
   private useConsumable(slot: 1 | 2 | 3): void {
@@ -443,6 +473,13 @@ export default class Game {
       ? this.resolveTrap(enc as TrapEncounter, level)
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
+    if (this.pendingItem) {
+      // Item equip dialog was shown by resolveTreasure — don't overwrite it
+      if (preamble) this.showInteraction([preamble]);
+      this.render();
+      return;
+    }
+
     if (preamble) logLines.unshift(preamble);
     this.checkPuzzleComplete();
     if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
@@ -488,12 +525,9 @@ export default class Game {
       }
     } else if (enc.subKind === 'item') {
       const item = getTreasureItemStats(enc as TreasureItemEncounter, level);
-      this.equipItem(item);
-      lines.push(`Equipped: ${item.name}`);
-      if (item.damageBonus > 0)  lines.push(`+${item.damageBonus} DMG`);
-      if (item.defenseBonus > 0) lines.push(`+${item.defenseBonus} DEF`);
-      if (item.maxHpBonus > 0)   lines.push(`+${item.maxHpBonus} max HP`);
-      if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
+      this.pendingItem = item;
+      this.showEquipDialog(item);
+      return lines;
     } else if (enc.subKind === 'consumable') {
       const quantity = enc.baseQuantity + Math.floor((level - 1) * enc.quantityGrowth);
       if (enc.effect === 'restore_hp') {
@@ -569,6 +603,22 @@ export default class Game {
 
     if (this.gameOver || this.puzzleComplete) {
       if (e.key === ' ') this.restart();
+      return;
+    }
+
+    if (this.pendingItem) {
+      if (e.key === 'y' || e.key === 'Y') {
+        this.equipItem(this.pendingItem);
+        const name = [...this.pendingItem.modNames, this.pendingItem.name].join(' ');
+        this.pendingItem = null;
+        this.showInteraction([`Equipped: ${name}`]);
+      } else if (e.key === 'n' || e.key === 'N') {
+        this.pendingItem = null;
+        this.showInteraction([`Discarded.`]);
+      } else {
+        return;
+      }
+      this.render();
       return;
     }
 
@@ -679,6 +729,11 @@ export default class Game {
       this.statusEl.classList.remove('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.encounterEl.classList.add('hidden');
+    } else if (this.pendingItem) {
+      this.statusEl.classList.remove('hidden');
+      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
+      this.encounterEl.classList.add('hidden');
+      return;
     } else {
       this.statusEl.classList.add('hidden');
       this.encounterEl.classList.remove('hidden');
