@@ -339,7 +339,6 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
       if (mod.passive_effect === 'mana_per_combat_round') manaPerRound += mod.passive_amount;
     } else {
       // bonus_effect: equipped bonus to max_hp or max_mana
-      passiveEffects.push(`+${mod.bonus_amount} max ${mod.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} equipped`);
       if (mod.bonus_effect === 'max_hp')   bonusMaxHp   += mod.bonus_amount;
       if (mod.bonus_effect === 'max_mana') bonusMaxMana += mod.bonus_amount;
     }
@@ -454,39 +453,6 @@ const FLAVOR_TEXTS = [
   'The room is empty... for now!',
 ];
 
-function modEffectSummary(
-  mod: typeof MONSTER_MODIFIERS[number] | typeof TRAP_MODIFIERS[number] | typeof TREASURE_MODIFIERS[number],
-  context: 'monster' | 'trap' | 'treasure-item',
-  extra?: string,
-): string {
-  const parts: string[] = [];
-  if (context === 'monster') {
-    const m = mod as typeof MONSTER_MODIFIERS[number];
-    if (m.dmg_bonus  > 0) parts.push(`+${m.dmg_bonus} DMG`);
-    if (m.hp_bonus   > 0) parts.push(`+${m.hp_bonus} HP`);
-    if (m.def_bonus  > 0) parts.push(`+${m.def_bonus} DEF`);
-    if (m.mana_drain > 0) parts.push(`drains ${m.mana_drain} MANA on hit`);
-  } else if (context === 'trap') {
-    const m = mod as typeof TRAP_MODIFIERS[number];
-    const dmgLabel = extra === 'mana' ? 'MANA drain' : 'DMG';
-    if (m.dmg_bonus        > 0) parts.push(`+${m.dmg_bonus} ${dmgLabel}`);
-    if (m.mana_drain       > 0) parts.push(`drains ${m.mana_drain} MANA`);
-    if (m.max_hp_reduce    > 0) parts.push(`-${m.max_hp_reduce} max HP`);
-    if (m.max_mana_reduce  > 0) parts.push(`-${m.max_mana_reduce} max MANA`);
-  } else {
-    const m = mod as typeof TREASURE_MODIFIERS[number];
-    if ('stat_multiplier' in m) {
-      const statLabel = extra ? statTypeLabel(extra as TreasureItemEncounter['statType']) : 'stat';
-      parts.push(`+${Math.round((m.stat_multiplier - 1) * 100)}% ${statLabel}`);
-    } else if ('passive_effect' in m) {
-      parts.push(`+${m.passive_amount} ${m.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'MANA each hit'}`);
-    } else {
-      parts.push(`+${m.bonus_amount} max ${m.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} while equipped`);
-    }
-  }
-  return parts.join(', ');
-}
-
 export function formatEncounter(encounter: Encounter, displayLevel: number, currentHp?: number): string[] {
   if (displayLevel === 0) {
     const idx = Math.abs(encounter.baseName.charCodeAt(0)) % FLAVOR_TEXTS.length;
@@ -504,21 +470,17 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     const title = `${ENCOUNTER_STYLE.monster.symbol} [MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
     lines.push(title);
     lines.push(encounter.baseDescription);
+    if (activeMods.length > 0) {
+      for (const mod of activeMods) {
+        lines.push(`◆ ${mod.name}  — ${mod.description}`);
+      }
+    }
     lines.push('');
     const displayHp = currentHp ?? stats.hp;
     lines.push(`HP: ${hpBar(displayHp, stats.hp)}  ${displayHp}`);
-    lines.push(`DMG: ${stats.dmg}` + (stats.def > 0 ? `   DEF: ${stats.def}` : ''));
-    if (activeMods.length > 0) {
-      lines.push('');
-      const indent = '  ◆ ';
-      const longestName = Math.max(...activeMods.map(m => m.name.length));
-      const arrowPad = ' '.repeat(indent.length + longestName + 2);
-      for (const mod of activeMods) {
-        const fx = modEffectSummary(mod, 'monster');
-        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
-        if (fx) lines.push(`${arrowPad}→ ${fx}`);
-      }
-    }
+    lines.push(`DMG: ${stats.dmg}`);
+    if (stats.def      > 0) lines.push(`DEF: ${stats.def}`);
+    if (stats.manaDrain > 0) lines.push(`-${stats.manaDrain} MANA on hit`);
     lines.push('');
     lines.push('REWARD');
     lines.push(`+ ${stats.xp} XP  on defeat`);
@@ -534,13 +496,8 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
-      const indent = '  ◆ ';
-      const longestName = Math.max(...activeMods.map(m => m.name.length));
-      const arrowPad = ' '.repeat(indent.length + longestName + 2);
       for (const mod of activeMods) {
-        const fx = modEffectSummary(mod, 'trap', encounter.damageType);
-        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
-        if (fx) lines.push(`${arrowPad}→ ${fx}`);
+        lines.push(`◆ ${mod.name}  — ${mod.description}`);
       }
     }
     lines.push('');
@@ -549,6 +506,9 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     } else {
       lines.push(`DRAIN: ${stats.dmg}`);
     }
+    if (stats.sideEffects.manaDrain    > 0) lines.push(`-${stats.sideEffects.manaDrain} MANA`);
+    if (stats.sideEffects.maxHpReduce  > 0) lines.push(`-${stats.sideEffects.maxHpReduce} max HP`);
+    if (stats.sideEffects.maxManaReduce > 0) lines.push(`-${stats.sideEffects.maxManaReduce} max MANA`);
     lines.push('');
     lines.push('REWARD');
     const rewardLabel = stats.rewardType === 'xp' ? 'XP' : 'MANA';
@@ -568,7 +528,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
       } else if ('passive_effect' in mod) {
         passiveEffects.push(`+${mod.passive_amount} ${mod.passive_effect === 'hp_per_combat_round' ? 'HP each hit' : 'MANA each hit'}`);
       } else {
-        passiveEffects.push(`+${mod.bonus_amount} max ${mod.bonus_effect === 'max_hp' ? 'HP' : 'MANA'} equipped`);
+        passiveEffects.push(`+${mod.bonus_amount} max ${mod.bonus_effect === 'max_hp' ? 'HP' : 'MANA'}`);
       }
     };
     if (displayLevel >= 3) applyMod(encounter.mod1);
@@ -578,19 +538,13 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
-      const indent = '  ◆ ';
-      const longestName = Math.max(...activeMods.map(m => m.name.length));
-      const arrowPad = ' '.repeat(indent.length + longestName + 2);
       for (const mod of activeMods) {
-        const fx = modEffectSummary(mod, 'treasure-item', encounter.statType);
-        lines.push(`${indent}${mod.name.padEnd(longestName)}  — ${mod.description}`);
-        if (fx) lines.push(`${arrowPad}→ ${fx}`);
+        lines.push(`◆ ${mod.name}  — ${mod.description}`);
       }
     }
     lines.push('');
-    const statLine = `+${round(rawStat * totalMult)} ${statTypeLabel(encounter.statType)}`;
-    const extras = passiveEffects.length > 0 ? `   ${passiveEffects.join('  ')}` : '';
-    lines.push(statLine + extras);
+    lines.push(`+${round(rawStat * totalMult)} ${statTypeLabel(encounter.statType)}`);
+    for (const fx of passiveEffects) lines.push(fx);
 
   } else if (encounter.subKind === 'consumable') {
     const quantity = encounter.baseQuantity + Math.floor((displayLevel - 1) * encounter.quantityGrowth);

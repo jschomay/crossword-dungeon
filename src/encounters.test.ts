@@ -341,7 +341,7 @@ describe('passive effects', () => {
     const enc = generateTreasure(rng);
     const all = formatEncounter(enc, 3).join('\n');
     expect(all).toContain('Fortifying');
-    expect(all).toContain('+5 max HP while equipped');
+    expect(all).toContain('+5 max HP');
   });
 
   it('resolveCombat: hpPerRound heals player each round after monster attacks', () => {
@@ -509,8 +509,7 @@ describe('generateTrap', () => {
     expect(all).toContain('Dart Trap');
     // raw_dmg = 4+(5)*2 = 14, +3 = 17
     expect(all).toContain('DMG: 17');
-    // Draining side effect shown in mod list
-    expect(all).toContain('drains 4 MANA');
+    expect(all).toContain('-4 MANA');
   });
 
   it('magical trap mod effect uses mana drain label', () => {
@@ -546,7 +545,7 @@ describe('generateTrap', () => {
     const t = generateTrap(rng);
     const all = formatEncounter(t, 3).join('\n');
     expect(all).toContain('Draining');
-    expect(all).toContain('drains 4 MANA');
+    expect(all).toContain('-4 MANA');
   });
 });
 

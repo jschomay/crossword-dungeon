@@ -24,6 +24,7 @@ export function colorLine(line: string, titleColor: string, isFirst: boolean, fl
   if (trimmed.startsWith('◆') || trimmed.startsWith('→')) return span(C_DIM, line);
   if (line.startsWith('HP:'))    return span(C_HP, line);
   if (line.startsWith('DMG:'))   return span(C_DMG, line);
+  if (line.startsWith('DEF:'))   return span(C_DEF, line);
   if (line.startsWith('DRAIN:')) return span(C_MANA, line);
   if (line.startsWith('+ ')) {
     if (/ XP/.test(line))   return span(C_XP, line);
@@ -31,8 +32,9 @@ export function colorLine(line: string, titleColor: string, isFirst: boolean, fl
     if (/ HP/.test(line))   return span(C_HP, line);
     return span(C_DIM, line);
   }
-  if (/\+\d+.*damage/i.test(line)) return span(C_DMG, line);
-  if (/\+\d+.*\bhp\b/i.test(line)) return span(C_HP, line);
+  if (/[+-]\d+.*\b(dmg|damage)\b/i.test(line)) return span(C_DMG, line);
+  if (/[+-]\d+.*\bdef\b/i.test(line))           return span(C_DEF, line);
+  if (/[+-]\d+.*\bhp\b/i.test(line)) return span(C_HP, line);
   if (/ MANA/.test(line))          return span(C_MANA, line);
   if (/ XP/.test(line))            return span(C_XP, line);
   return span(C_DIM, line);

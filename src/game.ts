@@ -338,6 +338,11 @@ export default class Game {
           this.hp = Math.max(0, this.hp - dmgTaken);
           logLines.push(`The ${enc.baseName} strikes!`);
           logLines.push(`  -${dmgTaken} HP`);
+          if (stats.manaDrain > 0) {
+            const drained = Math.min(this.mana, stats.manaDrain);
+            this.mana = Math.max(0, this.mana - drained);
+            logLines.push(`  -${drained} MANA (drained)`);
+          }
         } else if (enc.kind === 'trap') {
           const stats = getTrapStats(enc as TrapEncounter, level);
           if (enc.damageType === 'hp') {
