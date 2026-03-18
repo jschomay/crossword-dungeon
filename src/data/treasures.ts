@@ -14,7 +14,7 @@ export const TREASURE_ITEMS = [
 export const TREASURE_CONSUMABLES = [
   { name: 'Health Potion', description: 'Restores hit points', effect: 'restore_hp' as const, restore_amount: 20, base_quantity: 1, quantity_growth: 0.5 },
   { name: 'Mana Potion', description: 'Restores mana', effect: 'restore_mana' as const, restore_amount: 10, base_quantity: 1, quantity_growth: 0.5 },
-  { name: 'Letter Reveal Scroll', description: 'Magically reveals a letter in the puzzle', effect: 'reveal_letter' as const, restore_amount: 1, base_quantity: 1, quantity_growth: 0 },
+  { name: 'Letter Reveal Scroll', description: 'Magically reveals a letter in the puzzle', effect: 'reveal_letter' as const, restore_amount: 1, base_quantity: 1, quantity_growth: 0.5 },
 ] as const;
 
 export const TREASURE_IMMEDIATE = [
