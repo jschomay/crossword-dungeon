@@ -103,28 +103,48 @@ export default class Game {
   private manaPotions: number = 0;
   private revealScrolls: number = 0;
 
+  private readonly fullIpuz = validateIpuz(puzzleJson);
+
+  private readonly TILT_SCALE = 1.22;
+
+  private calcFontSize(): number {
+    const availW = (window.innerWidth * 0.6 - 12 - 24) / this.TILT_SCALE;
+    const availH = (window.innerHeight - 24) / this.TILT_SCALE;
+    return Math.max(4, Math.floor(Math.min(
+      availW / this.dungeon.displayWidth,
+      availH / this.dungeon.displayHeight
+    )));
+  }
+
+  private regenDungeon(): void {
+    const selected = selectWords(this.fullIpuz, 8, Math.random);
+    const ipuz = buildSparseIpuz(this.fullIpuz, selected);
+    this.puzzle = new Puzzle(ipuz);
+    this.dungeon = new Dungeon(this.puzzle);
+    this.totalRooms = this.puzzle.getRooms().length;
+    // Replace the canvas so no stale pixels remain
+    this.dungeonEl.innerHTML = '';
+    this.display = new ROT.Display({
+      width: this.dungeon.displayWidth,
+      height: this.dungeon.displayHeight,
+      fontSize: this.display.getOptions().fontSize,
+      forceSquareRatio: true,
+    });
+    this.display.setOptions({ fontSize: this.calcFontSize() });
+    this.dungeonEl.appendChild(this.display.getContainer()!);
+  }
+
   constructor() {
-    const fullIpuz = validateIpuz(puzzleJson);
-    const selected = selectWords(fullIpuz, 10, Math.random);
-    const ipuz = buildSparseIpuz(fullIpuz, selected);
+    const selected = selectWords(this.fullIpuz, 8, Math.random);
+    const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.dungeon = new Dungeon(this.puzzle);
     this.totalRooms = this.puzzle.getRooms().length;
 
-    const TILT_SCALE = 1.22; // bounding box grows ~22% at max 6° rotation
-    const calcFontSize = () => {
-      const availW = (window.innerWidth * 0.6 - 12 - 24) / TILT_SCALE; // 60% viewport minus gap and padding
-      const availH = (window.innerHeight - 24) / TILT_SCALE;
-      return Math.max(4, Math.floor(Math.min(
-        availW / this.dungeon.displayWidth,
-        availH / this.dungeon.displayHeight
-      )));
-    };
-
     this.display = new ROT.Display({
       width: this.dungeon.displayWidth,
       height: this.dungeon.displayHeight,
-      fontSize: calcFontSize(),
+      fontSize: this.calcFontSize(),
       forceSquareRatio: true,
     });
 
@@ -132,7 +152,7 @@ export default class Game {
     this.dungeonEl.appendChild(this.display.getContainer()!);
 
     window.addEventListener('resize', () => {
-      this.display.setOptions({ fontSize: calcFontSize() });
+      this.display.setOptions({ fontSize: this.calcFontSize() });
       this.render();
     });
 
@@ -177,6 +197,7 @@ export default class Game {
   }
 
   private restart(): void {
+    this.regenDungeon();
     this.initRoomStates();
     this.mana = BASE_MANA;
     this.maxMana = BASE_MANA;

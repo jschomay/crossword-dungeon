@@ -153,8 +153,6 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
   // Seed: random eligible word
   const seedIndex = Math.floor(rng() * eligible.length);
   const selected = new Set<string>([eligible[seedIndex].key]);
-  // Only track intersection cells valid for expansion:
-  // from an across word, expand via odd-col cells; from a down word, via odd-row cells
   const expansionCells: Coord[] = eligible[seedIndex].cells.filter(c =>
     eligible[seedIndex].direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
   );
@@ -184,7 +182,15 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
     const ck = `${cell.x},${cell.y}`;
     const candidates = (cellToWords.get(ck) ?? []).filter(w => !selected.has(w.key));
     if (candidates.length === 0) continue;
-    const pick = candidates[Math.floor(rng() * candidates.length)];
+    // Bias toward shorter words: weight = 1 / length²
+    const candWeights = candidates.map(w => 1 / (w.cells.length ** 2));
+    const candTotal = candWeights.reduce((s, w) => s + w, 0);
+    let cr = rng() * candTotal;
+    let pick = candidates[candidates.length - 1];
+    for (let i = 0; i < candidates.length; i++) {
+      cr -= candWeights[i];
+      if (cr <= 0) { pick = candidates[i]; break; }
+    }
     selected.add(pick.key);
     const newExpansionCells = pick.cells.filter(c =>
       pick.direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
