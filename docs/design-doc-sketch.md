@@ -102,6 +102,4 @@ The player must carefully solve the rooms in an order that maximizes rewards and
 
 - reveal scroll not leveling up count
 - restart gets new dungeon
-- fill space
 - experiment with denser/horizontal/vertical/shorter words gen
-- filled in letters should be white

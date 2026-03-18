@@ -696,7 +696,7 @@ export default class Game {
 
     this.heroEl.innerHTML =
       `<div style="display:flex;align-items:baseline;gap:12px">` +
-        `<span style="color:#aaa">Adventurer</span>` +
+        `<span style="color:#ffdd44">Adventurer</span>` +
         `<span${lvlFlash} style="color:#777">Lv.${this.level}</span>` +
       `</div>` +
       `<div style="display:flex;gap:32px;margin-top:4px">` +

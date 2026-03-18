@@ -159,12 +159,28 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
     eligible[seedIndex].direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
   );
 
+  // Track all selected cells for centroid computation
+  const allSelectedCells: Coord[] = [...expansionCells];
+
+  const weightedPick = (cells: Coord[]): Coord => {
+    const cx = allSelectedCells.reduce((s, c) => s + c.x, 0) / allSelectedCells.length;
+    const cy = allSelectedCells.reduce((s, c) => s + c.y, 0) / allSelectedCells.length;
+    const weights = cells.map(c => 1 / ((c.x - cx) ** 2 + (c.y - cy) ** 2 + 1));
+    const total = weights.reduce((s, w) => s + w, 0);
+    let r = rng() * total;
+    for (let i = 0; i < cells.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return cells[i];
+    }
+    return cells[cells.length - 1];
+  };
+
   let attempts = 0;
   const maxAttempts = targetCount * eligible.length * 2;
 
   while (selected.size < clampedTarget && attempts < maxAttempts) {
     attempts++;
-    const cell = expansionCells[Math.floor(rng() * expansionCells.length)];
+    const cell = weightedPick(expansionCells);
     const ck = `${cell.x},${cell.y}`;
     const candidates = (cellToWords.get(ck) ?? []).filter(w => !selected.has(w.key));
     if (candidates.length === 0) continue;
@@ -173,7 +189,10 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
     const newExpansionCells = pick.cells.filter(c =>
       pick.direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
     );
-    for (const c of newExpansionCells) expansionCells.push(c);
+    for (const c of newExpansionCells) {
+      expansionCells.push(c);
+      allSelectedCells.push(c);
+    }
   }
 
   return selected;

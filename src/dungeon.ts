@@ -4,9 +4,9 @@ import { ENCOUNTER_STYLE, UNKNOWN_COLOR } from './encounters';
 
 const WALL_FG = '#888888';
 const UNKNOWN_FG = UNKNOWN_COLOR;
-const SOLVED_FG = UNKNOWN_COLOR;
+const SOLVED_FG = '#ffffff';
 const DOT_FG = '#4444ff';
-const PLAYER_FG = '#ffffff';
+const PLAYER_FG = '#ffdd44';
 const BLACK = '#000000';
 
 // The 8 interior non-center cells in a 5×5 room, left-to-right, top-to-bottom
