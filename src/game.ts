@@ -354,7 +354,8 @@ export default class Game {
     for (const nb of neighbors) {
       const nbState = this.getRoomState(nb.x, nb.y);
       if (nbState.solvedLetter !== null) continue;
-      nbState.activatedLevel++;
+      const maxLevel = this.puzzle.potentialLevels[nb.y][nb.x];
+      nbState.activatedLevel = Math.min(nbState.activatedLevel + 1, maxLevel);
     }
   }
 
@@ -657,6 +658,7 @@ export default class Game {
       } else {
         return;
       }
+      this.checkPuzzleComplete();
       this.render();
       return;
     }
