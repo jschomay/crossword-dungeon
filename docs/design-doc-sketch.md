@@ -97,3 +97,11 @@ Reaching 0 HP or 0 mana ends the run.
 
 The player must carefully solve the rooms in an order that maximizes rewards and avoids leveling-up a monster or trap room beyond their ability to withstand it.
 
+
+----
+
+- reveal scroll not leveling up count
+- restart gets new dungeon
+- fill space
+- experiment with denser/horizontal/vertical/shorter words gen
+- filled in letters should be white

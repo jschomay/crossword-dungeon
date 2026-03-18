@@ -94,6 +94,151 @@ export function validateIpuz(data: unknown): Ipuz {
   return d as unknown as Ipuz;
 }
 
+export type Word = {
+  key: string; // e.g. "1A" or "5D"
+  direction: 'across' | 'down';
+  number: number;
+  cells: Coord[];
+};
+
+// Returns all valid words (length >= 2) in the puzzle.
+export function getWords(ipuz: Ipuz): Word[] {
+  const { width, height } = ipuz.dimensions;
+  const words: Word[] = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const num = clueNumberFromCell(ipuz.puzzle[y][x]);
+      if (num === null) continue;
+      for (const direction of ['across', 'down'] as const) {
+        // Only start a word at cells where this direction begins
+        if (direction === 'across' && x > 0 && !isBlackCell(ipuz, { x: x - 1, y })) continue;
+        if (direction === 'down' && y > 0 && !isBlackCell(ipuz, { x, y: y - 1 })) continue;
+        const len = wordLength(ipuz, { x, y }, direction);
+        if (len < 2) continue;
+        const cells: Coord[] = [];
+        for (let i = 0; i < len; i++) {
+          cells.push(direction === 'across' ? { x: x + i, y } : { x, y: y + i });
+        }
+        words.push({ key: `${num}${direction === 'across' ? 'A' : 'D'}`, direction, number: num, cells });
+      }
+    }
+  }
+  return words;
+}
+
+// Build-up algorithm using odd row/col constraint to guarantee valid sparse words.
+// Across words must lie on an odd row; down words on an odd col.
+// Expansion only happens through intersection cells at odd col (for across) or odd row (for down).
+// This ensures every selected word is always fully included — no partial word stubs.
+export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number): Set<string> {
+  const allWords = getWords(ipuz);
+
+  // Only eligible words: across on odd rows, down on odd cols
+  const eligible = allWords.filter(w =>
+    w.direction === 'across' ? w.cells[0].y % 2 === 1 : w.cells[0].x % 2 === 1
+  );
+  if (eligible.length === 0) return new Set();
+  const clampedTarget = Math.min(targetCount, eligible.length);
+
+  // Build a map: for each cell, which eligible words cover it
+  const cellToWords = new Map<string, Word[]>();
+  for (const word of eligible) {
+    for (const cell of word.cells) {
+      const ck = `${cell.x},${cell.y}`;
+      if (!cellToWords.has(ck)) cellToWords.set(ck, []);
+      cellToWords.get(ck)!.push(word);
+    }
+  }
+
+  // Seed: random eligible word
+  const seedIndex = Math.floor(rng() * eligible.length);
+  const selected = new Set<string>([eligible[seedIndex].key]);
+  // Only track intersection cells valid for expansion:
+  // from an across word, expand via odd-col cells; from a down word, via odd-row cells
+  const expansionCells: Coord[] = eligible[seedIndex].cells.filter(c =>
+    eligible[seedIndex].direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
+  );
+
+  let attempts = 0;
+  const maxAttempts = targetCount * eligible.length * 2;
+
+  while (selected.size < clampedTarget && attempts < maxAttempts) {
+    attempts++;
+    const cell = expansionCells[Math.floor(rng() * expansionCells.length)];
+    const ck = `${cell.x},${cell.y}`;
+    const candidates = (cellToWords.get(ck) ?? []).filter(w => !selected.has(w.key));
+    if (candidates.length === 0) continue;
+    const pick = candidates[Math.floor(rng() * candidates.length)];
+    selected.add(pick.key);
+    const newExpansionCells = pick.cells.filter(c =>
+      pick.direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
+    );
+    for (const c of newExpansionCells) expansionCells.push(c);
+  }
+
+  return selected;
+}
+
+// Returns a new ipuz with only the cells belonging to selectedWords kept; all others blacked out,
+// and dimensions trimmed to the bounding box of kept cells.
+export function buildSparseIpuz(ipuz: Ipuz, selectedWords: Set<string>): Ipuz {
+  const allWords = getWords(ipuz);
+  const keptCells = new Set<string>();
+  for (const word of allWords) {
+    if (selectedWords.has(word.key)) {
+      for (const cell of word.cells) keptCells.add(`${cell.x},${cell.y}`);
+    }
+  }
+
+  // Compute bounding box of kept cells
+  const { width, height } = ipuz.dimensions;
+  let minX = width, maxX = 0, minY = height, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (keptCells.has(`${x},${y}`)) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  const newWidth = maxX - minX + 1;
+  const newHeight = maxY - minY + 1;
+
+  const newSolution: (string | null)[][] = Array.from({ length: newHeight }, (_, y) =>
+    Array.from({ length: newWidth }, (_, x) =>
+      keptCells.has(`${x + minX},${y + minY}`) ? (ipuz.solution[y + minY][x + minX] as string) : '#'
+    )
+  );
+  const newPuzzle = Array.from({ length: newHeight }, (_, y) =>
+    Array.from({ length: newWidth }, (_, x) =>
+      keptCells.has(`${x + minX},${y + minY}`) ? ipuz.puzzle[y + minY][x + minX] : '#'
+    )
+  );
+
+  // Filter clues to only selected words
+  const selectedAcross = new Set<number>();
+  const selectedDown = new Set<number>();
+  for (const word of allWords) {
+    if (!selectedWords.has(word.key)) continue;
+    if (word.direction === 'across') selectedAcross.add(word.number);
+    else selectedDown.add(word.number);
+  }
+
+  return {
+    ...ipuz,
+    dimensions: { width: newWidth, height: newHeight },
+    solution: newSolution,
+    puzzle: newPuzzle,
+    clues: {
+      Across: ipuz.clues.Across.filter(([n]) => selectedAcross.has(n)),
+      Down: ipuz.clues.Down.filter(([n]) => selectedDown.has(n)),
+    },
+  };
+}
+
 export default class Puzzle {
   ipuz: Ipuz;
   readonly potentialLevels: number[][];

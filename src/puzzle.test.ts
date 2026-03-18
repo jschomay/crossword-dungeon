@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateIpuz, computePotentialLevel, computePotentialLevels } from './puzzle';
+import { validateIpuz, computePotentialLevel, computePotentialLevels, getWords, selectWords, buildSparseIpuz } from './puzzle';
 import Puzzle from './puzzle';
 import testPuzzleJson from '../puzzles/test-potential.json';
 import demoJson from '../puzzles/demo.json';
@@ -155,6 +155,130 @@ describe('getWordNeighbors', () => {
     // A(0,0): surrounded by black cells on all sides — no valid words
     const soloPuzzle = new Puzzle(soloIpuz);
     expect(soloPuzzle.getWordNeighbors({ x: 0, y: 0 })).toHaveLength(0);
+  });
+});
+
+// test-potential fixture words:
+//   Across: 1A(AB), 3A(CD), 5A(EF), 7A(GH), 9A(IJ), 11A(KL) — 6 words
+//   Down: 1D(AEI), 2D(BFJ), 3D(CGK), 4D(DHL) — 4 words
+//   Total: 10 words
+
+describe('getWords', () => {
+  it('returns all words in the fixture', () => {
+    const words = getWords(ipuz);
+    expect(words).toHaveLength(10);
+  });
+
+  it('includes expected word keys', () => {
+    const keys = new Set(getWords(ipuz).map(w => w.key));
+    expect(keys.has('1A')).toBe(true);
+    expect(keys.has('1D')).toBe(true);
+    expect(keys.has('2D')).toBe(true);
+    expect(keys.has('11A')).toBe(true);
+  });
+
+  it('returns correct cells for 1A (AB at y=0)', () => {
+    const word = getWords(ipuz).find(w => w.key === '1A')!;
+    expect(word.cells).toEqual([{ x: 0, y: 0 }, { x: 1, y: 0 }]);
+  });
+
+  it('returns correct cells for 1D (AEI at x=0)', () => {
+    const word = getWords(ipuz).find(w => w.key === '1D')!;
+    expect(word.cells).toEqual([{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 0, y: 2 }]);
+  });
+});
+
+// Eligible words in test-potential fixture (odd row/col constraint):
+//   Across on odd rows: row 1 only → 5A (EF at y=1, cols 0-1) and 7A (GH at y=1, cols 3-4)
+//   Down on odd cols: col 1 → 2D (BFJ), col 3 → 3D (CGK)
+//   Total eligible: 4 words, but black col at x=2 splits into two components:
+//     Component A: 5A + 2D (connected via col 1)
+//     Component B: 7A + 3D (connected via col 3)
+//   From any seed, only 2 words reachable
+
+describe('selectWords', () => {
+  const seededRng = (values: number[]) => {
+    let i = 0;
+    return () => values[i++ % values.length];
+  };
+
+  it('returns exactly targetCount words when enough eligible words exist', () => {
+    const selected = selectWords(ipuz, 2, Math.random);
+    expect(selected.size).toBe(2);
+  });
+
+  it('clamps to reachable connected component when targetCount exceeds it', () => {
+    // Black col at x=2 splits eligible words into two 2-word components
+    const selected = selectWords(ipuz, 999, Math.random);
+    expect(selected.size).toBe(2);
+  });
+
+  it('only selects eligible words (across on odd rows, down on odd cols)', () => {
+    const allWords = getWords(ipuz);
+    const selected = selectWords(ipuz, 3, Math.random);
+    const selectedWords = allWords.filter(w => selected.has(w.key));
+    for (const word of selectedWords) {
+      if (word.direction === 'across') {
+        expect(word.cells[0].y % 2).toBe(1);
+      } else {
+        expect(word.cells[0].x % 2).toBe(1);
+      }
+    }
+  });
+
+  it('all selected words share at least one cell with another selected word (connected)', () => {
+    for (let trial = 0; trial < 20; trial++) {
+      const selected = selectWords(ipuz, 2, Math.random);
+      const allWords = getWords(ipuz);
+      const selectedWords = allWords.filter(w => selected.has(w.key));
+      for (const word of selectedWords) {
+        const wordCellKeys = new Set(word.cells.map(c => `${c.x},${c.y}`));
+        const hasNeighbor = selectedWords.some(other => {
+          if (other.key === word.key) return false;
+          return other.cells.some(c => wordCellKeys.has(`${c.x},${c.y}`));
+        });
+        expect(hasNeighbor).toBe(true);
+      }
+    }
+  });
+
+  it('seed word is always in the selected set', () => {
+    // rng returns 0 first → seed = eligible[0] = '5A'
+    const rng = seededRng([0, 0.5, 0.5, 0.5, 0.5]);
+    const selected = selectWords(ipuz, 2, rng);
+    expect(selected.has('5A')).toBe(true);
+  });
+});
+
+describe('buildSparseIpuz', () => {
+  it('only keeps cells belonging to selected words', () => {
+    const selected = selectWords(ipuz, 2, Math.random);
+    const sparse = buildSparseIpuz(ipuz, selected);
+    // Every non-black cell in the sparse ipuz must belong to a selected word
+    const allWords = getWords(sparse);
+    const sparseWordKeys = new Set(allWords.map(w => w.key));
+    for (let y = 0; y < sparse.dimensions.height; y++) {
+      for (let x = 0; x < sparse.dimensions.width; x++) {
+        if (sparse.solution[y][x] !== '#') {
+          // At least one word in the sparse grid covers this cell
+          const coveredByWord = allWords.some(w => w.cells.some(c => c.x === x && c.y === y));
+          expect(coveredByWord).toBe(true);
+        }
+      }
+    }
+    // And only selected word keys are present
+    for (const key of sparseWordKeys) {
+      expect(selected.has(key)).toBe(true);
+    }
+  });
+
+  it('clues only contain selected words', () => {
+    // Select just 1A and 1D: across num 1, down num 1
+    const sparse = buildSparseIpuz(ipuz, new Set(['1A', '1D']));
+    expect(sparse.clues.Across).toHaveLength(1);
+    expect(sparse.clues.Across[0][0]).toBe(1);
+    expect(sparse.clues.Down).toHaveLength(1);
+    expect(sparse.clues.Down[0][0]).toBe(1);
   });
 });
 

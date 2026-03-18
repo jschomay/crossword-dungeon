@@ -1,7 +1,7 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
-import demoJson from '../puzzles/demo.json';
-import { validateIpuz } from './puzzle';
+import puzzleJson from '../puzzles/wapo-2026-03-16.json';
+import { validateIpuz, selectWords, buildSparseIpuz } from './puzzle';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
@@ -104,19 +104,37 @@ export default class Game {
   private revealScrolls: number = 0;
 
   constructor() {
-    const ipuz = validateIpuz(demoJson);
+    const fullIpuz = validateIpuz(puzzleJson);
+    const selected = selectWords(fullIpuz, 10, Math.random);
+    const ipuz = buildSparseIpuz(fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.dungeon = new Dungeon(this.puzzle);
     this.totalRooms = this.puzzle.getRooms().length;
 
+    const TILT_SCALE = 1.22; // bounding box grows ~22% at max 6° rotation
+    const calcFontSize = () => {
+      const availW = (window.innerWidth * 0.6 - 12 - 24) / TILT_SCALE; // 60% viewport minus gap and padding
+      const availH = (window.innerHeight - 24) / TILT_SCALE;
+      return Math.max(4, Math.floor(Math.min(
+        availW / this.dungeon.displayWidth,
+        availH / this.dungeon.displayHeight
+      )));
+    };
+
     this.display = new ROT.Display({
       width: this.dungeon.displayWidth,
       height: this.dungeon.displayHeight,
-      fontSize: 20,
+      fontSize: calcFontSize(),
+      forceSquareRatio: true,
     });
 
     this.dungeonEl = document.getElementById('dungeon')!;
     this.dungeonEl.appendChild(this.display.getContainer()!);
+
+    window.addEventListener('resize', () => {
+      this.display.setOptions({ fontSize: calcFontSize() });
+      this.render();
+    });
 
     this.heroEl = document.getElementById('hero')!;
     this.statusEl = document.getElementById('status')!;
