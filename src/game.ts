@@ -43,7 +43,10 @@ function roomKey(x: number, y: number): string {
 const BASE_MANA = 10;
 const BASE_HP = 50;
 const BASE_DMG = 10;
-const XP_PER_LEVEL = 50;
+const XP_PER_LEVEL = 100;
+const BASE_WORD_COUNT = 5;
+const WORD_COUNT_STEP = 2;
+const MAX_WORD_COUNT = 20;
 
 // ---- Inventory list rendering ----
 
@@ -66,11 +69,12 @@ type Equipped = {
 };
 
 export default class Game {
-  display: ROT.Display;
-  private puzzle: Puzzle;
-  private dungeon: Dungeon;
+  display!: ROT.Display;
+  private puzzle!: Puzzle;
+  private dungeon!: Dungeon;
   private playerPos: { x: number; y: number };
   private heroEl: HTMLElement;
+  private dungeonLevelEl: HTMLElement;
   private statusEl: HTMLElement;
   private cluesEl: HTMLElement;
   private encounterEl: HTMLElement;
@@ -95,6 +99,7 @@ export default class Game {
   private gameOver: boolean = false;
   private gameOverReason: 'hp' | 'mana' | null = null;
   private puzzleComplete: boolean = false;
+  private dungeonLevel: number = 1;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
   private pendingItem: TreasureItemStats | null = null;
@@ -116,51 +121,45 @@ export default class Game {
     )));
   }
 
-  private regenDungeon(): void {
-    const selected = selectWords(this.fullIpuz, 8, Math.random);
-    const ipuz = buildSparseIpuz(this.fullIpuz, selected);
-    this.puzzle = new Puzzle(ipuz);
-    this.dungeon = new Dungeon(this.puzzle);
-    this.totalRooms = this.puzzle.getRooms().length;
-    // Replace the canvas so no stale pixels remain
-    this.dungeonEl.innerHTML = '';
-    this.display = new ROT.Display({
-      width: this.dungeon.displayWidth,
-      height: this.dungeon.displayHeight,
-      fontSize: this.display.getOptions().fontSize,
-      forceSquareRatio: true,
-    });
-    this.display.setOptions({ fontSize: this.calcFontSize() });
-    this.dungeonEl.appendChild(this.display.getContainer()!);
+  private wordCount(): number {
+    return Math.min(MAX_WORD_COUNT, BASE_WORD_COUNT + (this.dungeonLevel - 1) * WORD_COUNT_STEP);
   }
 
-  constructor() {
-    const selected = selectWords(this.fullIpuz, 8, Math.random);
+  private puzzleMult(): number {
+    return 1 + (this.dungeonLevel - 1) * 0.3;
+  }
+
+  private regenDungeon(): void {
+    const selected = selectWords(this.fullIpuz, this.wordCount(), Math.random, 0);
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.dungeon = new Dungeon(this.puzzle);
     this.totalRooms = this.puzzle.getRooms().length;
-
+    this.dungeonEl.innerHTML = '';
     this.display = new ROT.Display({
       width: this.dungeon.displayWidth,
       height: this.dungeon.displayHeight,
       fontSize: this.calcFontSize(),
       forceSquareRatio: true,
     });
-
-    this.dungeonEl = document.getElementById('dungeon')!;
     this.dungeonEl.appendChild(this.display.getContainer()!);
+  }
+
+  constructor() {
+    this.dungeonEl = document.getElementById('dungeon')!;
+    this.heroEl = document.getElementById('hero')!;
+    this.dungeonLevelEl = document.getElementById('dungeon-level')!;
+    this.statusEl = document.getElementById('status')!;
+    this.cluesEl = document.getElementById('clues')!;
+    this.encounterEl = document.getElementById('encounter')!;
+    this.interactionLogEl = document.getElementById('interaction-log')!;
+
+    this.regenDungeon();
 
     window.addEventListener('resize', () => {
       this.display.setOptions({ fontSize: this.calcFontSize() });
       this.render();
     });
-
-    this.heroEl = document.getElementById('hero')!;
-    this.statusEl = document.getElementById('status')!;
-    this.cluesEl = document.getElementById('clues')!;
-    this.encounterEl = document.getElementById('encounter')!;
-    this.interactionLogEl = document.getElementById('interaction-log')!;
 
     this.applyTilt();
     this.initRoomStates();
@@ -197,6 +196,7 @@ export default class Game {
   }
 
   private restart(): void {
+    this.dungeonLevel = 1;
     this.regenDungeon();
     this.initRoomStates();
     this.mana = BASE_MANA;
@@ -216,6 +216,20 @@ export default class Game {
     this.combatRunning = false;
     this.combatMonsterHp = null;
     this.gameOverReason = null;
+    this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
+    this.applyTilt();
+    this.clearLogs();
+    this.render();
+  }
+
+  private advancePuzzle(): void {
+    this.dungeonLevel++;
+    this.regenDungeon();
+    this.initRoomStates();
+    this.pendingItem = null;
+    this.puzzleComplete = false;
+    this.combatRunning = false;
+    this.combatMonsterHp = null;
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
     this.applyTilt();
     this.clearLogs();
@@ -403,7 +417,7 @@ export default class Game {
         logLines.push(`You cast the '${letter}' rune... but it fades away.`);
 
         if (enc.kind === 'monster') {
-          const stats = getMonsterStats(enc as MonsterEncounter, level);
+          const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
           const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
           this.hp = Math.max(0, this.hp - dmgTaken);
           logLines.push(`The ${enc.baseName} strikes!`);
@@ -414,7 +428,7 @@ export default class Game {
             logLines.push(`  -${drained} MANA (drained)`);
           }
         } else if (enc.kind === 'trap') {
-          const stats = getTrapStats(enc as TrapEncounter, level);
+          const stats = getTrapStats(enc as TrapEncounter, level, this.puzzleMult());
           if (enc.damageType === 'hp') {
             const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
             this.hp = Math.max(0, this.hp - dmgTaken);
@@ -487,7 +501,7 @@ export default class Game {
     this.markRoomSolved(x, y, letter);
 
     if (enc.kind === 'monster') {
-      const stats = getMonsterStats(enc as MonsterEncounter, level);
+      const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
       const equippedItems = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet];
       const manaPerRound = equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0);
       const hpPerRound   = equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0);
@@ -527,7 +541,7 @@ export default class Game {
   }
 
   private resolveTrap(enc: TrapEncounter, level: number): string[] {
-    const stats = getTrapStats(enc, level);
+    const stats = getTrapStats(enc, level, this.puzzleMult());
     const lines = [`You disarm the ${enc.baseName}!`];
     if (stats.rewardType === 'xp') {
       const leveledUp = this.gainXp(stats.reward);
@@ -642,7 +656,10 @@ export default class Game {
     if (this.combatRunning) return;
 
     if (this.gameOver || this.puzzleComplete) {
-      if (e.key === ' ') this.restart();
+      if (e.key === ' ') {
+        if (this.puzzleComplete) this.advancePuzzle();
+        else this.restart();
+      }
       return;
     }
 
@@ -744,6 +761,9 @@ export default class Game {
     this.prevXp              = this.xp;
     this.prevLevel           = this.level;
     this.prevCombatMonsterHp = this.combatMonsterHp;
+
+    this.dungeonLevelEl.innerHTML =
+      `<span style="color:#aaaaff">Dungeon Level ${this.dungeonLevel}</span>`;
   }
 
   private render(): void {
@@ -766,7 +786,7 @@ export default class Game {
     } else if (this.puzzleComplete) {
       this.statusEl.innerHTML =
         `<span style="color:#44ff88;font-size:20px">PUZZLE COMPLETE</span><br><br>` +
-        `<span style="color:#aaa">[SPACE] Restart</span>`;
+        `<span style="color:#aaa">[SPACE] Continue to Dungeon Level ${this.dungeonLevel + 1}</span>`;
       this.statusEl.classList.remove('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.encounterEl.classList.add('hidden');

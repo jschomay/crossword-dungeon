@@ -100,6 +100,7 @@ The player must carefully solve the rooms in an order that maximizes rewards and
 
 ----
 
-- reveal scroll not leveling up count
-- restart gets new dungeon
-- experiment with denser/horizontal/vertical/shorter words gen
+Balance
+
+- level up at 100
+- level scale too much (easy to get level 7+ dragon or shield)

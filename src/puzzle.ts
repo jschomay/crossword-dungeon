@@ -126,16 +126,26 @@ export function getWords(ipuz: Ipuz): Word[] {
   return words;
 }
 
-// Build-up algorithm using odd row/col constraint to guarantee valid sparse words.
-// Across words must lie on an odd row; down words on an odd col.
-// Expansion only happens through intersection cells at odd col (for across) or odd row (for down).
+const CROSS_REF_CLUE_RE = /\d+[-.]?\s*(across|down)/i;
+
+function wordClue(ipuz: Ipuz, word: Word): string {
+  const dir = word.direction === 'across' ? 'Across' : 'Down';
+  return ipuz.clues[dir].find(([n]) => n === word.number)?.[1] ?? '';
+}
+
+// Build-up algorithm using a parity row/col constraint to guarantee valid sparse words.
+// Across words must lie on a row matching parity; down words on a col matching parity.
+// Expansion only happens through intersection cells matching parity (col for across, row for down).
 // This ensures every selected word is always fully included — no partial word stubs.
-export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number): Set<string> {
+// parity=1 means odd rows/cols (default); parity=0 means even rows/cols.
+export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number, parity: 0 | 1 = 1): Set<string> {
   const allWords = getWords(ipuz);
 
-  // Only eligible words: across on odd rows, down on odd cols
+  // Only eligible words: across on rows matching parity, down on cols matching parity,
+  // and clue must not reference another clue number (e.g. "See 58-Down").
   const eligible = allWords.filter(w =>
-    w.direction === 'across' ? w.cells[0].y % 2 === 1 : w.cells[0].x % 2 === 1
+    (w.direction === 'across' ? w.cells[0].y % 2 === parity : w.cells[0].x % 2 === parity) &&
+    !CROSS_REF_CLUE_RE.test(wordClue(ipuz, w))
   );
   if (eligible.length === 0) return new Set();
   const clampedTarget = Math.min(targetCount, eligible.length);
@@ -154,7 +164,7 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
   const seedIndex = Math.floor(rng() * eligible.length);
   const selected = new Set<string>([eligible[seedIndex].key]);
   const expansionCells: Coord[] = eligible[seedIndex].cells.filter(c =>
-    eligible[seedIndex].direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
+    eligible[seedIndex].direction === 'across' ? c.x % 2 === parity : c.y % 2 === parity
   );
 
   // Track all selected cells for centroid computation
@@ -193,7 +203,7 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number):
     }
     selected.add(pick.key);
     const newExpansionCells = pick.cells.filter(c =>
-      pick.direction === 'across' ? c.x % 2 === 1 : c.y % 2 === 1
+      pick.direction === 'across' ? c.x % 2 === parity : c.y % 2 === parity
     );
     for (const c of newExpansionCells) {
       expansionCells.push(c);

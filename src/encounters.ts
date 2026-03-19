@@ -254,6 +254,7 @@ export function generateEncounter(rng: Rng): Encounter {
 export function getMonsterStats(
   enc: MonsterEncounter,
   level: number,
+  puzzleMult: number = 1,
 ): { hp: number; dmg: number; def: number; xp: number; manaDrain: number } {
   const baseHp  = enc.baseHp  + (level - 1) * enc.hpGrowth;
   const baseDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
@@ -269,9 +270,9 @@ export function getMonsterStats(
   if (level >= 3) applyMod(enc.mod1);
   if (level >= 6) applyMod(enc.mod2);
   return {
-    hp:  round(baseHp  + hpBonus),
-    dmg: round(baseDmg + dmgBonus),
-    def: round(baseDef + defBonus),
+    hp:  round((baseHp  + hpBonus)  * puzzleMult),
+    dmg: round((baseDmg + dmgBonus) * puzzleMult),
+    def: round((baseDef + defBonus) * puzzleMult),
     xp:  round(baseXp),
     manaDrain,
   };
@@ -280,6 +281,7 @@ export function getMonsterStats(
 export function getTrapStats(
   enc: TrapEncounter,
   level: number,
+  puzzleMult: number = 1,
 ): { dmg: number; reward: number; rewardType: 'xp' | 'mana'; sideEffects: TrapSideEffects } {
   const baseDmg    = enc.baseDamage + (level - 1) * enc.damageGrowth;
   const baseReward = enc.baseReward + (level - 1) * enc.rewardGrowth;
@@ -294,7 +296,7 @@ export function getTrapStats(
   if (level >= 3) applyMod(enc.mod1);
   if (level >= 6) applyMod(enc.mod2);
   return {
-    dmg: round(baseDmg + dmgBonus),
+    dmg: round((baseDmg + dmgBonus) * puzzleMult),
     reward: round(baseReward),
     rewardType: enc.rewardType,
     sideEffects,

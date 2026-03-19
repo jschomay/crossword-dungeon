@@ -46,6 +46,7 @@ body {
   min-width: 0;
   align-self: flex-start;
   padding-right: 16px;
+  padding-top: 16px;
 }
 
 #status {
@@ -58,8 +59,16 @@ body {
   text-align: center;
 }
 
+#dungeon-level {
+  font-size: 14px;
+  font-family: monospace;
+  line-height: 1.8;
+  border: 1px solid #444;
+  padding: 16px 20px;
+  white-space: pre;
+}
+
 #hero {
-  margin-top: 16px;
   font-size: 14px;
   font-family: monospace;
   line-height: 1.8;
