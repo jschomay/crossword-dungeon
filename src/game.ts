@@ -130,7 +130,11 @@ export default class Game {
   }
 
   private regenDungeon(): void {
-    const selected = selectWords(this.fullIpuz, this.wordCount(), Math.random, 0);
+    const target = this.wordCount();
+    let selected: Set<string>;
+    do {
+      selected = selectWords(this.fullIpuz, target, Math.random, 0);
+    } while (selected.size < target);
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.dungeon = new Dungeon(this.puzzle);

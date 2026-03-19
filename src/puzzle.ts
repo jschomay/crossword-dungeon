@@ -160,54 +160,67 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number, 
     }
   }
 
-  // Seed: random eligible word
+  // Seed: random word from all eligible words
   const seedIndex = Math.floor(rng() * eligible.length);
-  const selected = new Set<string>([eligible[seedIndex].key]);
-  const expansionCells: Coord[] = eligible[seedIndex].cells.filter(c =>
-    eligible[seedIndex].direction === 'across' ? c.x % 2 === parity : c.y % 2 === parity
-  );
+  const seed = eligible[seedIndex];
+  const selected = new Set<string>([seed.key]);
 
-  // Track all selected cells for centroid computation
-  const allSelectedCells: Coord[] = [...expansionCells];
+  // selectedCells: parity-matching cells of selected words, used for centroid
+  const selectedCells: Coord[] = [];
 
-  const weightedPick = (cells: Coord[]): Coord => {
-    const cx = allSelectedCells.reduce((s, c) => s + c.x, 0) / allSelectedCells.length;
-    const cy = allSelectedCells.reduce((s, c) => s + c.y, 0) / allSelectedCells.length;
-    const weights = cells.map(c => 1 / ((c.x - cx) ** 2 + (c.y - cy) ** 2 + 1));
-    const total = weights.reduce((s, w) => s + w, 0);
-    let r = rng() * total;
-    for (let i = 0; i < cells.length; i++) {
-      r -= weights[i];
-      if (r <= 0) return cells[i];
+  type Option = { cell: Coord; word: Word; centroidScore: number; lengthScore: number };
+
+  // frontier: cells in selected words (at parity) that have an unselected crossing word
+  const frontier = new Map<string, Option>();
+
+  const parityCell = (word: Word, cell: Coord): boolean =>
+    word.direction === 'across' ? cell.x % 2 === parity : cell.y % 2 === parity;
+
+  const addWordToSelection = (word: Word) => {
+    for (const cell of word.cells) {
+      if (!parityCell(word, cell)) continue;
+      selectedCells.push(cell);
+      const ck = `${cell.x},${cell.y}`;
+      // The crossing word at this cell (different direction, in allWords)
+      const crossing = (cellToWords.get(ck) ?? []).find(w => w.direction !== word.direction && !selected.has(w.key));
+      if (crossing) {
+        frontier.set(ck, { cell, word: crossing, centroidScore: 0, lengthScore: 1 / crossing.cells.length });
+      } else {
+        // No unselected crossing word — remove from frontier if it was there
+        frontier.delete(ck);
+      }
     }
-    return cells[cells.length - 1];
   };
 
-  let attempts = 0;
-  const maxAttempts = targetCount * eligible.length * 2;
-
-  while (selected.size < clampedTarget && attempts < maxAttempts) {
-    attempts++;
-    const cell = weightedPick(expansionCells);
-    const ck = `${cell.x},${cell.y}`;
-    const candidates = (cellToWords.get(ck) ?? []).filter(w => !selected.has(w.key));
-    if (candidates.length === 0) continue;
-    // Bias toward shorter words: weight = 1 / length²
-    const candWeights = candidates.map(w => 1 / (w.cells.length ** 2));
-    const candTotal = candWeights.reduce((s, w) => s + w, 0);
-    let cr = rng() * candTotal;
-    let pick = candidates[candidates.length - 1];
-    for (let i = 0; i < candidates.length; i++) {
-      cr -= candWeights[i];
-      if (cr <= 0) { pick = candidates[i]; break; }
+  const updateScores = () => {
+    const cx = selectedCells.reduce((s, c) => s + c.x, 0) / selectedCells.length;
+    const cy = selectedCells.reduce((s, c) => s + c.y, 0) / selectedCells.length;
+    for (const [, opt] of frontier) {
+      const dist2 = (opt.cell.x - cx) ** 2 + (opt.cell.y - cy) ** 2;
+      opt.centroidScore = 1 / (dist2 + 1);
     }
-    selected.add(pick.key);
-    const newExpansionCells = pick.cells.filter(c =>
-      pick.direction === 'across' ? c.x % 2 === parity : c.y % 2 === parity
-    );
-    for (const c of newExpansionCells) {
-      expansionCells.push(c);
-      allSelectedCells.push(c);
+  };
+
+  addWordToSelection(seed);
+
+  while (selected.size < clampedTarget) {
+    if (frontier.size === 0) break;
+    updateScores();
+    const options = [...frontier.values()].sort((a, b) => b.centroidScore - a.centroidScore);
+    const top = options.slice(0, 3);
+    const pick = top[Math.floor(rng() * top.length)];
+    selected.add(pick.word.key);
+    // Remove this cell from frontier — it's now fully selected on both sides
+    frontier.delete(`${pick.cell.x},${pick.cell.y}`);
+    addWordToSelection(pick.word);
+    // Also update frontier: any cell of the new word that was previously frontier
+    // may now have its crossing word already selected — addWordToSelection handles this
+    // But we also need to re-check cells of existing selected words that cross the new word
+    for (const cell of pick.word.cells) {
+      if (!parityCell(pick.word, cell)) continue;
+      const ck = `${cell.x},${cell.y}`;
+      const existing = frontier.get(ck);
+      if (existing && selected.has(existing.word.key)) frontier.delete(ck);
     }
   }
 

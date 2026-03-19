@@ -26,4 +26,12 @@ When selecting a subset of words from a full crossword to form the dungeon, a na
 
 **Why it works:** In a standard crossword every word's interior cells lie strictly between its two endpoints. If both endpoints are at odd positions, the word itself lies on an odd row or col and is always fully selected as a unit. The even rows/cols are simply never entered, so their cells are always blacked out consistently.
 
+## Sparse Dungeon Generation: Dead-End Seeds and Retry Strategy
+
+When building a sparse dungeon via the frontier expansion algorithm, some seeds produce clusters that are smaller than the target word count. This happens when a seed word lands in a corner of the full puzzle where the only expandable crossing words are filtered out — most commonly because their clues reference other clue numbers (e.g. "See 65-Across") and are excluded from eligibility. The frontier exhausts before reaching the target.
+
+**Solution (chosen): retry on short result.** `regenDungeon` calls `selectWords` in a loop until the returned set meets the target count. Since most seeds succeed, retries are rare and cheap.
+
+**Why not fix the root cause:** Allowing cross-ref words into eligibility would require either displaying broken clues in-game or synthesizing replacement clues — more complexity than the retry approach warrants.
+
 Both approaches were prototyped. Cell-by-cell movement (one display character per keypress) was rejected because it required too many keypresses to navigate, felt slow, and gave no gameplay reason to visit corridor cells. Room-to-room movement (one keypress = jump to adjacent letter room) was kept as it matches the crossword structure and feels snappy.
