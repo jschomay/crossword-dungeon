@@ -30,14 +30,15 @@ export default class Dungeon {
     this.displayHeight = height * 6 + 1;
   }
 
-  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer = false): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer = false, camera?: { x: number; y: number }): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
+    display.clear();
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer);
-          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy);
-          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy);
+          this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer, camera);
+          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera);
+          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera);
         }
       }
     }
@@ -50,9 +51,14 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean): void {
-    const dx = 1 + gx * 6;
-    const dy = 1 + gy * 6;
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean, camera?: { x: number; y: number }): void {
+    const wx = 1 + gx * 6;
+    const wy = 1 + gy * 6;
+    const dx = camera ? wx - camera.x : wx;
+    const dy = camera ? wy - camera.y : wy;
+    const { width: vpW, height: vpH } = display.getOptions();
+    // Skip rooms fully outside viewport
+    if (camera && (dx + 5 < 0 || dy + 5 < 0 || dx >= vpW || dy >= vpH)) return;
 
     const connUp    = this.hasRoom(gx, gy - 1);
     const connDown  = this.hasRoom(gx, gy + 1);
@@ -125,17 +131,21 @@ export default class Dungeon {
   }
 
   // Corridor column between (gx, gy) and (gx+1, gy): walls at rows 1 and 3, open at center
-  private drawHCorridor(display: ROT.Display, gx: number, gy: number): void {
-    const cx = 1 + gx * 6 + 5;
-    const ry = 1 + gy * 6;
+  private drawHCorridor(display: ROT.Display, gx: number, gy: number, camera?: { x: number; y: number }): void {
+    const wcx = 1 + gx * 6 + 5;
+    const wry = 1 + gy * 6;
+    const cx = camera ? wcx - camera.x : wcx;
+    const ry = camera ? wry - camera.y : wry;
     display.draw(cx, ry + 1, '#', WALL_FG, BLACK);
     display.draw(cx, ry + 3, '#', WALL_FG, BLACK);
   }
 
   // Corridor row between (gx, gy) and (gx, gy+1): walls at cols 1 and 3, open at center
-  private drawVCorridor(display: ROT.Display, gx: number, gy: number): void {
-    const rx = 1 + gx * 6;
-    const cy = 1 + gy * 6 + 5;
+  private drawVCorridor(display: ROT.Display, gx: number, gy: number, camera?: { x: number; y: number }): void {
+    const wrx = 1 + gx * 6;
+    const wcy = 1 + gy * 6 + 5;
+    const rx = camera ? wrx - camera.x : wrx;
+    const cy = camera ? wcy - camera.y : wcy;
     display.draw(rx + 1, cy, '#', WALL_FG, BLACK);
     display.draw(rx + 3, cy, '#', WALL_FG, BLACK);
   }

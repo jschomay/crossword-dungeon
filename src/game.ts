@@ -40,6 +40,9 @@ function roomKey(x: number, y: number): string {
   return `${x},${y}`;
 }
 
+const VIEWPORT_W = 37;
+const VIEWPORT_H = 37;
+
 const BASE_MANA = 10;
 const BASE_HP = 50;
 const BASE_DMG = 10;
@@ -102,6 +105,7 @@ export default class Game {
   private dungeonLevel: number = 1;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
+  private showMap: boolean = false;
   private pendingItem: TreasureItemStats | null = null;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
   private hpPotions: number = 0;
@@ -115,10 +119,9 @@ export default class Game {
   private calcFontSize(): number {
     const availW = (window.innerWidth * 0.6 - 12 - 24) / this.TILT_SCALE;
     const availH = (window.innerHeight - 24) / this.TILT_SCALE;
-    return Math.max(4, Math.floor(Math.min(
-      availW / this.dungeon.displayWidth,
-      availH / this.dungeon.displayHeight
-    )));
+    const w = this.showMap ? this.dungeon.displayWidth : VIEWPORT_W;
+    const h = this.showMap ? this.dungeon.displayHeight : VIEWPORT_H;
+    return Math.max(4, Math.floor(Math.min(availW / w, availH / h)));
   }
 
   private wordCount(): number {
@@ -146,9 +149,10 @@ export default class Game {
     this.dungeon = new Dungeon(this.puzzle);
     this.totalRooms = this.puzzle.getRooms().length;
     this.dungeonEl.innerHTML = '';
+    this.showMap = false;
     this.display = new ROT.Display({
-      width: this.dungeon.displayWidth,
-      height: this.dungeon.displayHeight,
+      width: VIEWPORT_W,
+      height: VIEWPORT_H,
       fontSize: this.calcFontSize(),
       forceSquareRatio: true,
     });
@@ -165,11 +169,19 @@ export default class Game {
     this.interactionLogEl = document.getElementById('interaction-log')!;
   }
 
+  private applyDisplaySize(): void {
+    this.display.setOptions({
+      width: this.showMap ? this.dungeon.displayWidth : VIEWPORT_W,
+      height: this.showMap ? this.dungeon.displayHeight : VIEWPORT_H,
+      fontSize: this.calcFontSize(),
+    });
+  }
+
   static async create(): Promise<Game> {
     const game = new Game();
     await game.regenDungeon();
     window.addEventListener('resize', () => {
-      game.display.setOptions({ fontSize: game.calcFontSize() });
+      game.applyDisplaySize();
       game.render();
     });
     game.applyTilt();
@@ -691,6 +703,13 @@ export default class Game {
       return;
     }
 
+    if (e.key === ' ') {
+      this.showMap = !this.showMap;
+      this.applyDisplaySize();
+      this.render();
+      return;
+    }
+
     if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
     if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
     if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
@@ -773,13 +792,24 @@ export default class Game {
     this.prevLevel = this.level;
     this.prevCombatMonsterHp = this.combatMonsterHp;
 
+    const mapHint = this.showMap ? 'Exit map' : 'Full map';
     this.dungeonLevelEl.innerHTML =
-      `<span style="color:#aaaaff">Dungeon Level ${this.dungeonLevel}</span>`;
+      `<span style="color:#aaaaff">Dungeon Level ${this.dungeonLevel}</span>` +
+      `<span style="color:#777">  [SPACE] ${mapHint}</span>`;
+  }
+
+  private camera(): { x: number; y: number } | undefined {
+    if (this.showMap) return undefined;
+    const pw = 1 + this.playerPos.x * 6 + 2; // center of player room in world coords
+    const ph = 1 + this.playerPos.y * 6 + 2;
+    const camX = Math.max(0, Math.min(pw - Math.floor(VIEWPORT_W / 2), this.dungeon.displayWidth - VIEWPORT_W));
+    const camY = Math.max(0, Math.min(ph - Math.floor(VIEWPORT_H / 2), this.dungeon.displayHeight - VIEWPORT_H));
+    return { x: camX, y: camY };
   }
 
   private render(): void {
     const ended = this.gameOver || this.puzzleComplete;
-    this.dungeon.render(this.display, this.playerPos, this.roomStates, ended);
+    this.dungeon.render(this.display, this.playerPos, this.roomStates, ended, this.camera());
     this.renderHeroPanel();
 
     // Status panel: game over / puzzle complete
