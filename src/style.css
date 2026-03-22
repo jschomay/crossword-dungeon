@@ -117,3 +117,9 @@ body {
 .hidden {
   display: none !important;
 }
+
+.loading {
+  color: #888;
+  font-family: monospace;
+  padding: 1rem;
+}

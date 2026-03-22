@@ -1,0 +1,837 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Monday’s Daily",
+  "author": "Christina Iverson / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      "#",
+      5,
+      6,
+      7,
+      8,
+      "#",
+      9,
+      10,
+      11,
+      12,
+      "#"
+    ],
+    [
+      13,
+      null,
+      null,
+      null,
+      "#",
+      14,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      "#"
+    ],
+    [
+      16,
+      null,
+      null,
+      null,
+      17,
+      null,
+      null,
+      null,
+      null,
+      18,
+      null,
+      null,
+      null,
+      null,
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      19,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      20,
+      null,
+      null,
+      null,
+      null,
+      null,
+      21
+    ],
+    [
+      22,
+      23,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      24,
+      null,
+      null,
+      "#",
+      25,
+      null,
+      null,
+      null
+    ],
+    [
+      26,
+      null,
+      null,
+      null,
+      null,
+      null,
+      27,
+      null,
+      null,
+      "#",
+      28,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      29,
+      null,
+      null,
+      null,
+      "#",
+      30,
+      null,
+      null,
+      "#",
+      31,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      32,
+      null,
+      null,
+      "#",
+      33,
+      null,
+      null,
+      null,
+      34,
+      null,
+      null,
+      "#",
+      35,
+      36,
+      37
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      38,
+      null,
+      null,
+      "#",
+      39,
+      null,
+      null,
+      "#",
+      40,
+      null,
+      null,
+      null
+    ],
+    [
+      41,
+      42,
+      43,
+      null,
+      null,
+      "#",
+      44,
+      null,
+      null,
+      null,
+      45,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      46,
+      null,
+      null,
+      null,
+      "#",
+      47,
+      null,
+      null,
+      "#",
+      48,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      49,
+      null,
+      null,
+      null,
+      50,
+      null,
+      null,
+      "#",
+      51,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      52,
+      null,
+      null,
+      null,
+      null,
+      null,
+      53,
+      null,
+      null,
+      null,
+      null,
+      null,
+      54,
+      55
+    ],
+    [
+      "#",
+      56,
+      null,
+      null,
+      null,
+      "#",
+      57,
+      null,
+      null,
+      null,
+      "#",
+      58,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      59,
+      null,
+      null,
+      null,
+      "#",
+      60,
+      null,
+      null,
+      null,
+      "#",
+      61,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "A",
+      "D",
+      "O",
+      "S",
+      "#",
+      "S",
+      "A",
+      "A",
+      "B",
+      "#",
+      "A",
+      "L",
+      "P",
+      "O",
+      "#"
+    ],
+    [
+      "V",
+      "O",
+      "N",
+      "N",
+      "#",
+      "U",
+      "C",
+      "L",
+      "A",
+      "#",
+      "T",
+      "A",
+      "I",
+      "L",
+      "#"
+    ],
+    [
+      "A",
+      "S",
+      "T",
+      "O",
+      "U",
+      "G",
+      "H",
+      "A",
+      "S",
+      "N",
+      "A",
+      "I",
+      "L",
+      "S",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "A",
+      "R",
+      "R",
+      "A",
+      "Y",
+      "#",
+      "T",
+      "O",
+      "D",
+      "D",
+      "L",
+      "E",
+      "R"
+    ],
+    [
+      "M",
+      "O",
+      "R",
+      "T",
+      "A",
+      "R",
+      "#",
+      "B",
+      "E",
+      "G",
+      "#",
+      "L",
+      "O",
+      "N",
+      "E"
+    ],
+    [
+      "A",
+      "N",
+      "G",
+      "E",
+      "L",
+      "H",
+      "A",
+      "I",
+      "R",
+      "#",
+      "H",
+      "O",
+      "W",
+      "S",
+      "O"
+    ],
+    [
+      "I",
+      "C",
+      "E",
+      "D",
+      "#",
+      "I",
+      "N",
+      "C",
+      "#",
+      "N",
+      "O",
+      "W",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "L",
+      "E",
+      "T",
+      "#",
+      "I",
+      "G",
+      "G",
+      "Y",
+      "P",
+      "O",
+      "P",
+      "#",
+      "D",
+      "A",
+      "M"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "H",
+      "A",
+      "H",
+      "#",
+      "C",
+      "I",
+      "S",
+      "#",
+      "M",
+      "I",
+      "C",
+      "E"
+    ],
+    [
+      "D",
+      "R",
+      "E",
+      "A",
+      "M",
+      "#",
+      "B",
+      "L",
+      "U",
+      "E",
+      "B",
+      "E",
+      "A",
+      "R",
+      "D"
+    ],
+    [
+      "N",
+      "E",
+      "A",
+      "T",
+      "#",
+      "C",
+      "U",
+      "E",
+      "#",
+      "R",
+      "A",
+      "N",
+      "G",
+      "E",
+      "S"
+    ],
+    [
+      "A",
+      "L",
+      "R",
+      "E",
+      "A",
+      "D",
+      "Y",
+      "#",
+      "P",
+      "I",
+      "N",
+      "T",
+      "O",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "I",
+      "T",
+      "S",
+      "G",
+      "R",
+      "O",
+      "W",
+      "I",
+      "N",
+      "G",
+      "O",
+      "N",
+      "M",
+      "E"
+    ],
+    [
+      "#",
+      "S",
+      "H",
+      "O",
+      "E",
+      "#",
+      "F",
+      "O",
+      "G",
+      "G",
+      "#",
+      "R",
+      "A",
+      "I",
+      "L"
+    ],
+    [
+      "#",
+      "H",
+      "A",
+      "N",
+      "D",
+      "#",
+      "F",
+      "E",
+      "S",
+      "S",
+      "#",
+      "S",
+      "L",
+      "A",
+      "M"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Flurries of activity"
+      ],
+      [
+        5,
+        "Swedish aerospace giant"
+      ],
+      [
+        9,
+        "Pet food brand"
+      ],
+      [
+        13,
+        "Olympic skier Lindsey"
+      ],
+      [
+        14,
+        "The Bruins of the Big Ten Conf."
+      ],
+      [
+        15,
+        "Devil costume part"
+      ],
+      [
+        16,
+        "Really, really strong"
+      ],
+      [
+        19,
+        "Impressive display"
+      ],
+      [
+        20,
+        "One whose age is given in months"
+      ],
+      [
+        22,
+        "Brick and __"
+      ],
+      [
+        24,
+        "Plead"
+      ],
+      [
+        25,
+        "__ Star State"
+      ],
+      [
+        26,
+        "Delicate pasta often served with a light sauce"
+      ],
+      [
+        28,
+        "\"Please explain?\""
+      ],
+      [
+        29,
+        "Chilled"
+      ],
+      [
+        30,
+        "Bus. letters"
+      ],
+      [
+        31,
+        "\"Right this minute!\""
+      ],
+      [
+        32,
+        "Allow"
+      ],
+      [
+        33,
+        "Musician known as the \"Godfather of Punk\""
+      ],
+      [
+        35,
+        "Beaver's project"
+      ],
+      [
+        38,
+        "\"As if!\""
+      ],
+      [
+        39,
+        "Prefix with gender"
+      ],
+      [
+        40,
+        "\"Of __ and Men\""
+      ],
+      [
+        41,
+        "Lofty goal"
+      ],
+      [
+        44,
+        "French folktale that inspired a Kurt Vonnegut novel"
+      ],
+      [
+        46,
+        "Tidy"
+      ],
+      [
+        47,
+        "Stick in a pool hall"
+      ],
+      [
+        48,
+        "Stovetops"
+      ],
+      [
+        49,
+        "\"Wow, so soon?\""
+      ],
+      [
+        51,
+        "Refried beans bean"
+      ],
+      [
+        52,
+        "\"I wasn't sure at first, but ...,\" or what could be said about the ends of 16-, 26-, and 44-Across?"
+      ],
+      [
+        56,
+        "\"If the __ fits ... \""
+      ],
+      [
+        57,
+        "World-traveling Verne protagonist"
+      ],
+      [
+        58,
+        "Train travel"
+      ],
+      [
+        59,
+        "Watch part"
+      ],
+      [
+        60,
+        "Own (up)"
+      ],
+      [
+        61,
+        "Loud noise"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Director DuVernay"
+      ],
+      [
+        2,
+        "Uno y uno"
+      ],
+      [
+        3,
+        "Properly aimed"
+      ],
+      [
+        4,
+        "Showed appreciation for a bad joke, maybe"
+      ],
+      [
+        5,
+        "Result of a Halloween candy binge"
+      ],
+      [
+        6,
+        "Sore"
+      ],
+      [
+        7,
+        "In the style of, on a menu"
+      ],
+      [
+        8,
+        "Tool often used on Thanksgiving"
+      ],
+      [
+        9,
+        "Just slightly"
+      ],
+      [
+        10,
+        "Brought down to the ground"
+      ],
+      [
+        11,
+        "Bed cushion"
+      ],
+      [
+        12,
+        "\"Full House\" twins"
+      ],
+      [
+        17,
+        "Asian territory on a Risk board"
+      ],
+      [
+        18,
+        "Eggy holiday drink"
+      ],
+      [
+        21,
+        "__ Speedwagon"
+      ],
+      [
+        22,
+        "Put in the post"
+      ],
+      [
+        23,
+        "A single time"
+      ],
+      [
+        24,
+        "Transport with training wheels"
+      ],
+      [
+        27,
+        "\"Brokeback Mountain\" director Lee"
+      ],
+      [
+        28,
+        "Move like a frog"
+      ],
+      [
+        31,
+        "Some facial jewelry"
+      ],
+      [
+        33,
+        "Terse affirmative"
+      ],
+      [
+        34,
+        "More, on a music score"
+      ],
+      [
+        35,
+        "Like the lines on argyle socks"
+      ],
+      [
+        36,
+        "Land unit"
+      ],
+      [
+        37,
+        "Rx items"
+      ],
+      [
+        38,
+        "Talks trash about"
+      ],
+      [
+        40,
+        "Trusted career guides"
+      ],
+      [
+        41,
+        "Genetic letters"
+      ],
+      [
+        42,
+        "Condiment on a hot dog"
+      ],
+      [
+        43,
+        "\"Santa Baby\" singer Kitt"
+      ],
+      [
+        44,
+        "Bribe"
+      ],
+      [
+        45,
+        "Loud noise"
+      ],
+      [
+        47,
+        "Capt.'s underling"
+      ],
+      [
+        50,
+        "Became older"
+      ],
+      [
+        51,
+        "Babe and Wilbur, for two"
+      ],
+      [
+        53,
+        "Deep sadness"
+      ],
+      [
+        54,
+        "\"Mamma __!\""
+      ],
+      [
+        55,
+        "Furniture wood"
+      ]
+    ]
+  }
+}

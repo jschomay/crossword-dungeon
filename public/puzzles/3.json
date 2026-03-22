@@ -1,0 +1,845 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Wednesday’s Daily",
+  "author": "Brian Callahan & Tim Giannetti / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      "#",
+      "#",
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      14,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      16,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      17,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      18,
+      null,
+      null,
+      null,
+      "#",
+      19,
+      null,
+      20,
+      null,
+      "#",
+      21,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      22,
+      23,
+      null,
+      "#",
+      24,
+      null,
+      25,
+      null,
+      "#",
+      26,
+      null,
+      null
+    ],
+    [
+      27,
+      28,
+      29,
+      "#",
+      30,
+      null,
+      31,
+      null,
+      "#",
+      32,
+      null,
+      33,
+      null,
+      "#",
+      "#"
+    ],
+    [
+      34,
+      null,
+      null,
+      "#",
+      35,
+      null,
+      null,
+      null,
+      "#",
+      36,
+      null,
+      null,
+      null,
+      37,
+      38
+    ],
+    [
+      39,
+      null,
+      null,
+      40,
+      null,
+      "#",
+      41,
+      null,
+      42,
+      "#",
+      43,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      44,
+      null,
+      null,
+      null,
+      null,
+      45,
+      "#",
+      46,
+      null,
+      47,
+      null,
+      "#",
+      48,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      49,
+      null,
+      null,
+      null,
+      "#",
+      50,
+      null,
+      null,
+      null,
+      "#",
+      51,
+      null,
+      null
+    ],
+    [
+      52,
+      53,
+      null,
+      "#",
+      54,
+      null,
+      55,
+      null,
+      "#",
+      56,
+      null,
+      57,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      58,
+      null,
+      null,
+      59,
+      null,
+      "#",
+      60,
+      null,
+      61,
+      null,
+      "#",
+      62,
+      63,
+      64,
+      65
+    ],
+    [
+      66,
+      null,
+      null,
+      null,
+      null,
+      67,
+      null,
+      "#",
+      68,
+      null,
+      69,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      70,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      71,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      72,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      73,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "A",
+      "P",
+      "S",
+      "T",
+      "A",
+      "T",
+      "S",
+      "#",
+      "#",
+      "S",
+      "P",
+      "A",
+      "S",
+      "M",
+      "S"
+    ],
+    [
+      "W",
+      "A",
+      "V",
+      "E",
+      "D",
+      "H",
+      "I",
+      "#",
+      "S",
+      "P",
+      "A",
+      "R",
+      "T",
+      "A",
+      "N"
+    ],
+    [
+      "O",
+      "N",
+      "E",
+      "S",
+      "E",
+      "E",
+      "D",
+      "#",
+      "H",
+      "A",
+      "S",
+      "G",
+      "A",
+      "M",
+      "E"
+    ],
+    [
+      "L",
+      "E",
+      "N",
+      "S",
+      "#",
+      "S",
+      "E",
+      "R",
+      "A",
+      "#",
+      "T",
+      "O",
+      "R",
+      "M",
+      "E"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "A",
+      "S",
+      "I",
+      "#",
+      "E",
+      "M",
+      "M",
+      "A",
+      "#",
+      "T",
+      "A",
+      "R"
+    ],
+    [
+      "A",
+      "P",
+      "R",
+      "#",
+      "A",
+      "M",
+      "P",
+      "S",
+      "#",
+      "O",
+      "R",
+      "B",
+      "S",
+      "#",
+      "#"
+    ],
+    [
+      "M",
+      "A",
+      "I",
+      "#",
+      "L",
+      "S",
+      "A",
+      "T",
+      "#",
+      "M",
+      "E",
+      "R",
+      "M",
+      "A",
+      "N"
+    ],
+    [
+      "I",
+      "T",
+      "S",
+      "M",
+      "E",
+      "#",
+      "L",
+      "A",
+      "B",
+      "#",
+      "C",
+      "R",
+      "A",
+      "V",
+      "E"
+    ],
+    [
+      "S",
+      "H",
+      "I",
+      "I",
+      "S",
+      "M",
+      "#",
+      "R",
+      "A",
+      "M",
+      "I",
+      "#",
+      "L",
+      "I",
+      "E"
+    ],
+    [
+      "#",
+      "#",
+      "N",
+      "O",
+      "T",
+      "E",
+      "#",
+      "E",
+      "A",
+      "R",
+      "P",
+      "#",
+      "L",
+      "S",
+      "D"
+    ],
+    [
+      "O",
+      "R",
+      "G",
+      "#",
+      "A",
+      "L",
+      "B",
+      "A",
+      "#",
+      "S",
+      "E",
+      "A",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "C",
+      "E",
+      "S",
+      "A",
+      "R",
+      "#",
+      "A",
+      "S",
+      "A",
+      "P",
+      "#",
+      "E",
+      "L",
+      "S",
+      "A"
+    ],
+    [
+      "A",
+      "N",
+      "T",
+      "I",
+      "G",
+      "E",
+      "N",
+      "#",
+      "H",
+      "O",
+      "T",
+      "S",
+      "E",
+      "A",
+      "T"
+    ],
+    [
+      "L",
+      "E",
+      "A",
+      "D",
+      "E",
+      "R",
+      "S",
+      "#",
+      "A",
+      "C",
+      "R",
+      "O",
+      "N",
+      "Y",
+      "M"
+    ],
+    [
+      "A",
+      "W",
+      "R",
+      "A",
+      "T",
+      "S",
+      "#",
+      "#",
+      "S",
+      "K",
+      "I",
+      "P",
+      "A",
+      "S",
+      "S"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "HS class with many average lessons?"
+      ],
+      [
+        8,
+        "Twitches"
+      ],
+      [
+        14,
+        "Greeted from afar"
+      ],
+      [
+        15,
+        "MSU athlete"
+      ],
+      [
+        16,
+        "Top rank in a tournament"
+      ],
+      [
+        17,
+        "Can compete with the best"
+      ],
+      [
+        18,
+        "Fisheye __"
+      ],
+      [
+        19,
+        "Blood bank fluids"
+      ],
+      [
+        21,
+        "Crooner Mel"
+      ],
+      [
+        22,
+        "\"__ live and breathe!\""
+      ],
+      [
+        24,
+        "Thompson of \"Men in Black: International\""
+      ],
+      [
+        26,
+        "Paving goo"
+      ],
+      [
+        27,
+        "World Autism Mo."
+      ],
+      [
+        30,
+        "Roadie's charges"
+      ],
+      [
+        32,
+        "Planets, poetically"
+      ],
+      [
+        34,
+        "__ tai"
+      ],
+      [
+        35,
+        "Future JD's exam"
+      ],
+      [
+        36,
+        "Fishy fellow"
+      ],
+      [
+        39,
+        "\"I'm home!\""
+      ],
+      [
+        41,
+        "Chem class site"
+      ],
+      [
+        43,
+        "__ Case: White Castle purchase"
+      ],
+      [
+        44,
+        "Branch of Islam"
+      ],
+      [
+        46,
+        "\"The Amateur\" actor Malek"
+      ],
+      [
+        48,
+        "Fabrication"
+      ],
+      [
+        49,
+        "Quick scribble"
+      ],
+      [
+        50,
+        "O.K. Corral surname"
+      ],
+      [
+        51,
+        "Acid letters"
+      ],
+      [
+        52,
+        "URL option"
+      ],
+      [
+        54,
+        "Actress Jessica"
+      ],
+      [
+        56,
+        "36-Across's realm"
+      ],
+      [
+        58,
+        "Civil rights activist Chavez"
+      ],
+      [
+        60,
+        "Brief \"Get it done!\""
+      ],
+      [
+        62,
+        "\"Frozen\" princess"
+      ],
+      [
+        66,
+        "Immune response trigger"
+      ],
+      [
+        68,
+        "Stressful situation"
+      ],
+      [
+        70,
+        "Heads"
+      ],
+      [
+        71,
+        "NASA or NASCAR"
+      ],
+      [
+        72,
+        "\"Gosh darn it!\""
+      ],
+      [
+        73,
+        "Ticket for a black diamond enthusiast"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Mil. no-show"
+      ],
+      [
+        2,
+        "Window installer's unit"
+      ],
+      [
+        3,
+        "\"Frozen\" reindeer"
+      ],
+      [
+        4,
+        "Thompson of \"Men in Black: International\""
+      ],
+      [
+        5,
+        "Sports drink suffix"
+      ],
+      [
+        6,
+        "PC game with Livin' Large and Hot Date expansion packs"
+      ],
+      [
+        7,
+        "Hash browns, e.g."
+      ],
+      [
+        8,
+        "Club with cucumber slices?"
+      ],
+      [
+        9,
+        "Secret passed down by Nonna, perhaps"
+      ],
+      [
+        10,
+        "Golden Fleece vessel"
+      ],
+      [
+        11,
+        "\"Don't try to do everything at once\""
+      ],
+      [
+        12,
+        "ABBA's \"__ Mia!\""
+      ],
+      [
+        13,
+        "Vile smile"
+      ],
+      [
+        15,
+        "Part of a bedding set"
+      ],
+      [
+        20,
+        "Some turnpike turnoffs"
+      ],
+      [
+        23,
+        "Certain business quota"
+      ],
+      [
+        25,
+        "Lisa Bonet, to Zoë Kravitz"
+      ],
+      [
+        27,
+        "Brest friends"
+      ],
+      [
+        28,
+        "Way"
+      ],
+      [
+        29,
+        "Up-and-comer, or a progression found in 29-, 23-, 20-, 9-, and 11-Down"
+      ],
+      [
+        31,
+        "Buddy"
+      ],
+      [
+        33,
+        "\"I c-c-can't feel my t-t-toes\""
+      ],
+      [
+        37,
+        "\"We try harder\" car rental chain"
+      ],
+      [
+        38,
+        "\"... should the __ arise\""
+      ],
+      [
+        40,
+        "\"'O Sole __\""
+      ],
+      [
+        42,
+        "Farmyard bleat"
+      ],
+      [
+        45,
+        "Filmmaker Brooks"
+      ],
+      [
+        47,
+        "Vulcan salute giver"
+      ],
+      [
+        52,
+        "Sunshine State city"
+      ],
+      [
+        53,
+        "Subscribe again"
+      ],
+      [
+        55,
+        "Prohibits"
+      ],
+      [
+        57,
+        "\"The Tortoise and the Hare\" teller"
+      ],
+      [
+        59,
+        "Verdi opera"
+      ],
+      [
+        61,
+        "\"I see now!\" cries"
+      ],
+      [
+        63,
+        "Emmy winner Waithe"
+      ],
+      [
+        64,
+        "Declares"
+      ],
+      [
+        65,
+        "Twentysomethings?"
+      ],
+      [
+        67,
+        "MD workplaces"
+      ],
+      [
+        69,
+        "Tetra- minus one"
+      ]
+    ]
+  }
+}

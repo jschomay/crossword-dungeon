@@ -1,0 +1,845 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Monday’s Daily",
+  "author": "Zachary David Levy / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      5,
+      "#",
+      6,
+      7,
+      8,
+      9,
+      "#",
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      14,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      "#",
+      16,
+      null,
+      null,
+      null
+    ],
+    [
+      17,
+      null,
+      null,
+      null,
+      null,
+      18,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      19,
+      null,
+      null,
+      null
+    ],
+    [
+      20,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      21,
+      null,
+      22,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      23,
+      null,
+      null,
+      "#",
+      24,
+      null,
+      null,
+      25,
+      "#",
+      26,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      27,
+      null,
+      null,
+      null,
+      null,
+      28,
+      null,
+      null,
+      null,
+      29,
+      30,
+      31
+    ],
+    [
+      32,
+      33,
+      34,
+      null,
+      null,
+      null,
+      "#",
+      35,
+      null,
+      null,
+      null,
+      "#",
+      36,
+      null,
+      null
+    ],
+    [
+      37,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      38,
+      null,
+      null,
+      "#",
+      "#",
+      39,
+      null,
+      null,
+      null
+    ],
+    [
+      40,
+      null,
+      null,
+      "#",
+      41,
+      42,
+      null,
+      null,
+      "#",
+      43,
+      44,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      45,
+      null,
+      null,
+      46,
+      null,
+      null,
+      null,
+      null,
+      47,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      48,
+      null,
+      null,
+      "#",
+      49,
+      null,
+      null,
+      null,
+      "#",
+      50,
+      51,
+      52
+    ],
+    [
+      53,
+      54,
+      55,
+      null,
+      null,
+      null,
+      56,
+      "#",
+      57,
+      null,
+      null,
+      58,
+      null,
+      null,
+      null
+    ],
+    [
+      59,
+      null,
+      null,
+      null,
+      "#",
+      60,
+      null,
+      61,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      62,
+      null,
+      null,
+      null,
+      "#",
+      63,
+      null,
+      null,
+      null,
+      "#",
+      64,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      65,
+      null,
+      null,
+      null,
+      "#",
+      66,
+      null,
+      null,
+      null,
+      "#",
+      67,
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "P",
+      "I",
+      "T",
+      "A",
+      "S",
+      "#",
+      "E",
+      "D",
+      "I",
+      "T",
+      "#",
+      "B",
+      "F",
+      "F",
+      "S"
+    ],
+    [
+      "I",
+      "C",
+      "A",
+      "N",
+      "T",
+      "#",
+      "D",
+      "O",
+      "R",
+      "A",
+      "#",
+      "E",
+      "R",
+      "I",
+      "E"
+    ],
+    [
+      "S",
+      "I",
+      "N",
+      "K",
+      "O",
+      "R",
+      "S",
+      "W",
+      "I",
+      "M",
+      "#",
+      "C",
+      "A",
+      "F",
+      "E"
+    ],
+    [
+      "M",
+      "E",
+      "T",
+      "H",
+      "R",
+      "E",
+      "E",
+      "#",
+      "S",
+      "P",
+      "R",
+      "A",
+      "Y",
+      "E",
+      "D"
+    ],
+    [
+      "O",
+      "R",
+      "E",
+      "#",
+      "M",
+      "I",
+      "L",
+      "D",
+      "#",
+      "A",
+      "O",
+      "L",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "S",
+      "E",
+      "N",
+      "S",
+      "E",
+      "O",
+      "F",
+      "S",
+      "M",
+      "E",
+      "L",
+      "L"
+    ],
+    [
+      "B",
+      "E",
+      "A",
+      "R",
+      "D",
+      "S",
+      "#",
+      "P",
+      "A",
+      "L",
+      "E",
+      "#",
+      "A",
+      "A",
+      "A"
+    ],
+    [
+      "T",
+      "A",
+      "R",
+      "O",
+      "#",
+      "#",
+      "S",
+      "O",
+      "S",
+      "#",
+      "#",
+      "D",
+      "R",
+      "U",
+      "M"
+    ],
+    [
+      "U",
+      "S",
+      "E",
+      "#",
+      "T",
+      "H",
+      "O",
+      "R",
+      "#",
+      "A",
+      "G",
+      "E",
+      "N",
+      "D",
+      "A"
+    ],
+    [
+      "S",
+      "T",
+      "A",
+      "R",
+      "T",
+      "O",
+      "U",
+      "T",
+      "S",
+      "L",
+      "O",
+      "W",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "E",
+      "O",
+      "N",
+      "#",
+      "S",
+      "W",
+      "A",
+      "T",
+      "#",
+      "W",
+      "A",
+      "G"
+    ],
+    [
+      "S",
+      "H",
+      "A",
+      "R",
+      "P",
+      "E",
+      "I",
+      "#",
+      "I",
+      "M",
+      "I",
+      "T",
+      "A",
+      "T",
+      "E"
+    ],
+    [
+      "L",
+      "A",
+      "N",
+      "E",
+      "#",
+      "S",
+      "L",
+      "I",
+      "P",
+      "O",
+      "N",
+      "S",
+      "H",
+      "O",
+      "E"
+    ],
+    [
+      "E",
+      "T",
+      "N",
+      "A",
+      "#",
+      "T",
+      "I",
+      "R",
+      "E",
+      "#",
+      "T",
+      "O",
+      "O",
+      "L",
+      "S"
+    ],
+    [
+      "D",
+      "E",
+      "E",
+      "D",
+      "#",
+      "Y",
+      "E",
+      "A",
+      "R",
+      "#",
+      "O",
+      "S",
+      "O",
+      "L",
+      "E"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Greek pocket breads"
+      ],
+      [
+        6,
+        "Word processor menu heading"
+      ],
+      [
+        10,
+        "Close pals, briefly"
+      ],
+      [
+        14,
+        "\"Would love to, but alas\""
+      ],
+      [
+        15,
+        "Bilingual cartoon explorer on Nickelodeon"
+      ],
+      [
+        16,
+        "Western Pennsylvania city"
+      ],
+      [
+        17,
+        "Stark choice between success and failure"
+      ],
+      [
+        19,
+        "Latte spot"
+      ],
+      [
+        20,
+        "\"Totally agree with you both\""
+      ],
+      [
+        21,
+        "Used the hose on"
+      ],
+      [
+        23,
+        "Lode load"
+      ],
+      [
+        24,
+        "Not spicy"
+      ],
+      [
+        26,
+        "Internet co. once known for mailing CDs"
+      ],
+      [
+        27,
+        "Hunting dog's prized ability"
+      ],
+      [
+        32,
+        "Goatees, e.g."
+      ],
+      [
+        35,
+        "Lacking color"
+      ],
+      [
+        36,
+        "Org. offering travel advice"
+      ],
+      [
+        37,
+        "Starchy root in poi"
+      ],
+      [
+        38,
+        "Mayday call, or a pattern found in 17-, 27-, 45-, and 60-Across"
+      ],
+      [
+        39,
+        "Percussion instrument"
+      ],
+      [
+        40,
+        "\"__ your head!\""
+      ],
+      [
+        41,
+        "Norse god who wields the hammer Mjölnir"
+      ],
+      [
+        43,
+        "Meeting outline"
+      ],
+      [
+        45,
+        "Take baby steps, so to speak"
+      ],
+      [
+        48,
+        "Long stretch"
+      ],
+      [
+        49,
+        "Thwack"
+      ],
+      [
+        50,
+        "Canine \"I'm happy to see you!\""
+      ],
+      [
+        53,
+        "Chinese canine"
+      ],
+      [
+        57,
+        "Ape"
+      ],
+      [
+        59,
+        "Bowling alley assignment"
+      ],
+      [
+        60,
+        "Footwear without laces"
+      ],
+      [
+        62,
+        "Sicilian volcano"
+      ],
+      [
+        63,
+        "Goodyear product"
+      ],
+      [
+        64,
+        "Home Depot purchases"
+      ],
+      [
+        65,
+        "Proof of ownership"
+      ],
+      [
+        66,
+        "12 months"
+      ],
+      [
+        67,
+        "\"__ Mio\": classic Italian song"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "\"__ Beach and all the clams we can eat!\""
+      ],
+      [
+        2,
+        "Not as friendly"
+      ],
+      [
+        3,
+        "Aunt, in French"
+      ],
+      [
+        4,
+        "Egyptian cross"
+      ],
+      [
+        5,
+        "Huffed and puffed"
+      ],
+      [
+        6,
+        "Old Ford models"
+      ],
+      [
+        7,
+        "__ Jones Industrial Average"
+      ],
+      [
+        8,
+        "Colorful eye part"
+      ],
+      [
+        9,
+        "City across the bay from St. Petersburg"
+      ],
+      [
+        10,
+        "\"Relax\""
+      ],
+      [
+        11,
+        "Brouhaha"
+      ],
+      [
+        12,
+        "High-pitched wind instrument"
+      ],
+      [
+        13,
+        "Crop starter"
+      ],
+      [
+        18,
+        "Horse riding straps"
+      ],
+      [
+        22,
+        "Valentine bloom"
+      ],
+      [
+        25,
+        "Conducts (oneself)"
+      ],
+      [
+        27,
+        "Sign at a sellout"
+      ],
+      [
+        28,
+        "Post-WWII alliance"
+      ],
+      [
+        29,
+        "Make, as a salary"
+      ],
+      [
+        30,
+        "Praise"
+      ],
+      [
+        31,
+        "The Dalai __"
+      ],
+      [
+        32,
+        "AC measures"
+      ],
+      [
+        33,
+        "Toward sunrise"
+      ],
+      [
+        34,
+        "Region"
+      ],
+      [
+        38,
+        "Tiny amount"
+      ],
+      [
+        39,
+        "Dawn droplets"
+      ],
+      [
+        41,
+        "Sporty car roof"
+      ],
+      [
+        42,
+        "The best policy, per a proverb"
+      ],
+      [
+        43,
+        "Historic Texas site"
+      ],
+      [
+        44,
+        "Took up, as a hobby"
+      ],
+      [
+        46,
+        "Look over again"
+      ],
+      [
+        47,
+        "Thieving fox often scolded by 15-Across"
+      ],
+      [
+        50,
+        "\"Yippee!\""
+      ],
+      [
+        51,
+        "Ring-shaped island"
+      ],
+      [
+        52,
+        "Honking birds"
+      ],
+      [
+        53,
+        "Snow day vehicle"
+      ],
+      [
+        54,
+        "More than dislike"
+      ],
+      [
+        55,
+        "Bancroft of \"The Graduate\""
+      ],
+      [
+        56,
+        "\"Would __ to You?\": BBC panel show"
+      ],
+      [
+        58,
+        "General __ chicken"
+      ],
+      [
+        61,
+        "401(k) kin"
+      ]
+    ]
+  }
+}

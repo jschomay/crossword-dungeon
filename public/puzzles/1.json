@@ -1,0 +1,845 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Monday’s Daily",
+  "author": "Doug Peterson & Angela Kinsella Olson / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      "#",
+      5,
+      6,
+      7,
+      8,
+      9,
+      "#",
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      14,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      16,
+      null,
+      null,
+      null
+    ],
+    [
+      17,
+      null,
+      null,
+      null,
+      "#",
+      18,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      19,
+      null,
+      null,
+      null
+    ],
+    [
+      20,
+      null,
+      null,
+      null,
+      21,
+      null,
+      "#",
+      22,
+      null,
+      null,
+      23,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      24,
+      null,
+      null,
+      null,
+      25,
+      null,
+      "#",
+      26,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      27,
+      28,
+      null,
+      "#",
+      29,
+      null,
+      null,
+      "#",
+      30,
+      null,
+      null,
+      "#",
+      31,
+      null,
+      null
+    ],
+    [
+      32,
+      null,
+      null,
+      33,
+      "#",
+      34,
+      null,
+      35,
+      null,
+      null,
+      null,
+      36,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      37,
+      null,
+      null,
+      null,
+      "#",
+      38,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      39,
+      40,
+      41,
+      42
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      43,
+      44,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      45,
+      null,
+      null,
+      null
+    ],
+    [
+      46,
+      47,
+      48,
+      "#",
+      49,
+      null,
+      null,
+      "#",
+      50,
+      null,
+      51,
+      "#",
+      52,
+      null,
+      null
+    ],
+    [
+      53,
+      null,
+      null,
+      54,
+      null,
+      null,
+      "#",
+      55,
+      null,
+      null,
+      null,
+      56,
+      null,
+      "#",
+      "#"
+    ],
+    [
+      57,
+      null,
+      null,
+      null,
+      null,
+      null,
+      58,
+      null,
+      "#",
+      59,
+      null,
+      null,
+      null,
+      60,
+      61
+    ],
+    [
+      62,
+      null,
+      null,
+      null,
+      "#",
+      63,
+      null,
+      null,
+      64,
+      null,
+      "#",
+      65,
+      null,
+      null,
+      null
+    ],
+    [
+      66,
+      null,
+      null,
+      null,
+      "#",
+      67,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      68,
+      null,
+      null,
+      null
+    ],
+    [
+      69,
+      null,
+      null,
+      null,
+      "#",
+      70,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      71,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "T",
+      "A",
+      "F",
+      "T",
+      "#",
+      "S",
+      "P",
+      "U",
+      "R",
+      "N",
+      "#",
+      "G",
+      "R",
+      "A",
+      "B"
+    ],
+    [
+      "L",
+      "U",
+      "L",
+      "U",
+      "#",
+      "H",
+      "O",
+      "S",
+      "E",
+      "A",
+      "#",
+      "L",
+      "O",
+      "R",
+      "E"
+    ],
+    [
+      "D",
+      "R",
+      "A",
+      "T",
+      "#",
+      "A",
+      "D",
+      "A",
+      "P",
+      "T",
+      "#",
+      "E",
+      "M",
+      "M",
+      "A"
+    ],
+    [
+      "R",
+      "A",
+      "T",
+      "E",
+      "D",
+      "R",
+      "#",
+      "I",
+      "S",
+      "U",
+      "R",
+      "E",
+      "C",
+      "A",
+      "N"
+    ],
+    [
+      "#",
+      "#",
+      "B",
+      "E",
+      "E",
+      "P",
+      "E",
+      "R",
+      "#",
+      "R",
+      "A",
+      "M",
+      "O",
+      "N",
+      "E"
+    ],
+    [
+      "N",
+      "Y",
+      "U",
+      "#",
+      "P",
+      "D",
+      "Q",
+      "#",
+      "S",
+      "A",
+      "G",
+      "#",
+      "M",
+      "I",
+      "D"
+    ],
+    [
+      "T",
+      "E",
+      "S",
+      "T",
+      "#",
+      "R",
+      "U",
+      "S",
+      "T",
+      "L",
+      "E",
+      "D",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "H",
+      "A",
+      "H",
+      "A",
+      "#",
+      "E",
+      "A",
+      "T",
+      "E",
+      "R",
+      "#",
+      "I",
+      "T",
+      "E",
+      "M"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "I",
+      "N",
+      "S",
+      "T",
+      "Y",
+      "L",
+      "E",
+      "#",
+      "N",
+      "O",
+      "L",
+      "A"
+    ],
+    [
+      "A",
+      "W",
+      "E",
+      "#",
+      "U",
+      "S",
+      "E",
+      "#",
+      "M",
+      "S",
+      "T",
+      "#",
+      "P",
+      "I",
+      "P"
+    ],
+    [
+      "D",
+      "E",
+      "R",
+      "I",
+      "D",
+      "E",
+      "#",
+      "L",
+      "O",
+      "O",
+      "S",
+      "E",
+      "N",
+      "#",
+      "#"
+    ],
+    [
+      "H",
+      "A",
+      "N",
+      "D",
+      "E",
+      "D",
+      "T",
+      "O",
+      "#",
+      "U",
+      "P",
+      "V",
+      "O",
+      "T",
+      "E"
+    ],
+    [
+      "E",
+      "P",
+      "E",
+      "E",
+      "#",
+      "M",
+      "A",
+      "T",
+      "E",
+      "R",
+      "#",
+      "I",
+      "T",
+      "A",
+      "L"
+    ],
+    [
+      "R",
+      "O",
+      "S",
+      "A",
+      "#",
+      "A",
+      "Z",
+      "T",
+      "E",
+      "C",
+      "#",
+      "T",
+      "E",
+      "R",
+      "M"
+    ],
+    [
+      "E",
+      "N",
+      "T",
+      "S",
+      "#",
+      "N",
+      "O",
+      "O",
+      "N",
+      "E",
+      "#",
+      "A",
+      "S",
+      "P",
+      "S"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "U.S. president who wrestled at Yale"
+      ],
+      [
+        5,
+        "Reject"
+      ],
+      [
+        10,
+        "\"How does that __ you?\""
+      ],
+      [
+        14,
+        "Beaut"
+      ],
+      [
+        15,
+        "Hebrew prophet"
+      ],
+      [
+        16,
+        "Traditional tales"
+      ],
+      [
+        17,
+        "\"Nerts!\""
+      ],
+      [
+        18,
+        "Go with the flow"
+      ],
+      [
+        19,
+        "\"The Brutalist\" actress Laird"
+      ],
+      [
+        20,
+        "Not for children"
+      ],
+      [
+        22,
+        "\"No problem!\""
+      ],
+      [
+        24,
+        "Paging device"
+      ],
+      [
+        26,
+        "Dee Dee of punk rock"
+      ],
+      [
+        27,
+        "Spike Lee's employer: Abbr."
+      ],
+      [
+        29,
+        "__ Bach: fictional \"forgotten son\" of classical music"
+      ],
+      [
+        30,
+        "Droop"
+      ],
+      [
+        31,
+        "Mediocre, in Gen Z slang"
+      ],
+      [
+        32,
+        "The \"T\" of SAT"
+      ],
+      [
+        34,
+        "Stole steers"
+      ],
+      [
+        37,
+        "\"So funny!\""
+      ],
+      [
+        38,
+        "Lotus-__"
+      ],
+      [
+        39,
+        "Shopping cart unit"
+      ],
+      [
+        43,
+        "Fashion magazine that went digital-only in 2022"
+      ],
+      [
+        45,
+        "Home of Tulane University, for short"
+      ],
+      [
+        46,
+        "Overwhelming feeling"
+      ],
+      [
+        49,
+        "\"__ it or lose it\""
+      ],
+      [
+        50,
+        "Winter hrs. in Las Cruces"
+      ],
+      [
+        52,
+        "Domino dimple"
+      ],
+      [
+        53,
+        "Mock mercilessly"
+      ],
+      [
+        55,
+        "Unlace, say"
+      ],
+      [
+        57,
+        "Bestowed upon"
+      ],
+      [
+        59,
+        "Signify approval of, as a Reddit post"
+      ],
+      [
+        62,
+        "Foil alternative"
+      ],
+      [
+        63,
+        "Alma __"
+      ],
+      [
+        65,
+        "Slanted type: Abbr."
+      ],
+      [
+        66,
+        "Stephanie's \"Brooklyn Nine-Nine\" role"
+      ],
+      [
+        67,
+        "San Diego State athlete"
+      ],
+      [
+        68,
+        "Six years for a U.S. senator, e.g."
+      ],
+      [
+        69,
+        "Docs who perform tonsillectomies"
+      ],
+      [
+        70,
+        "Disappointing turnout"
+      ],
+      [
+        71,
+        "Nile vipers"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Abbr. before a summary"
+      ],
+      [
+        2,
+        "Mystical glow"
+      ],
+      [
+        3,
+        "*Neighborhood where the Brooklyn Dodgers played"
+      ],
+      [
+        4,
+        "Solo scholar"
+      ],
+      [
+        5,
+        "*ZZ Top hit with the lyric \"Silk suit, black tie\""
+      ],
+      [
+        6,
+        "Cacao container"
+      ],
+      [
+        7,
+        "Old Pan Am rival"
+      ],
+      [
+        8,
+        "Union agts."
+      ],
+      [
+        9,
+        "*Soil, water, or wind, e.g."
+      ],
+      [
+        10,
+        "Electric toothbrush brand"
+      ],
+      [
+        11,
+        "Date night flick"
+      ],
+      [
+        12,
+        "Italian fashion house"
+      ],
+      [
+        13,
+        "Conked with a curveball"
+      ],
+      [
+        21,
+        "Opp. of withdrawal"
+      ],
+      [
+        23,
+        "Fury"
+      ],
+      [
+        25,
+        "Treat as the same"
+      ],
+      [
+        27,
+        "To the __ degree"
+      ],
+      [
+        28,
+        "Word of support"
+      ],
+      [
+        30,
+        "Patron of sailors"
+      ],
+      [
+        33,
+        "Mai __: cocktail"
+      ],
+      [
+        35,
+        "Foul territory?"
+      ],
+      [
+        36,
+        "Cacophony"
+      ],
+      [
+        40,
+        "Initial perfume scents, or what can be found in the answers to the starred clues"
+      ],
+      [
+        41,
+        "Yale grad"
+      ],
+      [
+        42,
+        "Hiker's graphic"
+      ],
+      [
+        44,
+        "Wearing nothing"
+      ],
+      [
+        46,
+        "Stick fast"
+      ],
+      [
+        47,
+        "Clue category"
+      ],
+      [
+        48,
+        "Novelist Hemingway"
+      ],
+      [
+        51,
+        "Amt. that may be \"heaping\""
+      ],
+      [
+        54,
+        "Mental flashes"
+      ],
+      [
+        55,
+        "State-run game"
+      ],
+      [
+        56,
+        "Patti LuPone role"
+      ],
+      [
+        58,
+        "Brand with an Organic Blonde Tea Latte variety"
+      ],
+      [
+        60,
+        "Rain delay cover"
+      ],
+      [
+        61,
+        "Colonnade trees"
+      ],
+      [
+        64,
+        "Poetic nightfall"
+      ]
+    ]
+  }
+}

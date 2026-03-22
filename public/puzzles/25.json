@@ -1,0 +1,829 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Thursday’s Daily",
+  "author": "Roland Huget / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      5,
+      "#",
+      6,
+      7,
+      8,
+      "#",
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      14,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      "#",
+      16,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      17,
+      null,
+      null,
+      null,
+      null,
+      18,
+      null,
+      null,
+      null,
+      "#",
+      19,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      20,
+      null,
+      null,
+      "#",
+      21,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      22,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      23,
+      null,
+      null,
+      24,
+      "#",
+      25,
+      null,
+      null,
+      null,
+      26,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      27,
+      null,
+      null,
+      null,
+      28,
+      null,
+      "#",
+      "#",
+      "#",
+      29,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      30,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      31,
+      32,
+      33,
+      null,
+      "#",
+      "#",
+      34,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      35,
+      null,
+      36,
+      null,
+      null,
+      null,
+      null,
+      37,
+      38,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      39,
+      40,
+      41,
+      "#",
+      "#",
+      42,
+      null,
+      null,
+      null,
+      "#",
+      43,
+      null,
+      44,
+      45,
+      46
+    ],
+    [
+      47,
+      null,
+      null,
+      48,
+      49,
+      null,
+      "#",
+      "#",
+      "#",
+      50,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      51,
+      null,
+      null,
+      null,
+      null,
+      null,
+      52,
+      53,
+      54,
+      null,
+      "#",
+      55,
+      null,
+      null,
+      null
+    ],
+    [
+      56,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      57,
+      null,
+      null,
+      null,
+      58,
+      "#",
+      59,
+      null,
+      null
+    ],
+    [
+      60,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      61,
+      null,
+      null,
+      null,
+      null,
+      62,
+      null,
+      null,
+      null
+    ],
+    [
+      63,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      64,
+      null,
+      null,
+      "#",
+      65,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      66,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      67,
+      null,
+      null,
+      "#",
+      68,
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "P",
+      "E",
+      "T",
+      "E",
+      "R",
+      "#",
+      "W",
+      "A",
+      "H",
+      "#",
+      "G",
+      "L",
+      "O",
+      "M",
+      "S"
+    ],
+    [
+      "A",
+      "T",
+      "A",
+      "R",
+      "I",
+      "#",
+      "E",
+      "M",
+      "O",
+      "#",
+      "R",
+      "E",
+      "V",
+      "E",
+      "L"
+    ],
+    [
+      "W",
+      "A",
+      "X",
+      "S",
+      "T",
+      "R",
+      "I",
+      "P",
+      "S",
+      "#",
+      "E",
+      "V",
+      "A",
+      "D",
+      "E"
+    ],
+    [
+      "P",
+      "I",
+      "C",
+      "#",
+      "E",
+      "A",
+      "G",
+      "L",
+      "E",
+      "#",
+      "A",
+      "E",
+      "R",
+      "I",
+      "E"
+    ],
+    [
+      "A",
+      "L",
+      "U",
+      "M",
+      "#",
+      "C",
+      "H",
+      "E",
+      "A",
+      "P",
+      "T",
+      "R",
+      "I",
+      "C",
+      "K"
+    ],
+    [
+      "W",
+      "E",
+      "T",
+      "I",
+      "N",
+      "K",
+      "#",
+      "#",
+      "#",
+      "U",
+      "S",
+      "S",
+      "E",
+      "A",
+      "L"
+    ],
+    [
+      "S",
+      "R",
+      "S",
+      "L",
+      "Y",
+      "#",
+      "P",
+      "A",
+      "I",
+      "R",
+      "#",
+      "#",
+      "S",
+      "L",
+      "Y"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "T",
+      "U",
+      "L",
+      "I",
+      "P",
+      "T",
+      "R",
+      "E",
+      "E",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "P",
+      "A",
+      "T",
+      "#",
+      "#",
+      "I",
+      "N",
+      "T",
+      "O",
+      "#",
+      "R",
+      "E",
+      "A",
+      "R",
+      "S"
+    ],
+    [
+      "A",
+      "S",
+      "H",
+      "P",
+      "A",
+      "N",
+      "#",
+      "#",
+      "#",
+      "S",
+      "A",
+      "L",
+      "T",
+      "O",
+      "N"
+    ],
+    [
+      "S",
+      "P",
+      "E",
+      "C",
+      "S",
+      "C",
+      "R",
+      "I",
+      "P",
+      "T",
+      "#",
+      "S",
+      "E",
+      "G",
+      "A"
+    ],
+    [
+      "T",
+      "I",
+      "T",
+      "U",
+      "S",
+      "#",
+      "A",
+      "V",
+      "L",
+      "A",
+      "B",
+      "#",
+      "C",
+      "A",
+      "P"
+    ],
+    [
+      "E",
+      "R",
+      "A",
+      "S",
+      "E",
+      "#",
+      "R",
+      "O",
+      "U",
+      "N",
+      "D",
+      "T",
+      "R",
+      "I",
+      "P"
+    ],
+    [
+      "L",
+      "I",
+      "K",
+      "E",
+      "N",
+      "#",
+      "E",
+      "R",
+      "M",
+      "#",
+      "A",
+      "S",
+      "O",
+      "N",
+      "E"
+    ],
+    [
+      "S",
+      "N",
+      "E",
+      "R",
+      "T",
+      "#",
+      "R",
+      "Y",
+      "E",
+      "#",
+      "Y",
+      "A",
+      "W",
+      "E",
+      "D"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Former \"Doctor Who\" star Capaldi"
+      ],
+      [
+        6,
+        "\"Quit crying, ya big baby!\""
+      ],
+      [
+        9,
+        "Latches (on to)"
+      ],
+      [
+        14,
+        "Breakout publisher"
+      ],
+      [
+        15,
+        "Punk offshoot"
+      ],
+      [
+        16,
+        "Make merry"
+      ],
+      [
+        17,
+        "Hair removal option"
+      ],
+      [
+        19,
+        "Get around"
+      ],
+      [
+        20,
+        "Shot"
+      ],
+      [
+        21,
+        "Apex predator with feathers"
+      ],
+      [
+        22,
+        "21-Across nest"
+      ],
+      [
+        23,
+        "Homecoming attendee"
+      ],
+      [
+        25,
+        "Underhanded move"
+      ],
+      [
+        27,
+        "Blotter target"
+      ],
+      [
+        29,
+        "Emblem on a dol."
+      ],
+      [
+        30,
+        "\"4 real?\""
+      ],
+      [
+        31,
+        "So-so poker hand"
+      ],
+      [
+        34,
+        "Conniving"
+      ],
+      [
+        35,
+        "Growth also known as yellow poplar"
+      ],
+      [
+        39,
+        "Stand __"
+      ],
+      [
+        42,
+        "Really liking"
+      ],
+      [
+        43,
+        "Brings up"
+      ],
+      [
+        47,
+        "Fireplace receptacle"
+      ],
+      [
+        50,
+        "__ Sea: saline lake in California's Sonoran Desert"
+      ],
+      [
+        51,
+        "Noncommissioned screenplay"
+      ],
+      [
+        55,
+        "Dreamcast maker"
+      ],
+      [
+        56,
+        "\"Bosch\" star Welliver"
+      ],
+      [
+        57,
+        "Place for HS filmmakers"
+      ],
+      [
+        59,
+        "Gown partner"
+      ],
+      [
+        60,
+        "Wipe out"
+      ],
+      [
+        61,
+        "There and back, or a progression found in 17-, 25-, 35-, 51-, and 61-Across"
+      ],
+      [
+        63,
+        "Compare"
+      ],
+      [
+        64,
+        "Hesitant response"
+      ],
+      [
+        65,
+        "With a single voice"
+      ],
+      [
+        66,
+        "Hägar's dog"
+      ],
+      [
+        67,
+        "Deli choice"
+      ],
+      [
+        68,
+        "Deviated from a straight course"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Green-skinned fruits in the custard-apple family"
+      ],
+      [
+        2,
+        "Always-open merchant"
+      ],
+      [
+        3,
+        "Campaign promises directed at wage earners"
+      ],
+      [
+        4,
+        "Triage ctrs."
+      ],
+      [
+        5,
+        "Liturgical act"
+      ],
+      [
+        6,
+        "Consider the pros and cons of"
+      ],
+      [
+        7,
+        "Copious"
+      ],
+      [
+        8,
+        "Hebrew prophet"
+      ],
+      [
+        9,
+        "Hall of Famers"
+      ],
+      [
+        10,
+        "Simple machines"
+      ],
+      [
+        11,
+        "Egg cell producers"
+      ],
+      [
+        12,
+        "Insurance category"
+      ],
+      [
+        13,
+        "In an aerodynamic way"
+      ],
+      [
+        18,
+        "Pool triangle"
+      ],
+      [
+        24,
+        "Jackson of the Modern Jazz Quartet"
+      ],
+      [
+        26,
+        "Ragdoll sound"
+      ],
+      [
+        28,
+        "Alma mater of Spike Lee and Ang Lee: Abbr."
+      ],
+      [
+        31,
+        "Map marker"
+      ],
+      [
+        32,
+        "Well-suited"
+      ],
+      [
+        33,
+        "Skater Midori"
+      ],
+      [
+        36,
+        "\"The Mod Squad\" role"
+      ],
+      [
+        37,
+        "Bullpen stat"
+      ],
+      [
+        38,
+        "Anago and unagi"
+      ],
+      [
+        39,
+        "Some Degas works"
+      ],
+      [
+        40,
+        "Medicine cabinet staple"
+      ],
+      [
+        41,
+        "Bad thing for an official to be on"
+      ],
+      [
+        44,
+        "Was humiliated"
+      ],
+      [
+        45,
+        "Hair growth option"
+      ],
+      [
+        46,
+        "Replied sharply"
+      ],
+      [
+        48,
+        "One who may download Microsoft software"
+      ],
+      [
+        49,
+        "Green light"
+      ],
+      [
+        50,
+        "Diehard fan, in slang"
+      ],
+      [
+        52,
+        "Harder to come by"
+      ],
+      [
+        53,
+        "Creamy white"
+      ],
+      [
+        54,
+        "Decorative feather"
+      ],
+      [
+        58,
+        "Annual celebration, briefly"
+      ],
+      [
+        62,
+        "Passenger-screening org."
+      ]
+    ]
+  }
+}

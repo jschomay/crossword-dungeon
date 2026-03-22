@@ -1,7 +1,7 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
-import puzzleJson from '../puzzles/wapo-2026-03-16.json';
 import { validateIpuz, selectWords, buildSparseIpuz } from './puzzle';
+import { consumeProgression, fetchPuzzle } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
@@ -53,9 +53,9 @@ const MAX_WORD_COUNT = 20;
 function equipLine(item: TreasureItemStats): string {
   const fullName = [...item.modNames, item.name].join(' ');
   const parts: string[] = [];
-  if (item.damageBonus > 0)  parts.push(`+${item.damageBonus} DMG`);
+  if (item.damageBonus > 0) parts.push(`+${item.damageBonus} DMG`);
   if (item.defenseBonus > 0) parts.push(`+${item.defenseBonus} DEF`);
-  if (item.maxHpBonus > 0)   parts.push(`+${item.maxHpBonus} max HP`);
+  if (item.maxHpBonus > 0) parts.push(`+${item.maxHpBonus} max HP`);
   if (item.maxManaBonus > 0) parts.push(`+${item.maxManaBonus} max MANA`);
   parts.push(...item.passiveEffects);
   return `◆ ${fullName} (${parts.join(', ')})`;
@@ -72,7 +72,7 @@ export default class Game {
   display!: ROT.Display;
   private puzzle!: Puzzle;
   private dungeon!: Dungeon;
-  private playerPos: { x: number; y: number };
+  private playerPos!: { x: number; y: number };
   private heroEl: HTMLElement;
   private dungeonLevelEl: HTMLElement;
   private statusEl: HTMLElement;
@@ -108,7 +108,7 @@ export default class Game {
   private manaPotions: number = 0;
   private revealScrolls: number = 0;
 
-  private readonly fullIpuz = validateIpuz(puzzleJson);
+  private fullIpuz!: ReturnType<typeof validateIpuz>;
 
   private readonly TILT_SCALE = 1.22;
 
@@ -129,12 +129,18 @@ export default class Game {
     return 1 + (this.dungeonLevel - 1) * 0.3;
   }
 
-  private regenDungeon(): void {
+  private async regenDungeon(): Promise<void> {
+    this.dungeonEl.innerHTML = '<p class="loading">Loading...</p>';
+    const { puzzleNumber, parityFlip } = consumeProgression();
+    this.fullIpuz = await fetchPuzzle(puzzleNumber);
     const target = this.wordCount();
+    const parityOffset = parityFlip ? 1 : 0;
     let selected: Set<string>;
+    let attempts = 0;
     do {
-      selected = selectWords(this.fullIpuz, target, Math.random, 0);
-    } while (selected.size < target);
+      selected = selectWords(this.fullIpuz, target, Math.random, parityOffset);
+      attempts++;
+    } while (selected.size < target && attempts < 20);
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.dungeon = new Dungeon(this.puzzle);
@@ -149,7 +155,7 @@ export default class Game {
     this.dungeonEl.appendChild(this.display.getContainer()!);
   }
 
-  constructor() {
+  private constructor() {
     this.dungeonEl = document.getElementById('dungeon')!;
     this.heroEl = document.getElementById('hero')!;
     this.dungeonLevelEl = document.getElementById('dungeon-level')!;
@@ -157,20 +163,21 @@ export default class Game {
     this.cluesEl = document.getElementById('clues')!;
     this.encounterEl = document.getElementById('encounter')!;
     this.interactionLogEl = document.getElementById('interaction-log')!;
+  }
 
-    this.regenDungeon();
-
+  static async create(): Promise<Game> {
+    const game = new Game();
+    await game.regenDungeon();
     window.addEventListener('resize', () => {
-      this.display.setOptions({ fontSize: this.calcFontSize() });
-      this.render();
+      game.display.setOptions({ fontSize: game.calcFontSize() });
+      game.render();
     });
-
-    this.applyTilt();
-    this.initRoomStates();
-    this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
-
-    this.render();
-    window.addEventListener('keydown', (e) => this.handleKey(e));
+    game.applyTilt();
+    game.initRoomStates();
+    game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
+    game.render();
+    window.addEventListener('keydown', (e) => game.handleKey(e));
+    return game;
   }
 
   private applyTilt(): void {
@@ -199,9 +206,9 @@ export default class Game {
     }
   }
 
-  private restart(): void {
+  private async restart(): Promise<void> {
     this.dungeonLevel = 1;
-    this.regenDungeon();
+    await this.regenDungeon();
     this.initRoomStates();
     this.mana = BASE_MANA;
     this.maxMana = BASE_MANA;
@@ -226,9 +233,9 @@ export default class Game {
     this.render();
   }
 
-  private advancePuzzle(): void {
+  private async advancePuzzle(): Promise<void> {
     this.dungeonLevel++;
-    this.regenDungeon();
+    await this.regenDungeon();
     this.initRoomStates();
     this.pendingItem = null;
     this.puzzleComplete = false;
@@ -284,9 +291,9 @@ export default class Game {
 
   private itemStatLines(item: TreasureItemStats): string[] {
     const lines: string[] = [];
-    if (item.damageBonus > 0)  lines.push(`+${item.damageBonus} DMG`);
+    if (item.damageBonus > 0) lines.push(`+${item.damageBonus} DMG`);
     if (item.defenseBonus > 0) lines.push(`+${item.defenseBonus} DEF`);
-    if (item.maxHpBonus > 0)   lines.push(`+${item.maxHpBonus} max HP`);
+    if (item.maxHpBonus > 0) lines.push(`+${item.maxHpBonus} max HP`);
     if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
     for (const e of item.passiveEffects) lines.push(e);
     return lines;
@@ -508,7 +515,7 @@ export default class Game {
       const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
       const equippedItems = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet];
       const manaPerRound = equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0);
-      const hpPerRound   = equippedItems.reduce((s, i) => s + (i?.hpPerRound   ?? 0), 0);
+      const hpPerRound = equippedItems.reduce((s, i) => s + (i?.hpPerRound ?? 0), 0);
       const result = resolveCombat(
         {
           dmg: this.effectiveDmg(),
@@ -710,17 +717,17 @@ export default class Game {
   }
 
   private renderHeroPanel(): void {
-    const hpBarStr   = hpBar(this.hp,   this.effectiveMaxHp());
+    const hpBarStr = hpBar(this.hp, this.effectiveMaxHp());
     const manaBarStr = hpBar(this.mana, this.effectiveMaxMana());
     const effDmg = this.effectiveDmg();
     const effDef = this.effectiveDef();
     const flash = (cur: number, prev: number) => cur !== prev ? ' class="flash"' : '';
-    const hpFlash   = flash(this.hp,    this.prevHp);
-    const manaFlash = flash(this.mana,  this.prevMana);
-    const dmgFlash  = flash(effDmg,     this.prevDmg);
-    const defFlash  = flash(effDef,     this.prevDef);
-    const xpFlash   = flash(this.xp,    this.prevXp);
-    const lvlFlash  = flash(this.level, this.prevLevel);
+    const hpFlash = flash(this.hp, this.prevHp);
+    const manaFlash = flash(this.mana, this.prevMana);
+    const dmgFlash = flash(effDmg, this.prevDmg);
+    const defFlash = flash(effDef, this.prevDef);
+    const xpFlash = flash(this.xp, this.prevXp);
+    const lvlFlash = flash(this.level, this.prevLevel);
 
     const equipLines = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
       .filter((item): item is TreasureItemStats => item !== null)
@@ -733,37 +740,37 @@ export default class Game {
       `<span style="color:#777">${esc(effect)}</span></div>`;
     const bagHtml =
       `<div style="display:flex;justify-content:space-between;width:100%">` +
-      itemBox('1', 'Heal',     '+20 HP',        this.hpPotions) +
-      itemBox('2', 'Restore',  '+10 MANA',      this.manaPotions) +
+      itemBox('1', 'Heal', '+20 HP', this.hpPotions) +
+      itemBox('2', 'Restore', '+10 MANA', this.manaPotions) +
       itemBox('3', 'Inscribe', 'Reveal letter', this.revealScrolls) +
       `</div>`;
 
     this.heroEl.innerHTML =
       `<div style="display:flex;align-items:baseline;gap:12px">` +
-        `<span style="color:#ffdd44">Adventurer</span>` +
-        `<span${lvlFlash} style="color:#777">Lv.${this.level}</span>` +
+      `<span style="color:#ffdd44">Adventurer</span>` +
+      `<span${lvlFlash} style="color:#777">Lv.${this.level}</span>` +
       `</div>` +
       `<div style="display:flex;gap:32px;margin-top:4px">` +
-        `<div>` +
-          `<div><span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.effectiveMaxHp()}</span></div>` +
-          `<div><span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.effectiveMaxMana()}</span></div>` +
-        `</div>` +
-        `<div>` +
-          `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
-          `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
-          `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
-        `</div>` +
+      `<div>` +
+      `<div><span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.effectiveMaxHp()}</span></div>` +
+      `<div><span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.effectiveMaxMana()}</span></div>` +
+      `</div>` +
+      `<div>` +
+      `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
+      `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
+      `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
+      `</div>` +
       `</div>` +
       `\n` +
       (equipLines ? `<span style="color:${C_DIM}">${equipLines}</span>\n\n` : '') +
       bagHtml;
 
-    this.prevHp              = this.hp;
-    this.prevMana            = this.mana;
-    this.prevDmg             = effDmg;
-    this.prevDef             = effDef;
-    this.prevXp              = this.xp;
-    this.prevLevel           = this.level;
+    this.prevHp = this.hp;
+    this.prevMana = this.mana;
+    this.prevDmg = effDmg;
+    this.prevDef = effDef;
+    this.prevXp = this.xp;
+    this.prevLevel = this.level;
     this.prevCombatMonsterHp = this.combatMonsterHp;
 
     this.dungeonLevelEl.innerHTML =

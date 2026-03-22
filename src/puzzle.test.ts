@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { validateIpuz, computePotentialLevel, computePotentialLevels, getWords, selectWords, buildSparseIpuz } from './puzzle';
 import Puzzle from './puzzle';
-import testPuzzleJson from '../puzzles/test-potential.json';
-import demoJson from '../puzzles/demo.json';
+import testPuzzleJson from '../tests/fixtures/test-potential.json';
+import demoJson from '../tests/fixtures/demo.json';
 
 // Layout (x=col, y=row):
 //   x: 0  1  2  3  4

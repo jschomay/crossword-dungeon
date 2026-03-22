@@ -1,0 +1,829 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Tuesday’s Daily",
+  "author": "Alan Massengill & Doug Peterson / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      "#",
+      "#",
+      4,
+      5,
+      6,
+      7,
+      8,
+      "#",
+      9,
+      10,
+      11,
+      12
+    ],
+    [
+      13,
+      null,
+      null,
+      "#",
+      "#",
+      14,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null
+    ],
+    [
+      16,
+      null,
+      null,
+      17,
+      "#",
+      18,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      19,
+      null,
+      null,
+      null
+    ],
+    [
+      20,
+      null,
+      null,
+      null,
+      21,
+      null,
+      null,
+      null,
+      "#",
+      22,
+      23,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      24,
+      null,
+      null,
+      null,
+      "#",
+      25,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      26,
+      27,
+      28,
+      null,
+      null,
+      null,
+      "#",
+      29,
+      null,
+      null,
+      null,
+      null,
+      30,
+      31,
+      32
+    ],
+    [
+      33,
+      null,
+      null,
+      null,
+      "#",
+      34,
+      35,
+      null,
+      null,
+      null,
+      "#",
+      36,
+      null,
+      null,
+      null
+    ],
+    [
+      37,
+      null,
+      null,
+      null,
+      "#",
+      38,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      39,
+      null,
+      null,
+      null
+    ],
+    [
+      40,
+      null,
+      null,
+      null,
+      "#",
+      41,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      42,
+      null,
+      null,
+      null
+    ],
+    [
+      43,
+      null,
+      null,
+      null,
+      44,
+      null,
+      null,
+      null,
+      "#",
+      45,
+      46,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      47,
+      null,
+      null,
+      null,
+      "#",
+      48,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      49,
+      50,
+      51,
+      null,
+      null,
+      null,
+      "#",
+      52,
+      null,
+      null,
+      null,
+      null,
+      53,
+      54,
+      55
+    ],
+    [
+      56,
+      null,
+      null,
+      null,
+      "#",
+      57,
+      58,
+      null,
+      null,
+      null,
+      "#",
+      59,
+      null,
+      null,
+      null
+    ],
+    [
+      60,
+      null,
+      null,
+      null,
+      "#",
+      61,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      62,
+      null,
+      null
+    ],
+    [
+      63,
+      null,
+      null,
+      null,
+      "#",
+      64,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      65,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "C",
+      "O",
+      "T",
+      "#",
+      "#",
+      "D",
+      "A",
+      "R",
+      "T",
+      "H",
+      "#",
+      "A",
+      "P",
+      "P",
+      "S"
+    ],
+    [
+      "L",
+      "A",
+      "O",
+      "#",
+      "#",
+      "O",
+      "S",
+      "A",
+      "K",
+      "A",
+      "#",
+      "D",
+      "A",
+      "L",
+      "E"
+    ],
+    [
+      "O",
+      "T",
+      "T",
+      "O",
+      "#",
+      "N",
+      "I",
+      "N",
+      "O",
+      "S",
+      "#",
+      "V",
+      "I",
+      "E",
+      "W"
+    ],
+    [
+      "P",
+      "H",
+      "O",
+      "N",
+      "E",
+      "T",
+      "A",
+      "G",
+      "#",
+      "T",
+      "B",
+      "I",
+      "R",
+      "D",
+      "S"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "E",
+      "A",
+      "R",
+      "N",
+      "#",
+      "M",
+      "E",
+      "R",
+      "C",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "I",
+      "H",
+      "A",
+      "D",
+      "T",
+      "O",
+      "#",
+      "S",
+      "O",
+      "M",
+      "B",
+      "E",
+      "R",
+      "L",
+      "Y"
+    ],
+    [
+      "N",
+      "A",
+      "S",
+      "A",
+      "#",
+      "C",
+      "O",
+      "C",
+      "O",
+      "A",
+      "#",
+      "C",
+      "I",
+      "A",
+      "O"
+    ],
+    [
+      "T",
+      "R",
+      "A",
+      "Y",
+      "#",
+      "K",
+      "N",
+      "O",
+      "C",
+      "K",
+      "#",
+      "O",
+      "P",
+      "R",
+      "Y"
+    ],
+    [
+      "O",
+      "S",
+      "H",
+      "A",
+      "#",
+      "T",
+      "I",
+      "T",
+      "H",
+      "E",
+      "#",
+      "L",
+      "A",
+      "G",
+      "O"
+    ],
+    [
+      "W",
+      "H",
+      "I",
+      "T",
+      "E",
+      "H",
+      "O",
+      "T",
+      "#",
+      "S",
+      "A",
+      "U",
+      "T",
+      "E",
+      "S"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "A",
+      "M",
+      "E",
+      "N",
+      "#",
+      "S",
+      "W",
+      "A",
+      "M",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "I",
+      "C",
+      "E",
+      "T",
+      "U",
+      "B",
+      "#",
+      "S",
+      "E",
+      "A",
+      "S",
+      "N",
+      "A",
+      "K",
+      "E"
+    ],
+    [
+      "M",
+      "A",
+      "X",
+      "I",
+      "#",
+      "O",
+      "A",
+      "T",
+      "E",
+      "S",
+      "#",
+      "S",
+      "L",
+      "E",
+      "D"
+    ],
+    [
+      "P",
+      "R",
+      "A",
+      "M",
+      "#",
+      "A",
+      "D",
+      "A",
+      "P",
+      "T",
+      "#",
+      "#",
+      "P",
+      "E",
+      "G"
+    ],
+    [
+      "S",
+      "A",
+      "M",
+      "E",
+      "#",
+      "T",
+      "E",
+      "R",
+      "S",
+      "E",
+      "#",
+      "#",
+      "S",
+      "L",
+      "Y"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Basic bed"
+      ],
+      [
+        4,
+        "Vader's title"
+      ],
+      [
+        9,
+        "Tablet downloads"
+      ],
+      [
+        13,
+        "Language similar to Thai"
+      ],
+      [
+        14,
+        "Tennis champion Naomi"
+      ],
+      [
+        15,
+        "Self-improvement icon Carnegie"
+      ],
+      [
+        16,
+        "\"The Simpsons\" bus driver"
+      ],
+      [
+        18,
+        "Yucatán boys"
+      ],
+      [
+        19,
+        "Scenic sight"
+      ],
+      [
+        20,
+        "\"Game\" of missed connections"
+      ],
+      [
+        22,
+        "Classic Fords"
+      ],
+      [
+        24,
+        "Acquire with effort"
+      ],
+      [
+        25,
+        "Former Ford div."
+      ],
+      [
+        26,
+        "\"No choice, sorry\""
+      ],
+      [
+        29,
+        "In a melancholy way"
+      ],
+      [
+        33,
+        "Astronauts org."
+      ],
+      [
+        34,
+        "Brownie ingredient"
+      ],
+      [
+        36,
+        "Farewell accompanied by an air kiss"
+      ],
+      [
+        37,
+        "DVD holder"
+      ],
+      [
+        38,
+        "Rap"
+      ],
+      [
+        39,
+        "The Grand Ole __"
+      ],
+      [
+        40,
+        "Div. of Labor"
+      ],
+      [
+        41,
+        "Church donation"
+      ],
+      [
+        42,
+        "Italian lake"
+      ],
+      [
+        43,
+        "Impassioned to the extreme"
+      ],
+      [
+        45,
+        "Lightly fries in oil"
+      ],
+      [
+        47,
+        "Prayer ending"
+      ],
+      [
+        48,
+        "Did the first stage of a triathlon"
+      ],
+      [
+        49,
+        "Spot for a therapeutic cold plunge"
+      ],
+      [
+        52,
+        "Colorful reef dweller"
+      ],
+      [
+        56,
+        "Full-length skirt"
+      ],
+      [
+        57,
+        "Hockey Hall of Famer Adam"
+      ],
+      [
+        59,
+        "Iditarod vehicle"
+      ],
+      [
+        60,
+        "British baby carriage"
+      ],
+      [
+        61,
+        "Change with the times"
+      ],
+      [
+        62,
+        "Wooden pin"
+      ],
+      [
+        63,
+        "Equivalent"
+      ],
+      [
+        64,
+        "Succinct"
+      ],
+      [
+        65,
+        "Foxy"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Hoofbeat sound"
+      ],
+      [
+        2,
+        "Pledge in court"
+      ],
+      [
+        3,
+        "Dorothy Gale's pup"
+      ],
+      [
+        4,
+        "\"Things are going well, so avoid sudden changes\""
+      ],
+      [
+        5,
+        "Like 13-Across"
+      ],
+      [
+        6,
+        "Called up"
+      ],
+      [
+        7,
+        "MMA decision"
+      ],
+      [
+        8,
+        "\"If you rush, you won't do it right\""
+      ],
+      [
+        9,
+        "\"Dear Abby,\" \"Ask Amy,\" et al., and an apt description of 4-, 8-, and 17-Down"
+      ],
+      [
+        10,
+        "Connect via Bluetooth, say"
+      ],
+      [
+        11,
+        "Swore"
+      ],
+      [
+        12,
+        "Stitches (up)"
+      ],
+      [
+        17,
+        "\"Relax and take things as they come\""
+      ],
+      [
+        21,
+        "Consume"
+      ],
+      [
+        23,
+        "Texter's \"Gimme a sec\""
+      ],
+      [
+        25,
+        "Freeloading sort"
+      ],
+      [
+        26,
+        "Following behind"
+      ],
+      [
+        27,
+        "Like an arctic winter"
+      ],
+      [
+        28,
+        "Beer with sushi, maybe"
+      ],
+      [
+        29,
+        "\"The Great Gatsby\" novelist F. __ Fitzgerald"
+      ],
+      [
+        30,
+        "Open eagerly, as a present"
+      ],
+      [
+        31,
+        "Not quite jumbo"
+      ],
+      [
+        32,
+        "Up-and-down toys"
+      ],
+      [
+        35,
+        "Pungent bulb"
+      ],
+      [
+        44,
+        "Bird on the Australian coat of arms"
+      ],
+      [
+        46,
+        "Small batteries"
+      ],
+      [
+        48,
+        "Oozes"
+      ],
+      [
+        49,
+        "Real troublemakers"
+      ],
+      [
+        50,
+        "Chanel model Delevingne"
+      ],
+      [
+        51,
+        "Academic hurdle"
+      ],
+      [
+        52,
+        "Betelgeuse, for one"
+      ],
+      [
+        53,
+        "Mont Blanc's range"
+      ],
+      [
+        54,
+        "On an even __: stable"
+      ],
+      [
+        55,
+        "With just a bit of spice"
+      ],
+      [
+        58,
+        "Citrus drink suffix"
+      ]
+    ]
+  }
+}

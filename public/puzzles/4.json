@@ -1,0 +1,837 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Thursday’s Daily",
+  "author": "Desirée Penner & Jeff Sinnock / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      "#",
+      "#",
+      5,
+      6,
+      7,
+      8,
+      9,
+      "#",
+      10,
+      11,
+      12
+    ],
+    [
+      13,
+      null,
+      null,
+      null,
+      "#",
+      14,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null
+    ],
+    [
+      16,
+      null,
+      null,
+      null,
+      17,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      18,
+      null,
+      null
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      19,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      20,
+      21,
+      null,
+      null,
+      null
+    ],
+    [
+      22,
+      23,
+      24,
+      null,
+      null,
+      "#",
+      "#",
+      25,
+      null,
+      26,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      27,
+      null,
+      null,
+      null,
+      null,
+      28,
+      29,
+      "#",
+      30,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      31,
+      null,
+      null,
+      "#",
+      "#",
+      32,
+      null,
+      33,
+      "#",
+      34,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      35,
+      36,
+      37,
+      null,
+      null,
+      null,
+      38,
+      null,
+      null,
+      null,
+      39,
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      40,
+      null,
+      null,
+      "#",
+      41,
+      null,
+      null,
+      "#",
+      "#",
+      42,
+      43,
+      44
+    ],
+    [
+      45,
+      46,
+      47,
+      null,
+      null,
+      null,
+      48,
+      "#",
+      49,
+      null,
+      50,
+      51,
+      null,
+      null,
+      null
+    ],
+    [
+      52,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      53,
+      "#",
+      "#",
+      54,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      55,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      56,
+      null,
+      57,
+      58,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      59,
+      null,
+      null,
+      "#",
+      60,
+      61,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      62,
+      63,
+      64
+    ],
+    [
+      65,
+      null,
+      null,
+      "#",
+      66,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      67,
+      null,
+      null,
+      null
+    ],
+    [
+      68,
+      null,
+      null,
+      "#",
+      69,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      70,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "A",
+      "D",
+      "D",
+      "S",
+      "#",
+      "#",
+      "T",
+      "E",
+      "E",
+      "T",
+      "H",
+      "#",
+      "I",
+      "S",
+      "H"
+    ],
+    [
+      "S",
+      "E",
+      "A",
+      "L",
+      "#",
+      "C",
+      "O",
+      "R",
+      "N",
+      "E",
+      "A",
+      "#",
+      "N",
+      "E",
+      "E"
+    ],
+    [
+      "L",
+      "A",
+      "B",
+      "O",
+      "R",
+      "L",
+      "E",
+      "A",
+      "D",
+      "E",
+      "R",
+      "#",
+      "T",
+      "R",
+      "I"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "G",
+      "U",
+      "E",
+      "S",
+      "T",
+      "S",
+      "#",
+      "D",
+      "A",
+      "R",
+      "E",
+      "S"
+    ],
+    [
+      "B",
+      "A",
+      "B",
+      "A",
+      "S",
+      "#",
+      "#",
+      "O",
+      "U",
+      "T",
+      "F",
+      "R",
+      "O",
+      "N",
+      "T"
+    ],
+    [
+      "P",
+      "H",
+      "O",
+      "N",
+      "E",
+      "M",
+      "E",
+      "#",
+      "P",
+      "R",
+      "A",
+      "I",
+      "S",
+      "E",
+      "S"
+    ],
+    [
+      "A",
+      "A",
+      "S",
+      "#",
+      "#",
+      "A",
+      "T",
+      "M",
+      "#",
+      "A",
+      "C",
+      "S",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "C",
+      "I",
+      "V",
+      "I",
+      "C",
+      "C",
+      "E",
+      "N",
+      "T",
+      "E",
+      "R",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "N",
+      "A",
+      "T",
+      "#",
+      "S",
+      "L",
+      "C",
+      "#",
+      "#",
+      "Y",
+      "A",
+      "P"
+    ],
+    [
+      "L",
+      "O",
+      "W",
+      "S",
+      "N",
+      "A",
+      "P",
+      "#",
+      "K",
+      "E",
+      "G",
+      "G",
+      "E",
+      "R",
+      "S"
+    ],
+    [
+      "O",
+      "N",
+      "E",
+      "T",
+      "H",
+      "I",
+      "R",
+      "D",
+      "#",
+      "#",
+      "L",
+      "U",
+      "S",
+      "T",
+      "Y"
+    ],
+    [
+      "S",
+      "A",
+      "N",
+      "A",
+      "A",
+      "#",
+      "O",
+      "U",
+      "I",
+      "O",
+      "U",
+      "I",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "I",
+      "T",
+      "T",
+      "#",
+      "L",
+      "O",
+      "V",
+      "E",
+      "L",
+      "E",
+      "T",
+      "T",
+      "E",
+      "R",
+      "S"
+    ],
+    [
+      "N",
+      "I",
+      "A",
+      "#",
+      "E",
+      "X",
+      "E",
+      "T",
+      "E",
+      "R",
+      "#",
+      "A",
+      "M",
+      "O",
+      "K"
+    ],
+    [
+      "G",
+      "P",
+      "S",
+      "#",
+      "N",
+      "O",
+      "N",
+      "O",
+      "S",
+      "#",
+      "#",
+      "R",
+      "U",
+      "B",
+      "Y"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Stirs in"
+      ],
+      [
+        5,
+        "Canines, e.g."
+      ],
+      [
+        10,
+        "\"In a way\""
+      ],
+      [
+        13,
+        "Mammal that may steal fish from a fisher's line"
+      ],
+      [
+        14,
+        "Transparent layer in the eye"
+      ],
+      [
+        15,
+        "Surname separator"
+      ],
+      [
+        16,
+        "*Dolores Huerta, for one"
+      ],
+      [
+        18,
+        "TNT part"
+      ],
+      [
+        19,
+        "Hotel fillers"
+      ],
+      [
+        20,
+        "Tempts fate"
+      ],
+      [
+        22,
+        "Rum-soaked cakes"
+      ],
+      [
+        25,
+        "*In the lead"
+      ],
+      [
+        27,
+        "\"Call anytime\""
+      ],
+      [
+        30,
+        "Raves about"
+      ],
+      [
+        31,
+        "TV remote batteries"
+      ],
+      [
+        32,
+        "Bodega convenience"
+      ],
+      [
+        34,
+        "Cooling systs."
+      ],
+      [
+        35,
+        "*Convention site"
+      ],
+      [
+        40,
+        "\"Unforgettable\" singer __ King Cole"
+      ],
+      [
+        41,
+        "Cap. founded by Brigham Young"
+      ],
+      [
+        42,
+        "Shrill bark"
+      ],
+      [
+        45,
+        "Cause of a flubbed field goal, maybe"
+      ],
+      [
+        49,
+        "Beer bashes"
+      ],
+      [
+        52,
+        "*Portion of the Irish flag that's green"
+      ],
+      [
+        54,
+        "Robust"
+      ],
+      [
+        55,
+        "Yemen metropolis with an elevation over 7,200 feet"
+      ],
+      [
+        56,
+        "\"But of course, Madame!\""
+      ],
+      [
+        59,
+        "Hairy Addams cousin"
+      ],
+      [
+        60,
+        "Messages containing X's and O's, and what the answers to the starred clues literally describe?"
+      ],
+      [
+        65,
+        "Actress Vardalos"
+      ],
+      [
+        66,
+        "English cathedral city"
+      ],
+      [
+        67,
+        "In a frenzy"
+      ],
+      [
+        68,
+        "Family docs"
+      ],
+      [
+        69,
+        "Frowned-upon activities"
+      ],
+      [
+        70,
+        "Shade of red"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Handy way to communicate, for short?"
+      ],
+      [
+        2,
+        "Justice Dept. arm"
+      ],
+      [
+        3,
+        "Apply with a light touch"
+      ],
+      [
+        4,
+        "\"Just say no\" or \"Just do it\""
+      ],
+      [
+        5,
+        "Small digits"
+      ],
+      [
+        6,
+        "Poet's Muse"
+      ],
+      [
+        7,
+        "Ultimately becomes"
+      ],
+      [
+        8,
+        "Merch table purchase"
+      ],
+      [
+        9,
+        "Truism backed up with irrefutable evidence"
+      ],
+      [
+        10,
+        "Prefaces"
+      ],
+      [
+        11,
+        "Placid"
+      ],
+      [
+        12,
+        "Bank capers"
+      ],
+      [
+        14,
+        "The Cavs, on scoreboards"
+      ],
+      [
+        17,
+        "Clever scheme"
+      ],
+      [
+        21,
+        "Get out of bed"
+      ],
+      [
+        22,
+        "Chem. in some plastic"
+      ],
+      [
+        23,
+        "Cry after an epiphany"
+      ],
+      [
+        24,
+        "Pear variety"
+      ],
+      [
+        26,
+        "Hypnotic state"
+      ],
+      [
+        28,
+        "Cocktail with a tiny umbrella"
+      ],
+      [
+        29,
+        "\"I could go on\" abbr."
+      ],
+      [
+        33,
+        "Roast VIPs"
+      ],
+      [
+        36,
+        "Social media app launched on Oct. 6, 2010"
+      ],
+      [
+        37,
+        "\"1984\" rock band"
+      ],
+      [
+        38,
+        "Caribou kin"
+      ],
+      [
+        39,
+        "Marbled loaves"
+      ],
+      [
+        43,
+        "Works on easels"
+      ],
+      [
+        44,
+        "Social science maj."
+      ],
+      [
+        45,
+        "Behind, in a way"
+      ],
+      [
+        46,
+        "How detectives might act"
+      ],
+      [
+        47,
+        "Dressed like for a comic-con, e.g."
+      ],
+      [
+        48,
+        "Tried-and-true"
+      ],
+      [
+        50,
+        "Oversupply"
+      ],
+      [
+        51,
+        "Instrument for 37-Down"
+      ],
+      [
+        53,
+        "Caused by"
+      ],
+      [
+        57,
+        "Seine sights"
+      ],
+      [
+        58,
+        "Opposite of 'neath"
+      ],
+      [
+        61,
+        "Good Grips brand"
+      ],
+      [
+        62,
+        "Grounded bird"
+      ],
+      [
+        63,
+        "Actor Lowe"
+      ],
+      [
+        64,
+        "Drone zone"
+      ]
+    ]
+  }
+}

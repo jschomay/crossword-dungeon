@@ -1,0 +1,837 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Tuesday’s Daily",
+  "author": "Rebecca Goldstein / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      4,
+      "#",
+      5,
+      6,
+      7,
+      8,
+      "#",
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      14,
+      null,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      "#",
+      16,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      17,
+      null,
+      null,
+      null,
+      18,
+      null,
+      null,
+      null,
+      null,
+      19,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "#",
+      20,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#",
+      21,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      22,
+      null,
+      null,
+      null,
+      null,
+      23,
+      24,
+      25,
+      null,
+      null,
+      "#",
+      "#",
+      26,
+      null,
+      null
+    ],
+    [
+      27,
+      null,
+      null,
+      "#",
+      28,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      29,
+      30,
+      null,
+      null,
+      "#"
+    ],
+    [
+      31,
+      null,
+      null,
+      32,
+      "#",
+      33,
+      null,
+      null,
+      "#",
+      34,
+      null,
+      null,
+      null,
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      35,
+      36,
+      null,
+      null,
+      null,
+      37,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      38,
+      null,
+      null,
+      null,
+      "#",
+      39,
+      null,
+      null,
+      "#",
+      40,
+      41,
+      42,
+      43
+    ],
+    [
+      "#",
+      44,
+      null,
+      null,
+      null,
+      "#",
+      45,
+      null,
+      null,
+      null,
+      46,
+      "#",
+      47,
+      null,
+      null
+    ],
+    [
+      48,
+      null,
+      null,
+      "#",
+      "#",
+      49,
+      null,
+      null,
+      null,
+      null,
+      null,
+      50,
+      null,
+      null,
+      null
+    ],
+    [
+      51,
+      null,
+      null,
+      52,
+      53,
+      null,
+      null,
+      "#",
+      "#",
+      "#",
+      54,
+      null,
+      null,
+      null,
+      "#"
+    ],
+    [
+      55,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      56,
+      57,
+      58,
+      null,
+      null,
+      null,
+      null,
+      59
+    ],
+    [
+      60,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      61,
+      null,
+      null,
+      null,
+      "#",
+      62,
+      null,
+      null,
+      null
+    ],
+    [
+      63,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      64,
+      null,
+      null,
+      null,
+      "#",
+      65,
+      null,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "A",
+      "C",
+      "I",
+      "D",
+      "#",
+      "C",
+      "H",
+      "O",
+      "P",
+      "#",
+      "W",
+      "H",
+      "I",
+      "F",
+      "F"
+    ],
+    [
+      "H",
+      "A",
+      "R",
+      "E",
+      "#",
+      "A",
+      "U",
+      "D",
+      "I",
+      "#",
+      "I",
+      "O",
+      "N",
+      "I",
+      "A"
+    ],
+    [
+      "I",
+      "R",
+      "E",
+      "M",
+      "E",
+      "M",
+      "B",
+      "E",
+      "R",
+      "I",
+      "T",
+      "W",
+      "E",
+      "L",
+      "L"
+    ],
+    [
+      "#",
+      "A",
+      "L",
+      "U",
+      "M",
+      "#",
+      "#",
+      "#",
+      "A",
+      "S",
+      "S",
+      "E",
+      "R",
+      "T",
+      "S"
+    ],
+    [
+      "S",
+      "M",
+      "A",
+      "R",
+      "T",
+      "W",
+      "A",
+      "T",
+      "C",
+      "H",
+      "#",
+      "#",
+      "T",
+      "E",
+      "E"
+    ],
+    [
+      "P",
+      "E",
+      "N",
+      "#",
+      "S",
+      "A",
+      "T",
+      "A",
+      "Y",
+      "#",
+      "E",
+      "M",
+      "I",
+      "R",
+      "#"
+    ],
+    [
+      "A",
+      "L",
+      "D",
+      "A",
+      "#",
+      "S",
+      "I",
+      "C",
+      "#",
+      "L",
+      "E",
+      "I",
+      "A",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "L",
+      "O",
+      "T",
+      "T",
+      "O",
+      "B",
+      "A",
+      "L",
+      "L",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "T",
+      "O",
+      "M",
+      "E",
+      "#",
+      "P",
+      "E",
+      "C",
+      "#",
+      "D",
+      "R",
+      "A",
+      "G"
+    ],
+    [
+      "#",
+      "A",
+      "R",
+      "E",
+      "S",
+      "#",
+      "C",
+      "I",
+      "T",
+      "E",
+      "S",
+      "#",
+      "O",
+      "L",
+      "A"
+    ],
+    [
+      "C",
+      "P",
+      "U",
+      "#",
+      "#",
+      "B",
+      "R",
+      "E",
+      "A",
+      "D",
+      "C",
+      "R",
+      "U",
+      "M",
+      "B"
+    ],
+    [
+      "R",
+      "E",
+      "S",
+      "I",
+      "D",
+      "U",
+      "E",
+      "#",
+      "#",
+      "#",
+      "A",
+      "U",
+      "T",
+      "O",
+      "#"
+    ],
+    [
+      "E",
+      "X",
+      "T",
+      "R",
+      "E",
+      "M",
+      "E",
+      "L",
+      "Y",
+      "O",
+      "N",
+      "L",
+      "I",
+      "N",
+      "E"
+    ],
+    [
+      "D",
+      "A",
+      "M",
+      "O",
+      "N",
+      "#",
+      "K",
+      "E",
+      "E",
+      "P",
+      "#",
+      "E",
+      "N",
+      "D",
+      "S"
+    ],
+    [
+      "O",
+      "M",
+      "E",
+      "N",
+      "S",
+      "#",
+      "S",
+      "T",
+      "A",
+      "T",
+      "#",
+      "R",
+      "E",
+      "S",
+      "T"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Low-pH solution"
+      ],
+      [
+        5,
+        "Drastic haircut"
+      ],
+      [
+        9,
+        "Bit of a stink?"
+      ],
+      [
+        14,
+        "Tortoise racer"
+      ],
+      [
+        15,
+        "E-tron carmaker"
+      ],
+      [
+        16,
+        "Ancient Greek region"
+      ],
+      [
+        17,
+        "\"That was a great day\""
+      ],
+      [
+        20,
+        "Former student"
+      ],
+      [
+        21,
+        "Says loud and proud"
+      ],
+      [
+        22,
+        "Wearable that can detect heart rate"
+      ],
+      [
+        26,
+        "Comfy top"
+      ],
+      [
+        27,
+        "Source of an ink stain"
+      ],
+      [
+        28,
+        "Skewered dish"
+      ],
+      [
+        29,
+        "Muslim monarch"
+      ],
+      [
+        31,
+        "Actor and advocate for science communication Alan"
+      ],
+      [
+        33,
+        "[Not my error]"
+      ],
+      [
+        34,
+        "Princess from the planet Alderaan"
+      ],
+      [
+        35,
+        "Numbered element in a drawing"
+      ],
+      [
+        38,
+        "Book that's hardly light reading"
+      ],
+      [
+        39,
+        "Chest muscle, for short"
+      ],
+      [
+        40,
+        "\"RuPaul's __ Race\""
+      ],
+      [
+        44,
+        "Bellicose god"
+      ],
+      [
+        45,
+        "References in a research paper"
+      ],
+      [
+        47,
+        "\"Yo,\" in Rio"
+      ],
+      [
+        48,
+        "Galaxy brain?"
+      ],
+      [
+        49,
+        "Morsel in Hansel and Gretel's trail"
+      ],
+      [
+        51,
+        "Leftover schmutz"
+      ],
+      [
+        54,
+        "Self starter?"
+      ],
+      [
+        55,
+        "Like someone who spends too much time on the internet, and like this puzzle's circled letters?"
+      ],
+      [
+        60,
+        "\"The Leftovers\" producer Lindelof"
+      ],
+      [
+        61,
+        "Hang on to"
+      ],
+      [
+        62,
+        "Comes to a close"
+      ],
+      [
+        63,
+        "Signs of what's to come"
+      ],
+      [
+        64,
+        "Attempts or assists"
+      ],
+      [
+        65,
+        "Relax"
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Sushi-grade tuna"
+      ],
+      [
+        2,
+        "Sweet sundae sauce"
+      ],
+      [
+        3,
+        "Home country of novelist Sally Rooney"
+      ],
+      [
+        4,
+        "Raise objections"
+      ],
+      [
+        5,
+        "Pic taker"
+      ],
+      [
+        6,
+        "Networking center"
+      ],
+      [
+        7,
+        "\"__ to Neptune\": Phillis Wheatley poem"
+      ],
+      [
+        8,
+        "\"Our Flag Means Death\" subject"
+      ],
+      [
+        9,
+        "Clever folks"
+      ],
+      [
+        10,
+        "Gordie known as \"Mr. Hockey\""
+      ],
+      [
+        11,
+        "Lethargy"
+      ],
+      [
+        12,
+        "Coffee maker insert"
+      ],
+      [
+        13,
+        "Not true"
+      ],
+      [
+        18,
+        "Ambulance staff: Abbr."
+      ],
+      [
+        19,
+        "\"Or so\""
+      ],
+      [
+        22,
+        "Restorative space"
+      ],
+      [
+        23,
+        "Squander"
+      ],
+      [
+        24,
+        "Working hard"
+      ],
+      [
+        25,
+        "Tex-Mex-inspired casserole"
+      ],
+      [
+        29,
+        "Unagi fish"
+      ],
+      [
+        30,
+        "Not so hot"
+      ],
+      [
+        32,
+        "Soothing salve"
+      ],
+      [
+        34,
+        "Tied, as a corset"
+      ],
+      [
+        36,
+        "Meditative mantras"
+      ],
+      [
+        37,
+        "Testing phase"
+      ],
+      [
+        38,
+        "\"Have I ever steered you wrong?\""
+      ],
+      [
+        41,
+        "Gymnast's floor performance"
+      ],
+      [
+        42,
+        "Nuts with a high water footprint"
+      ],
+      [
+        43,
+        "Chitchat"
+      ],
+      [
+        44,
+        "Test for coll. credit"
+      ],
+      [
+        45,
+        "Small streams"
+      ],
+      [
+        46,
+        "Multifunction printer function"
+      ],
+      [
+        48,
+        "Operating principle"
+      ],
+      [
+        49,
+        "Word after beach or ski"
+      ],
+      [
+        50,
+        "One may be a foot long"
+      ],
+      [
+        52,
+        "On board device?"
+      ],
+      [
+        53,
+        "Rooms for movie night"
+      ],
+      [
+        56,
+        "Allow"
+      ],
+      [
+        57,
+        "Vote for"
+      ],
+      [
+        58,
+        "Make a choice"
+      ],
+      [
+        59,
+        "No. from a contractor"
+      ]
+    ]
+  }
+}

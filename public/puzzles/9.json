@@ -1,0 +1,837 @@
+{
+  "version": "http://ipuz.org/v1",
+  "kind": [
+    "http://ipuz.org/crossword#1"
+  ],
+  "title": "Tuesday’s Daily",
+  "author": "Amie Walker & Jess Shulman / Ed. Patti Varol",
+  "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
+  "dimensions": {
+    "width": 15,
+    "height": 15
+  },
+  "puzzle": [
+    [
+      1,
+      2,
+      3,
+      "#",
+      4,
+      5,
+      6,
+      "#",
+      "#",
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    [
+      13,
+      null,
+      null,
+      "#",
+      14,
+      null,
+      null,
+      "#",
+      15,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      16,
+      null,
+      null,
+      17,
+      null,
+      null,
+      null,
+      "#",
+      18,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      19,
+      null,
+      null,
+      null,
+      "#",
+      20,
+      null,
+      21,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      22,
+      null,
+      null,
+      23,
+      "#",
+      24,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      25,
+      26,
+      27
+    ],
+    [
+      "#",
+      "#",
+      28,
+      null,
+      null,
+      29,
+      null,
+      null,
+      "#",
+      30,
+      null,
+      31,
+      null,
+      null,
+      null
+    ],
+    [
+      32,
+      33,
+      null,
+      "#",
+      34,
+      null,
+      null,
+      null,
+      "#",
+      35,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      36,
+      null,
+      null,
+      37,
+      "#",
+      38,
+      null,
+      null,
+      39,
+      null,
+      "#",
+      40,
+      null,
+      null,
+      null
+    ],
+    [
+      41,
+      null,
+      null,
+      null,
+      42,
+      null,
+      "#",
+      43,
+      null,
+      null,
+      44,
+      "#",
+      45,
+      null,
+      null
+    ],
+    [
+      46,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      47,
+      null,
+      null,
+      null,
+      48,
+      null,
+      "#",
+      "#"
+    ],
+    [
+      49,
+      null,
+      null,
+      "#",
+      50,
+      null,
+      51,
+      null,
+      null,
+      "#",
+      52,
+      null,
+      null,
+      53,
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      54,
+      null,
+      null,
+      null,
+      null,
+      null,
+      55,
+      "#",
+      56,
+      null,
+      null,
+      57
+    ],
+    [
+      58,
+      59,
+      60,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      61,
+      null,
+      62,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      63,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      64,
+      null,
+      null,
+      "#",
+      65,
+      null,
+      null
+    ],
+    [
+      66,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      67,
+      null,
+      null,
+      "#",
+      68,
+      null,
+      null
+    ]
+  ],
+  "solution": [
+    [
+      "A",
+      "B",
+      "S",
+      "#",
+      "L",
+      "E",
+      "O",
+      "#",
+      "#",
+      "H",
+      "E",
+      "L",
+      "P",
+      "E",
+      "R"
+    ],
+    [
+      "L",
+      "A",
+      "P",
+      "#",
+      "A",
+      "L",
+      "P",
+      "#",
+      "B",
+      "E",
+      "L",
+      "I",
+      "E",
+      "V",
+      "E"
+    ],
+    [
+      "T",
+      "R",
+      "E",
+      "M",
+      "B",
+      "L",
+      "E",
+      "#",
+      "E",
+      "R",
+      "E",
+      "C",
+      "T",
+      "E",
+      "D"
+    ],
+    [
+      "O",
+      "R",
+      "E",
+      "O",
+      "#",
+      "A",
+      "D",
+      "B",
+      "R",
+      "E",
+      "A",
+      "K",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "#",
+      "E",
+      "D",
+      "N",
+      "A",
+      "#",
+      "P",
+      "A",
+      "G",
+      "A",
+      "N",
+      "#",
+      "W",
+      "W",
+      "E"
+    ],
+    [
+      "#",
+      "#",
+      "D",
+      "O",
+      "G",
+      "S",
+      "A",
+      "T",
+      "#",
+      "N",
+      "O",
+      "T",
+      "H",
+      "I",
+      "N"
+    ],
+    [
+      "A",
+      "H",
+      "A",
+      "#",
+      "E",
+      "C",
+      "G",
+      "S",
+      "#",
+      "D",
+      "R",
+      "E",
+      "A",
+      "D",
+      "S"
+    ],
+    [
+      "T",
+      "E",
+      "T",
+      "E",
+      "#",
+      "R",
+      "E",
+      "I",
+      "G",
+      "N",
+      "#",
+      "E",
+      "T",
+      "T",
+      "U"
+    ],
+    [
+      "E",
+      "N",
+      "I",
+      "G",
+      "M",
+      "A",
+      "#",
+      "G",
+      "R",
+      "O",
+      "W",
+      "#",
+      "C",
+      "H",
+      "E"
+    ],
+    [
+      "I",
+      "N",
+      "N",
+      "O",
+      "U",
+      "T",
+      "#",
+      "N",
+      "E",
+      "W",
+      "I",
+      "S",
+      "H",
+      "#",
+      "#"
+    ],
+    [
+      "N",
+      "A",
+      "G",
+      "#",
+      "S",
+      "C",
+      "R",
+      "A",
+      "M",
+      "#",
+      "T",
+      "O",
+      "A",
+      "D",
+      "#"
+    ],
+    [
+      "#",
+      "#",
+      "#",
+      "O",
+      "H",
+      "H",
+      "E",
+      "L",
+      "L",
+      "O",
+      "#",
+      "L",
+      "U",
+      "R",
+      "K"
+    ],
+    [
+      "G",
+      "O",
+      "S",
+      "S",
+      "I",
+      "P",
+      "S",
+      "#",
+      "I",
+      "T",
+      "S",
+      "O",
+      "P",
+      "E",
+      "N"
+    ],
+    [
+      "P",
+      "R",
+      "E",
+      "H",
+      "E",
+      "A",
+      "T",
+      "#",
+      "N",
+      "T",
+      "H",
+      "#",
+      "T",
+      "A",
+      "O"
+    ],
+    [
+      "S",
+      "E",
+      "W",
+      "A",
+      "R",
+      "D",
+      "#",
+      "#",
+      "S",
+      "O",
+      "Y",
+      "#",
+      "O",
+      "M",
+      "W"
+    ]
+  ],
+  "clues": {
+    "Across": [
+      [
+        1,
+        "Core muscles worked by crunches"
+      ],
+      [
+        4,
+        "Sign between Cancer and Virgo"
+      ],
+      [
+        7,
+        "Assistant"
+      ],
+      [
+        13,
+        "Mario Kart circuit"
+      ],
+      [
+        14,
+        "Italian mountain"
+      ],
+      [
+        15,
+        "Accept as true"
+      ],
+      [
+        16,
+        "Shiver with fear"
+      ],
+      [
+        18,
+        "Put up, as a building"
+      ],
+      [
+        19,
+        "Cookie with a Coca-Cola variety"
+      ],
+      [
+        20,
+        "Podcast pause"
+      ],
+      [
+        22,
+        "\"The Incredibles\" supersuit designer Mode"
+      ],
+      [
+        24,
+        "Like some solstice traditions"
+      ],
+      [
+        25,
+        "\"SmackDown\" org."
+      ],
+      [
+        28,
+        "Took care of a friend's pup, say"
+      ],
+      [
+        30,
+        "Laconic reply to 25-Down, perhaps"
+      ],
+      [
+        32,
+        "\"It just clicked!\""
+      ],
+      [
+        34,
+        "Heart charts, for short"
+      ],
+      [
+        35,
+        "Hates the thought of"
+      ],
+      [
+        36,
+        "Head, in French"
+      ],
+      [
+        38,
+        "Era in power"
+      ],
+      [
+        40,
+        "Latin \"Not you too!?\""
+      ],
+      [
+        41,
+        "Challenging riddle"
+      ],
+      [
+        43,
+        "\"Money doesn't __ on trees\""
+      ],
+      [
+        45,
+        "Revolutionary Guevara"
+      ],
+      [
+        46,
+        "California burger joint"
+      ],
+      [
+        47,
+        "Fairly recent"
+      ],
+      [
+        49,
+        "Pester"
+      ],
+      [
+        50,
+        "\"Get off my lawn!\""
+      ],
+      [
+        52,
+        "Kid-lit's \"Frog and __ Together\""
+      ],
+      [
+        54,
+        "Surprised greeting"
+      ],
+      [
+        56,
+        "Wait in hiding"
+      ],
+      [
+        58,
+        "Rumormongers"
+      ],
+      [
+        61,
+        "\"Come on in!\""
+      ],
+      [
+        63,
+        "Warm up before cooking"
+      ],
+      [
+        64,
+        "To the __ degree"
+      ],
+      [
+        65,
+        "\"__ Te Ching\""
+      ],
+      [
+        66,
+        "Secretary of state who negotiated the Alaska Purchase"
+      ],
+      [
+        67,
+        "__ sauce"
+      ],
+      [
+        68,
+        "Texter's \"I'll be there soon!\""
+      ]
+    ],
+    "Down": [
+      [
+        1,
+        "Choir voice"
+      ],
+      [
+        2,
+        "Support for a ballerina"
+      ],
+      [
+        3,
+        "Quick way to meet a bunch of people"
+      ],
+      [
+        4,
+        "Research setting"
+      ],
+      [
+        5,
+        "Jazz legend Fitzgerald"
+      ],
+      [
+        6,
+        "Newspaper section with views"
+      ],
+      [
+        7,
+        "Right this second"
+      ],
+      [
+        8,
+        "\"The Luminaries\" Booker Prize winner Catton"
+      ],
+      [
+        9,
+        "Kiss from a 10-Down"
+      ],
+      [
+        10,
+        "Fur baby"
+      ],
+      [
+        11,
+        "Night before"
+      ],
+      [
+        12,
+        "\"Colorful\" Taylor Swift era"
+      ],
+      [
+        15,
+        "Icy nautical hazard"
+      ],
+      [
+        17,
+        "Prefix with chrome or tone"
+      ],
+      [
+        21,
+        "Gotham City searchlight"
+      ],
+      [
+        23,
+        "Get older"
+      ],
+      [
+        25,
+        "\"Anything fun on the agenda today?,\" or a hint to the starts of 3-, 7-, 21-, and 29-Down"
+      ],
+      [
+        26,
+        "Area component"
+      ],
+      [
+        27,
+        "Come after"
+      ],
+      [
+        29,
+        "Spot for doodling"
+      ],
+      [
+        31,
+        "Casual top"
+      ],
+      [
+        32,
+        "Had food at home"
+      ],
+      [
+        33,
+        "Body dye in some wedding traditions"
+      ],
+      [
+        37,
+        "Alter __"
+      ],
+      [
+        39,
+        "Movie creatures that multiply if they get wet"
+      ],
+      [
+        42,
+        "More sentimental"
+      ],
+      [
+        44,
+        "Cleverness"
+      ],
+      [
+        48,
+        "Alone"
+      ],
+      [
+        51,
+        "Chill"
+      ],
+      [
+        53,
+        "Atlanta WNBA team"
+      ],
+      [
+        54,
+        "Job inspection org."
+      ],
+      [
+        55,
+        "Director Preminger"
+      ],
+      [
+        57,
+        "Not just guess"
+      ],
+      [
+        58,
+        "Rte. provider"
+      ],
+      [
+        59,
+        "Mine find"
+      ],
+      [
+        60,
+        "Use a needle and thread"
+      ],
+      [
+        62,
+        "Timid"
+      ]
+    ]
+  }
+}

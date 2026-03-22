@@ -34,4 +34,6 @@ When building a sparse dungeon via the frontier expansion algorithm, some seeds 
 
 **Why not fix the root cause:** Allowing cross-ref words into eligibility would require either displaying broken clues in-game or synthesizing replacement clues — more complexity than the retry approach warrants.
 
+The retry loop is capped at 20 attempts. For standard 15×15 puzzles this is never reached; it exists to prevent an infinite loop when loading small puzzles (e.g. `?puzzle=demo`) where the parity constraint may make the target unreachable. In that case the best available result is used.
+
 Both approaches were prototyped. Cell-by-cell movement (one display character per keypress) was rejected because it required too many keypresses to navigate, felt slow, and gave no gameplay reason to visit corridor cells. Room-to-room movement (one keypress = jump to adjacent letter room) was kept as it matches the crossword structure and feels snappy.
