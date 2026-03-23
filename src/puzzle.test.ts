@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateIpuz, computePotentialLevel, computePotentialLevels, getWords, selectWords, buildSparseIpuz } from './puzzle';
+import { validateIpuz, computePotentialLevel, computePotentialLevels, getWords, selectWords, buildSparseIpuz, getWordAt, getIntoneWord } from './puzzle';
 import Puzzle from './puzzle';
 import testPuzzleJson from '../tests/fixtures/test-potential.json';
 import demoJson from '../tests/fixtures/demo.json';
@@ -297,5 +297,64 @@ describe('computePotentialLevels', () => {
     expect(levels[0]).toEqual([3, 3, 0, 3, 3]);
     expect(levels[1]).toEqual([3, 3, 0, 3, 3]);
     expect(levels[2]).toEqual([3, 3, 0, 3, 3]);
+  });
+});
+
+// Demo puzzle layout (x=col, y=row):
+//   x: 0  1  2  3
+// y=0: C  A  #  I
+// y=1: B  O  T  S     <- BOTS across; B/O/T/S also in down words
+// y=2: #  L  O  #
+// y=3: #  #  O  #     <- O only in TOOL down — hall cell
+// y=4: #  #  L  #     <- L only in TOOL down — hall cell
+//
+// Hall cells (1 word): C(0,0), I(3,0), L(1,2), O(2,3), L(2,4)
+// Intersection cells (2 words): A(1,0), B(0,1), O(1,1), T(2,1), S(3,1)
+
+describe('getWordAt', () => {
+  const demoIpuz = validateIpuz(demoJson);
+
+  it('returns null for an intersection cell (2 words)', () => {
+    expect(getWordAt(demoIpuz, { x: 1, y: 1 })).toBeNull();
+  });
+
+  it('returns the word for a hall cell (1 word)', () => {
+    // O(2,3): only in TOOL down
+    const word = getWordAt(demoIpuz, { x: 2, y: 3 });
+    expect(word).not.toBeNull();
+    expect(word!.direction).toBe('down');
+    expect(word!.cells).toContainEqual({ x: 2, y: 3 });
+  });
+
+  it('returns null for a black cell', () => {
+    expect(getWordAt(demoIpuz, { x: 2, y: 0 })).toBeNull();
+  });
+});
+
+describe('getIntoneWord', () => {
+  const demoIpuz = validateIpuz(demoJson);
+
+  const makeRoomStates = (solved: Record<string, string>) =>
+    new Map(Object.entries(solved).map(([k, v]) => [k, { solvedLetter: v, activatedLevel: 0, encounter: { kind: 'monster' as const }, incorrectGuesses: [] }]));
+
+  it('returns null for an intersection cell', () => {
+    expect(getIntoneWord(demoIpuz, { x: 1, y: 1 }, makeRoomStates({}))).toBeNull();
+  });
+
+  it('returns the word for a hall cell with unsolved letters', () => {
+    const word = getIntoneWord(demoIpuz, { x: 2, y: 3 }, makeRoomStates({}));
+    expect(word).not.toBeNull();
+    expect(word!.direction).toBe('down');
+  });
+
+  it('returns null when all cells of the word are already solved', () => {
+    // TOOL down: cells (2,1),(2,2),(2,3),(2,4)
+    const states = makeRoomStates({ '2,1': 'T', '2,2': 'O', '2,3': 'O', '2,4': 'L' });
+    expect(getIntoneWord(demoIpuz, { x: 2, y: 3 }, states)).toBeNull();
+  });
+
+  it('returns the word when current cell is solved but word has unsolved cells', () => {
+    const states = makeRoomStates({ '2,3': 'O' });
+    expect(getIntoneWord(demoIpuz, { x: 2, y: 3 }, states)).not.toBeNull();
   });
 });

@@ -45,3 +45,11 @@ Originally each room rendered two layers of dots in its interior cells: potentia
 **Changed to:** Only activated level dots are shown, in the potential dot color (blue), and only for unsolved rooms. Solved rooms show no dots — just the revealed letter. Potential dots are removed entirely.
 
 **Reason:** Visual clutter. The potential dot layer added noise without meaningful gameplay signal — players don't need to see the theoretical maximum, only the current activation state. Using a single neutral color (blue) for activated dots decouples the dot display from encounter type, keeping the room center character as the sole encounter indicator.
+
+## Encounter Panel: Hidden for Solved Rooms
+
+Originally solved rooms showed a summary in the encounter panel ("Defeated.", "Disarmed.", "Claimed.") with the encounter heading and a dim flavor line.
+
+**Changed to:** The encounter panel is hidden entirely when standing in a solved room.
+
+**Reason:** Cleaner UI, and removes misleading flavor when a room was solved via Inscribe or Intone scrolls rather than direct combat or encounter resolution. "Defeated." after using a scroll is inaccurate. The dungeon map already communicates solved state visually via the revealed letter.

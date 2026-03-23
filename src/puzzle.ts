@@ -126,6 +126,25 @@ export function getWords(ipuz: Ipuz): Word[] {
   return words;
 }
 
+// Returns the single word containing coord, or null if 0 or 2+ words contain it (intersection or black).
+export function getWordAt(ipuz: Ipuz, coord: Coord): Word | null {
+  const words = getWords(ipuz).filter(w => w.cells.some(c => c.x === coord.x && c.y === coord.y));
+  return words.length === 1 ? words[0] : null;
+}
+
+// Returns the word to reveal via Intone scroll, or null if ineligible.
+// Eligible: cell is in exactly 1 word (hall, not intersection), and that word has at least 1 unsolved cell.
+export function getIntoneWord(
+  ipuz: Ipuz,
+  coord: Coord,
+  roomStates: Map<string, { solvedLetter: string | null }>,
+): Word | null {
+  const word = getWordAt(ipuz, coord);
+  if (!word) return null;
+  const hasUnsolved = word.cells.some(c => (roomStates.get(`${c.x},${c.y}`)?.solvedLetter ?? null) === null);
+  return hasUnsolved ? word : null;
+}
+
 const CROSS_REF_CLUE_RE = /\d+[-.]?\s*(across|down)/i;
 
 function wordClue(ipuz: Ipuz, word: Word): string {

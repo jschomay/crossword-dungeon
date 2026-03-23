@@ -158,6 +158,7 @@ export default class Dungeon {
         display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
       }
     }
+
   }
 
   // Determines if local cell (lx, ly) within a 5×5 room is a wall

@@ -1,6 +1,6 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
-import { validateIpuz, selectWords, buildSparseIpuz } from './puzzle';
+import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord } from './puzzle';
 import { consumeProgression, fetchPuzzle } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
@@ -111,6 +111,7 @@ export default class Game {
   private hpPotions: number = 1;
   private manaPotions: number = 2;
   private revealScrolls: number = 3;
+  private intoneScrolls: number = 3;
 
   private fullIpuz!: ReturnType<typeof validateIpuz>;
 
@@ -234,6 +235,7 @@ export default class Game {
     this.hpPotions = 1;
     this.manaPotions = 2;
     this.revealScrolls = 3;
+    this.intoneScrolls = 3;
     this.gameOver = false;
     this.puzzleComplete = false;
     this.combatRunning = false;
@@ -329,31 +331,65 @@ export default class Game {
     this.statusEl.innerHTML = html;
   }
 
-  private useConsumable(slot: 1 | 2 | 3): void {
+  private useConsumable(slot: 1 | 2 | 3 | 4): void {
     if (this.combatRunning) return;
 
     if (slot === 1) {
-      if (this.hpPotions <= 0) return;
+      if (this.hpPotions <= 0) { this.showInteraction([`No Heal potions remaining.`]); this.render(); return; }
       this.hpPotions--;
       const restored = Math.min(20, this.effectiveMaxHp() - this.hp);
       this.hp = Math.min(this.hp + 20, this.effectiveMaxHp());
       this.showInteraction([`Heal used.`, `  +${restored} HP`]);
     } else if (slot === 2) {
-      if (this.manaPotions <= 0) return;
+      if (this.manaPotions <= 0) { this.showInteraction([`No Restore potions remaining.`]); this.render(); return; }
       this.manaPotions--;
       const restored = Math.min(10, this.effectiveMaxMana() - this.mana);
       this.mana = Math.min(this.mana + 10, this.effectiveMaxMana());
       this.showInteraction([`Restore used.`, `  +${restored} MANA`]);
-    } else {
-      if (this.revealScrolls <= 0) return;
+    } else if (slot === 3) {
+      if (this.revealScrolls <= 0) { this.showInteraction([`No Inscribe scrolls remaining.`]); this.render(); return; }
       const { x, y } = this.playerPos;
       if (!this.dungeon.hasRoom(x, y)) return;
       const state = this.getRoomState(x, y);
-      if (state.solvedLetter !== null) return;
+      if (state.solvedLetter !== null) { this.showInteraction([`These runes are already known to you.`]); this.render(); return; }
       this.revealScrolls--;
       const letter = this.puzzle.ipuz.solution[y][x] as string;
-      // resolveCorrectGuess handles its own render; return to avoid double render
-      this.resolveCorrectGuess(x, y, letter, state.encounter, state.activatedLevel, `You inscribe the '${letter}' rune.`);
+      this.markRoomSolved(x, y, letter);
+      this.checkPuzzleComplete();
+      this.showInteraction([`You inscribe the '${letter}' rune. It burns into the stone.`]);
+      if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+      else this.render();
+      return;
+    } else if (slot === 4) {
+      const { x, y } = this.playerPos;
+      if (this.intoneScrolls <= 0) {
+        this.showInteraction([`No Intone scrolls remaining.`]);
+        this.render();
+        return;
+      }
+      const word = getIntoneWord(this.puzzle.ipuz, { x, y }, this.roomStates);
+      if (!word) {
+        const reason = (() => {
+          const clues = this.puzzle.getCluesAt({ x, y });
+          if (clues.length >= 2) return 'The incantation requires a single focus, but this room branches.';
+          if (clues.length === 0) return 'The stone is silent here.';
+          return 'These runes are already known to you.';
+        })();
+        this.showInteraction([reason]);
+        this.render();
+        return;
+      }
+      this.intoneScrolls--;
+      for (const cell of word.cells) {
+        const cellState = this.getRoomState(cell.x, cell.y);
+        if (cellState.solvedLetter !== null) continue;
+        const letter = this.puzzle.ipuz.solution[cell.y][cell.x] as string;
+        this.markRoomSolved(cell.x, cell.y, letter);
+      }
+      this.checkPuzzleComplete();
+      this.showInteraction([`Your voice echoes through the hall. The letters burn into the stone.`]);
+      if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+      else this.render();
       return;
     }
     this.render();  // slots 1 and 2 render here
@@ -713,6 +749,7 @@ export default class Game {
     if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
     if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
     if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
+    if (e.key === '4') { this.clearLogs(); this.useConsumable(4); return; }
 
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
@@ -753,7 +790,7 @@ export default class Game {
       .map(item => esc(equipLine(item)))
       .join('\n');
 
-    const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:30%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
+    const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:24%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
     const itemBox = (key: string, label: string, effect: string, count: number) =>
       `<div style="${boxStyle}"><span style="color:#aaa">[${key}] ${esc(label)} ×${count}</span><br>` +
       `<span style="color:#777">${esc(effect)}</span></div>`;
@@ -762,6 +799,7 @@ export default class Game {
       itemBox('1', 'Heal', '+20 HP', this.hpPotions) +
       itemBox('2', 'Restore', '+10 MANA', this.manaPotions) +
       itemBox('3', 'Inscribe', 'Reveal letter', this.revealScrolls) +
+      itemBox('4', 'Intone', 'Reveal word', this.intoneScrolls) +
       `</div>`;
 
     this.heroEl.innerHTML =
@@ -853,27 +891,9 @@ export default class Game {
       this.encounterEl.style.color = '';
 
       if (state.solvedLetter !== null && !this.combatRunning) {
-        const enc = state.encounter;
-        const level = state.activatedLevel;
-        let flavorLine: string;
-        if (level === 0) {
-          flavorLine = `An empty room.`;
-        } else if (enc.kind === 'monster') {
-          flavorLine = `Defeated.`;
-        } else if (enc.kind === 'trap') {
-          flavorLine = `Disarmed.`;
-        } else {
-          flavorLine = `Claimed.`;
-        }
-        if (level > 0) {
-          const heading = formatEncounter(enc, level).slice(0, 1);
-          this.encounterEl.innerHTML =
-            `<span style="color:${style.color}">${esc(heading[0])}</span>\n\n` +
-            `<span style="color:${C_DIM}">${esc(flavorLine)}</span>`;
-        } else {
-          this.encounterEl.innerHTML = `<span style="color:${C_DIM}">${esc(flavorLine)}</span>`;
-        }
+        this.encounterEl.classList.add('hidden');
       } else {
+        this.encounterEl.classList.remove('hidden');
         const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined);
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
