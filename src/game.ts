@@ -105,6 +105,7 @@ export default class Game {
   private dungeonLevel: number = 1;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
+  private pulseRunning: boolean = false;
   private showMap: boolean = false;
   private pendingItem: TreasureItemStats | null = null;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
@@ -531,6 +532,8 @@ export default class Game {
         return;
       }
 
+      this.pulseRunning = true;
+      this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; }, [200, 0, 0], 2, 60);
       this.showInteraction(logLines);
       return;
     }
@@ -549,7 +552,11 @@ export default class Game {
         awaken,
       ];
       if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
-      else this.showInteraction(logLines);
+      else {
+        this.pulseRunning = true;
+        this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
+        this.showInteraction(logLines);
+      }
       return;
     }
 
@@ -558,6 +565,8 @@ export default class Game {
 
   private resolveCorrectGuess(x: number, y: number, letter: string, enc: Encounter, level: number, preamble?: string): void {
     this.markRoomSolved(x, y, letter);
+    this.pulseRunning = true;
+    this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
 
     if (enc.kind === 'monster') {
       const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
@@ -712,7 +721,7 @@ export default class Game {
 
   private handleKey(e: KeyboardEvent): void {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (this.combatRunning) return;
+    if (this.combatRunning || this.pulseRunning) return;
 
     if (this.gameOver || this.puzzleComplete) {
       if (e.key === ' ') {
@@ -756,7 +765,7 @@ export default class Game {
       if (this.dungeon.hasRoom(x, y)) {
         this.clearLogs();
         this.tryGuess(x, y, e.key.toUpperCase());
-        this.render();
+        if (!this.pulseRunning) this.render();
       }
       return;
     }

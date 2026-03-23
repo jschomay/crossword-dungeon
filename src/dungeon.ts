@@ -12,6 +12,10 @@ const BG_FG = '#333333';
 const BG_CHARS = [';', ',', "'", '^', '/', '%', '`', '~', '.', ':'];
 const BG_DENSITY = 0.01; // fraction of empty cells that get a char
 
+const PULSE_COLOR: [number, number, number] = [255, 255, 255];
+const PULSE_INTERVAL_MS = 20;
+const PULSE_MAX_R = 25;
+
 // The 8 interior non-center cells in a 5×5 room, left-to-right, top-to-bottom
 const DOT_POSITIONS: [number, number][] = [
   [1, 1], [2, 1], [3, 1],
@@ -24,6 +28,7 @@ export default class Dungeon {
   readonly displayHeight: number;
   private puzzle: Puzzle;
   private dungeonCells: Set<string>;
+  private wallCells: Set<string>;
 
   constructor(puzzle: Puzzle) {
     this.puzzle = puzzle;
@@ -32,33 +37,42 @@ export default class Dungeon {
     // Total = gridSize * 6 - 1 cells, plus 1-cell padding each side = gridSize * 6 + 1
     this.displayWidth = width * 6 + 1;
     this.displayHeight = height * 6 + 1;
-    this.dungeonCells = this.buildDungeonCells();
+    ({ dungeonCells: this.dungeonCells, wallCells: this.wallCells } = this.buildCells());
   }
 
-  private buildDungeonCells(): Set<string> {
-    const cells = new Set<string>();
+  private buildCells(): { dungeonCells: Set<string>; wallCells: Set<string> } {
+    const dungeonCells = new Set<string>();
+    const wallCells = new Set<string>();
     const { width, height } = this.puzzle.ipuz.dimensions;
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (!this.hasRoom(gx, gy)) continue;
         const rx = 1 + gx * 6;
         const ry = 1 + gy * 6;
-        for (let lx = 0; lx < 5; lx++)
-          for (let ly = 0; ly < 5; ly++)
-            cells.add(`${rx + lx},${ry + ly}`);
-        if (this.hasRoom(gx + 1, gy)) {
-          cells.add(`${rx + 5},${ry + 1}`);
-          cells.add(`${rx + 5},${ry + 2}`);
-          cells.add(`${rx + 5},${ry + 3}`);
+        const connUp    = this.hasRoom(gx, gy - 1);
+        const connDown  = this.hasRoom(gx, gy + 1);
+        const connLeft  = this.hasRoom(gx - 1, gy);
+        const connRight = this.hasRoom(gx + 1, gy);
+        for (let lx = 0; lx < 5; lx++) {
+          for (let ly = 0; ly < 5; ly++) {
+            const key = `${rx + lx},${ry + ly}`;
+            dungeonCells.add(key);
+            if (this.isWall(lx, ly, connUp, connDown, connLeft, connRight)) wallCells.add(key);
+          }
         }
-        if (this.hasRoom(gx, gy + 1)) {
-          cells.add(`${rx + 1},${ry + 5}`);
-          cells.add(`${rx + 2},${ry + 5}`);
-          cells.add(`${rx + 3},${ry + 5}`);
+        if (connRight) {
+          dungeonCells.add(`${rx + 5},${ry + 1}`); wallCells.add(`${rx + 5},${ry + 1}`);
+          dungeonCells.add(`${rx + 5},${ry + 2}`);
+          dungeonCells.add(`${rx + 5},${ry + 3}`); wallCells.add(`${rx + 5},${ry + 3}`);
+        }
+        if (connDown) {
+          dungeonCells.add(`${rx + 1},${ry + 5}`); wallCells.add(`${rx + 1},${ry + 5}`);
+          dungeonCells.add(`${rx + 2},${ry + 5}`);
+          dungeonCells.add(`${rx + 3},${ry + 5}`); wallCells.add(`${rx + 3},${ry + 5}`);
         }
       }
     }
-    return cells;
+    return { dungeonCells, wallCells };
   }
 
   private bgChar(wx: number, wy: number): string | null {
@@ -188,5 +202,94 @@ export default class Dungeon {
     const cy = camera ? wcy - camera.y : wcy;
     display.draw(rx + 1, cy, '#', WALL_FG, BLACK);
     display.draw(rx + 3, cy, '#', WALL_FG, BLACK);
+  }
+
+  private isWallCell(wx: number, wy: number): boolean {
+    return this.wallCells.has(`${wx},${wy}`);
+  }
+
+  triggerCorrectPulse(
+    display: ROT.Display,
+    playerPos: { x: number; y: number },
+    roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>,
+    camera: { x: number; y: number } | undefined,
+    onDone: () => void,
+    color: [number, number, number] = PULSE_COLOR,
+    maxR: number = PULSE_MAX_R,
+    intervalMs: number = PULSE_INTERVAL_MS,
+  ): void {
+    let r = 1;
+    let fovCells: [number, number][] = [];
+    const cx = 1 + playerPos.x * 6 + 2;
+    const cy = 1 + playerPos.y * 6 + 2;
+
+    const fov = new ROT.FOV.RecursiveShadowcasting(
+      (x, y) => !this.isWallCell(x, y),
+      { topology: 8 },
+    );
+
+    const drawCell = (x: number, y: number, tinted: boolean) => {
+      const sx = camera ? x - camera.x : x;
+      const sy = camera ? y - camera.y : y;
+      let ch = ' ';
+      let fg = BLACK;
+      if (this.dungeonCells.has(`${x},${y}`)) {
+        if (this.isWallCell(x, y)) {
+          ch = '#'; fg = WALL_FG;
+        } else {
+          const gx = Math.floor((x - 1) / 6);
+          const gy = Math.floor((y - 1) / 6);
+          const lx = x - (1 + gx * 6);
+          const ly = y - (1 + gy * 6);
+          const state = roomStates.get(`${gx},${gy}`);
+          if (lx === 2 && ly === 2) {
+            if (playerPos.x === gx && playerPos.y === gy) { ch = '@'; fg = PLAYER_FG; }
+            else if (state?.solvedLetter) { ch = state.solvedLetter; fg = SOLVED_FG; }
+            else if (state?.activatedLevel ?? 0 > 0) { const s = ENCOUNTER_STYLE[state!.encounter.kind]; ch = s.symbol; fg = s.color; }
+            else { ch = '?'; fg = UNKNOWN_FG; }
+          } else {
+            const dotIdx = DOT_POSITIONS.findIndex(([dlx, dly]) => dlx === lx && dly === ly);
+            if (dotIdx >= 0 && dotIdx < (state?.activatedLevel ?? 0) && state?.solvedLetter === null) {
+              ch = '.'; fg = DOT_FG;
+            }
+          }
+        }
+      } else {
+        const bgc = this.bgChar(x, y);
+        if (bgc) { ch = bgc; fg = BG_FG; }
+      }
+      if (ch === ' ') return;
+      if (tinted) {
+        const blend = ROT.Color.interpolate(ROT.Color.fromString(fg), color, 0.75);
+        display.draw(sx, sy, ch, ROT.Color.toHex(blend), BLACK);
+      } else {
+        display.draw(sx, sy, ch, fg, BLACK);
+      }
+    };
+
+    const tick = () => {
+      // Restore previously lit cells
+      for (const [x, y] of fovCells) drawCell(x, y, false);
+
+      if (r > maxR) {
+        clearInterval(intervalId);
+        this.render(display, playerPos, roomStates, false, camera);
+        onDone();
+        return;
+      }
+
+      fovCells = [];
+      fov.compute(cx, cy, r, (x, y, fovR) => {
+        if (fovR >= r - 1) {
+          fovCells.push([x, y]);
+          drawCell(x, y, true);
+        }
+      });
+
+      r++;
+    };
+
+    const intervalId = setInterval(tick, intervalMs) as unknown as number;
+    tick();
   }
 }
