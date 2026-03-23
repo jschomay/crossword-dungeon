@@ -4,7 +4,7 @@
     "http://ipuz.org/crossword#1"
   ],
   "title": "Monday’s Daily",
-  "author": "Christina Iverson / Ed. Patti Varol",
+  "author": "Amanda Cook / Ed. Patti Varol",
   "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
   "dimensions": {
     "width": 15,
@@ -21,19 +21,14 @@
       6,
       7,
       8,
-      "#",
       9,
       10,
+      "#",
       11,
       12,
-      "#"
+      13
     ],
     [
-      13,
-      null,
-      null,
-      null,
-      "#",
       14,
       null,
       null,
@@ -43,15 +38,15 @@
       null,
       null,
       null,
-      "#"
-    ],
-    [
+      null,
+      null,
+      "#",
       16,
       null,
-      null,
-      null,
+      null
+    ],
+    [
       17,
-      null,
       null,
       null,
       null,
@@ -60,70 +55,58 @@
       null,
       null,
       null,
-      "#"
-    ],
-    [
-      "#",
+      null,
+      null,
       "#",
       19,
       null,
-      null,
-      null,
-      null,
-      "#",
+      null
+    ],
+    [
       20,
       null,
       null,
       null,
       null,
+      "#",
+      "#",
+      21,
       null,
-      21
-    ],
-    [
+      null,
+      "#",
       22,
-      23,
-      null,
-      null,
-      null,
-      null,
-      "#",
-      24,
-      null,
-      null,
-      "#",
-      25,
       null,
       null,
       null
     ],
     [
+      "#",
+      "#",
+      "#",
+      23,
+      null,
+      24,
+      25,
+      null,
+      null,
+      null,
       26,
       null,
       null,
       null,
-      null,
-      null,
-      27,
-      null,
-      null,
-      "#",
-      28,
-      null,
-      null,
-      null,
       null
     ],
     [
+      27,
+      28,
       29,
       null,
       null,
       null,
+      null,
+      "#",
       "#",
       30,
-      null,
-      null,
-      "#",
-      31,
       null,
       null,
       "#",
@@ -131,43 +114,43 @@
       "#"
     ],
     [
+      31,
+      null,
+      null,
+      "#",
+      "#",
       32,
       null,
-      null,
-      "#",
       33,
-      null,
-      null,
-      null,
       34,
-      null,
-      null,
       "#",
       35,
+      null,
       36,
-      37
+      37,
+      38
     ],
     [
-      "#",
-      "#",
-      "#",
-      38,
-      null,
-      null,
-      "#",
       39,
       null,
       null,
-      "#",
       40,
+      41,
+      null,
+      null,
+      null,
+      null,
+      42,
+      null,
+      null,
       null,
       null,
       null
     ],
     [
-      41,
-      42,
       43,
+      null,
+      null,
       null,
       null,
       "#",
@@ -175,65 +158,47 @@
       null,
       null,
       null,
+      "#",
+      "#",
       45,
-      null,
-      null,
       null,
       null
     ],
     [
+      "#",
+      "#",
+      "#",
       46,
       null,
-      null,
-      null,
-      "#",
       47,
-      null,
-      null,
+      "#",
       "#",
       48,
       null,
-      null,
+      49,
+      50,
       null,
       null,
       null
     ],
     [
-      49,
-      null,
-      null,
-      null,
-      50,
-      null,
-      null,
-      "#",
       51,
-      null,
-      null,
-      null,
-      null,
-      "#",
-      "#"
-    ],
-    [
-      "#",
       52,
-      null,
-      null,
-      null,
-      null,
-      null,
       53,
       null,
       null,
       null,
-      null,
-      null,
       54,
-      55
+      55,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      "#",
+      "#"
     ],
     [
-      "#",
       56,
       null,
       null,
@@ -242,26 +207,61 @@
       57,
       null,
       null,
-      null,
+      "#",
       "#",
       58,
+      null,
+      59,
+      60,
+      61
+    ],
+    [
+      62,
+      null,
+      null,
+      "#",
+      63,
+      null,
+      null,
+      null,
+      64,
+      65,
+      null,
+      null,
       null,
       null,
       null
     ],
     [
-      "#",
-      59,
-      null,
-      null,
-      null,
-      "#",
-      60,
-      null,
+      66,
       null,
       null,
       "#",
-      61,
+      67,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      68,
+      null,
+      null,
+      null
+    ],
+    [
+      69,
+      null,
+      null,
+      "#",
+      70,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "#",
+      71,
       null,
       null,
       null
@@ -269,568 +269,576 @@
   ],
   "solution": [
     [
-      "A",
-      "D",
       "O",
-      "S",
-      "#",
-      "S",
-      "A",
-      "A",
-      "B",
-      "#",
+      "R",
       "A",
       "L",
-      "P",
-      "O",
-      "#"
-    ],
-    [
-      "V",
-      "O",
-      "N",
-      "N",
-      "#",
-      "U",
-      "C",
-      "L",
-      "A",
-      "#",
-      "T",
-      "A",
-      "I",
-      "L",
-      "#"
-    ],
-    [
-      "A",
-      "S",
-      "T",
-      "O",
-      "U",
-      "G",
-      "H",
-      "A",
-      "S",
-      "N",
-      "A",
-      "I",
-      "L",
-      "S",
-      "#"
-    ],
-    [
-      "#",
       "#",
       "A",
       "R",
-      "R",
-      "A",
-      "Y",
-      "#",
-      "T",
       "O",
-      "D",
-      "D",
-      "L",
-      "E",
-      "R"
-    ],
-    [
       "M",
-      "O",
-      "R",
-      "T",
       "A",
-      "R",
+      "S",
       "#",
       "B",
-      "E",
-      "G",
-      "#",
-      "L",
+      "A",
+      "T"
+    ],
+    [
+      "N",
       "O",
+      "N",
+      "E",
+      "#",
+      "N",
+      "I",
+      "C",
+      "E",
+      "N",
+      "E",
+      "#",
+      "O",
+      "L",
+      "E"
+    ],
+    [
+      "C",
+      "U",
+      "T",
+      "T",
+      "I",
+      "N",
+      "G",
+      "E",
+      "D",
+      "G",
+      "E",
+      "#",
+      "W",
+      "O",
+      "N"
+    ],
+    [
+      "E",
+      "X",
+      "I",
+      "S",
+      "T",
+      "#",
+      "#",
+      "A",
+      "I",
+      "L",
+      "#",
+      "P",
+      "I",
       "N",
       "E"
     ],
     [
+      "#",
+      "#",
+      "#",
+      "B",
+      "A",
+      "L",
       "A",
       "N",
-      "G",
+      "C",
       "E",
-      "L",
-      "H",
-      "A",
-      "I",
-      "R",
-      "#",
-      "H",
-      "O",
-      "W",
       "S",
-      "O"
+      "H",
+      "E",
+      "E",
+      "T"
     ],
     [
-      "I",
       "C",
+      "A",
+      "M",
       "E",
-      "D",
-      "#",
-      "I",
-      "N",
-      "C",
-      "#",
-      "N",
+      "L",
       "O",
-      "W",
+      "T",
+      "#",
+      "#",
+      "S",
+      "K",
+      "I",
       "#",
       "#",
       "#"
     ],
     [
-      "L",
-      "E",
-      "T",
+      "A",
+      "K",
+      "A",
+      "#",
+      "#",
+      "N",
+      "O",
+      "D",
+      "S",
       "#",
       "I",
+      "S",
+      "L",
+      "E",
+      "T"
+    ],
+    [
+      "M",
+      "I",
+      "X",
+      "I",
+      "N",
       "G",
-      "G",
-      "Y",
-      "P",
-      "O",
-      "P",
-      "#",
-      "D",
+      "M",
+      "E",
+      "T",
       "A",
-      "M"
+      "P",
+      "H",
+      "O",
+      "R",
+      "S"
+    ],
+    [
+      "S",
+      "N",
+      "I",
+      "P",
+      "E",
+      "#",
+      "S",
+      "E",
+      "R",
+      "A",
+      "#",
+      "#",
+      "R",
+      "I",
+      "P"
     ],
     [
       "#",
       "#",
       "#",
-      "H",
       "A",
-      "H",
-      "#",
-      "C",
       "I",
+      "M",
+      "#",
+      "#",
+      "U",
+      "P",
+      "S",
+      "I",
+      "D",
+      "E",
+      "S"
+    ],
+    [
+      "M",
+      "O",
+      "O",
+      "D",
+      "L",
+      "I",
+      "G",
+      "H",
+      "T",
+      "I",
+      "N",
+      "G",
+      "#",
+      "#",
+      "#"
+    ],
+    [
+      "A",
+      "R",
+      "C",
       "S",
       "#",
-      "M",
-      "I",
-      "C",
+      "S",
+      "E",
+      "A",
+      "#",
+      "#",
+      "O",
+      "N",
+      "T",
+      "O",
       "E"
     ],
     [
-      "D",
-      "R",
+      "C",
+      "A",
+      "T",
+      "#",
+      "L",
       "E",
       "A",
-      "M",
-      "#",
-      "B",
-      "L",
-      "U",
+      "D",
       "E",
+      "R",
       "B",
-      "E",
+      "O",
       "A",
       "R",
       "D"
     ],
     [
-      "N",
-      "E",
       "A",
       "T",
+      "E",
       "#",
+      "A",
+      "R",
+      "R",
+      "I",
+      "V",
+      "E",
+      "#",
+      "R",
+      "I",
       "C",
-      "U",
-      "E",
-      "#",
-      "R",
-      "A",
-      "N",
-      "G",
-      "E",
-      "S"
-    ],
-    [
-      "A",
-      "L",
-      "R",
-      "E",
-      "A",
-      "D",
-      "Y",
-      "#",
-      "P",
-      "I",
-      "N",
-      "T",
-      "O",
-      "#",
-      "#"
-    ],
-    [
-      "#",
-      "I",
-      "T",
-      "S",
-      "G",
-      "R",
-      "O",
-      "W",
-      "I",
-      "N",
-      "G",
-      "O",
-      "N",
-      "M",
       "E"
     ],
     [
-      "#",
-      "S",
-      "H",
-      "O",
+      "W",
       "E",
+      "T",
       "#",
-      "F",
-      "O",
-      "G",
-      "G",
-      "#",
-      "R",
-      "A",
-      "I",
-      "L"
-    ],
-    [
-      "#",
-      "H",
-      "A",
-      "N",
-      "D",
-      "#",
-      "F",
+      "S",
+      "Y",
+      "S",
+      "T",
       "E",
-      "S",
-      "S",
+      "M",
       "#",
-      "S",
+      "E",
       "L",
       "A",
-      "M"
+      "N"
     ]
   ],
   "clues": {
     "Across": [
       [
         1,
-        "Flurries of activity"
+        "Like some histories"
       ],
       [
         5,
-        "Swedish aerospace giant"
+        "Scents such as freshly baked bread and clean laundry"
       ],
       [
-        9,
-        "Pet food brand"
-      ],
-      [
-        13,
-        "Olympic skier Lindsey"
+        11,
+        "Cave mammal"
       ],
       [
         14,
-        "The Bruins of the Big Ten Conf."
+        "Zilch"
       ],
       [
         15,
-        "Devil costume part"
+        "__ Creed: Mass recitation"
       ],
       [
         16,
-        "Really, really strong"
+        "Flamenco cry"
+      ],
+      [
+        17,
+        "Avant-garde"
       ],
       [
         19,
-        "Impressive display"
+        "Was victorious"
       ],
       [
         20,
-        "One whose age is given in months"
+        "Live and breathe"
+      ],
+      [
+        21,
+        "Feel under the weather"
       ],
       [
         22,
-        "Brick and __"
+        "Cabin timber"
       ],
       [
-        24,
-        "Plead"
+        23,
+        "Assets and liabilities statement"
       ],
       [
-        25,
-        "__ Star State"
-      ],
-      [
-        26,
-        "Delicate pasta often served with a light sauce"
-      ],
-      [
-        28,
-        "\"Please explain?\""
-      ],
-      [
-        29,
-        "Chilled"
+        27,
+        "King Arthur's realm"
       ],
       [
         30,
-        "Bus. letters"
+        "Compete in a slalom"
       ],
       [
         31,
-        "\"Right this minute!\""
+        "Alias letters"
       ],
       [
         32,
-        "Allow"
-      ],
-      [
-        33,
-        "Musician known as the \"Godfather of Punk\""
+        "Dozes (off)"
       ],
       [
         35,
-        "Beaver's project"
-      ],
-      [
-        38,
-        "\"As if!\""
+        "Archipelago unit"
       ],
       [
         39,
-        "Prefix with gender"
+        "Stylistic faux pas that puts an editor between a rock and a black sheep?"
       ],
       [
-        40,
-        "\"Of __ and Men\""
-      ],
-      [
-        41,
-        "Lofty goal"
+        43,
+        "Take potshots (at)"
       ],
       [
         44,
-        "French folktale that inspired a Kurt Vonnegut novel"
+        "Repeated word in a Doris Day classic"
+      ],
+      [
+        45,
+        "Tear (apart)"
       ],
       [
         46,
-        "Tidy"
-      ],
-      [
-        47,
-        "Stick in a pool hall"
+        "Archer's asset"
       ],
       [
         48,
-        "Stovetops"
-      ],
-      [
-        49,
-        "\"Wow, so soon?\""
+        "Positives"
       ],
       [
         51,
-        "Refried beans bean"
-      ],
-      [
-        52,
-        "\"I wasn't sure at first, but ...,\" or what could be said about the ends of 16-, 26-, and 44-Across?"
+        "Illumination that sets a tone"
       ],
       [
         56,
-        "\"If the __ fits ... \""
+        "Storylines"
       ],
       [
         57,
-        "World-traveling Verne protagonist"
+        "Salty expanse"
       ],
       [
         58,
-        "Train travel"
+        "Pirouetting, say"
       ],
       [
-        59,
-        "Watch part"
+        62,
+        "Tabby"
       ],
       [
-        60,
-        "Own (up)"
+        63,
+        "List of top-scoring players, and what the start of 17-, 23-, 39-, or 51-Across could be called?"
       ],
       [
-        61,
-        "Loud noise"
+        66,
+        "Feasted on"
+      ],
+      [
+        67,
+        "Achieve fame"
+      ],
+      [
+        68,
+        "Arancini ingredient"
+      ],
+      [
+        69,
+        "Sopping"
+      ],
+      [
+        70,
+        "Organized workflow"
+      ],
+      [
+        71,
+        "Flair"
       ]
     ],
     "Down": [
       [
         1,
-        "Director DuVernay"
+        "__ upon a time"
       ],
       [
         2,
-        "Uno y uno"
+        "Gumbo thickener"
       ],
       [
         3,
-        "Properly aimed"
+        "Against"
       ],
       [
         4,
-        "Showed appreciation for a bad joke, maybe"
+        "Doesn't disturb"
       ],
       [
         5,
-        "Result of a Halloween candy binge"
+        "Rashida's \"Parks and Recreation\" role"
       ],
       [
         6,
-        "Sore"
+        "Fix, as a fight"
       ],
       [
         7,
-        "In the style of, on a menu"
+        "Atlantic, for one"
       ],
       [
         8,
-        "Tool often used on Thanksgiving"
+        "Soldier trained in first aid"
       ],
       [
         9,
-        "Just slightly"
+        "\"I teach geometry, so I know all the __\": math professor's quip"
       ],
       [
         10,
-        "Brought down to the ground"
+        "Observe"
       ],
       [
         11,
-        "Bed cushion"
+        "\"Starman\" singer David"
       ],
       [
         12,
-        "\"Full House\" twins"
+        "Unaccompanied"
       ],
       [
-        17,
-        "Asian territory on a Risk board"
+        13,
+        "Core belief"
       ],
       [
         18,
-        "Eggy holiday drink"
-      ],
-      [
-        21,
-        "__ Speedwagon"
+        "Lang. of Rome"
       ],
       [
         22,
-        "Put in the post"
-      ],
-      [
-        23,
-        "A single time"
+        "Run an email scam"
       ],
       [
         24,
-        "Transport with training wheels"
+        "__ division"
+      ],
+      [
+        25,
+        "Molecule makeup"
+      ],
+      [
+        26,
+        "Pass over"
       ],
       [
         27,
-        "\"Brokeback Mountain\" director Lee"
+        "Zoom devices, familiarly"
       ],
       [
         28,
-        "Move like a frog"
+        "Related (to)"
       ],
       [
-        31,
-        "Some facial jewelry"
+        29,
+        "Ankle-length skirt"
       ],
       [
         33,
-        "Terse affirmative"
+        "Hollywood ending?"
       ],
       [
         34,
-        "More, on a music score"
-      ],
-      [
-        35,
-        "Like the lines on argyle socks"
+        "Confident stride"
       ],
       [
         36,
-        "Land unit"
+        "\"Bridgerton\" title"
       ],
       [
         37,
-        "Rx items"
+        "Cleveland's lake"
       ],
       [
         38,
-        "Talks trash about"
+        "Baking amts."
       ],
       [
         40,
-        "Trusted career guides"
+        "Apple tablets"
       ],
       [
         41,
-        "Genetic letters"
+        "Singer Diamond"
       ],
       [
         42,
-        "Condiment on a hot dog"
-      ],
-      [
-        43,
-        "\"Santa Baby\" singer Kitt"
-      ],
-      [
-        44,
-        "Bribe"
-      ],
-      [
-        45,
-        "Loud noise"
+        "Heritage celebrated in May, for short"
       ],
       [
         47,
-        "Capt.'s underling"
+        "Great suffering"
+      ],
+      [
+        49,
+        "Hoity-toity type"
       ],
       [
         50,
-        "Became older"
+        "Send to voicemail, perhaps"
       ],
       [
         51,
-        "Babe and Wilbur, for two"
+        "Colorful parrot"
+      ],
+      [
+        52,
+        "Deliver a speech"
       ],
       [
         53,
-        "Deep sadness"
+        "Chamber music configuration"
       ],
       [
         54,
-        "\"Mamma __!\""
+        "Bike parts"
       ],
       [
         55,
-        "Furniture wood"
+        "\"You've never __ so good\""
+      ],
+      [
+        59,
+        "Follow covertly"
+      ],
+      [
+        60,
+        "Marine apex predator"
+      ],
+      [
+        61,
+        "Idyllic place"
+      ],
+      [
+        63,
+        "__ Vegas Aces"
+      ],
+      [
+        64,
+        "Night before"
+      ],
+      [
+        65,
+        "\"Shiny Happy People\" band"
       ]
     ]
   }

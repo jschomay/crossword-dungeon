@@ -3,11 +3,11 @@
   "kind": [
     "http://ipuz.org/crossword#1"
   ],
-  "title": "Thursday’s Daily",
-  "author": "Andrew Colin Kirk / Ed. Patti Varol",
+  "title": "Monday’s Daily",
+  "author": "Zachary David Levy / Ed. Patti Varol",
   "copyright": "Daily crosswords provided by the LA Times\n© 2025 Tribune Content Agency, LLC",
   "dimensions": {
-    "width": 16,
+    "width": 15,
     "height": 15
   },
   "puzzle": [
@@ -16,22 +16,25 @@
       2,
       3,
       4,
-      5,
       "#",
+      5,
       6,
       7,
       8,
-      9,
       "#",
+      9,
       10,
       11,
       12,
-      13,
-      14
+      13
     ],
     [
-      15,
+      14,
       null,
+      null,
+      null,
+      "#",
+      15,
       null,
       null,
       null,
@@ -40,26 +43,20 @@
       null,
       null,
       null,
-      "#",
+      null
+    ],
+    [
       17,
       null,
       null,
       null,
-      null
-    ],
-    [
       18,
       null,
       null,
       null,
       null,
+      "#",
       19,
-      null,
-      null,
-      null,
-      null,
-      20,
-      null,
       null,
       null,
       null,
@@ -68,180 +65,170 @@
     [
       "#",
       "#",
+      20,
+      null,
+      null,
+      null,
       "#",
       21,
       null,
-      null,
-      null,
-      "#",
       22,
       null,
       null,
       null,
       null,
-      "#",
-      "#",
-      "#"
+      null
     ],
     [
       23,
       24,
+      null,
+      null,
+      null,
+      "#",
       25,
       null,
-      "#",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
       26,
       null,
+      null,
+      "#",
       27,
-      null,
-      null,
-      null,
-      "#",
       28,
+      null,
+      "#",
       29,
-      30,
-      31
-    ],
-    [
-      32,
-      null,
-      null,
-      null,
-      33,
-      null,
-      null,
       null,
       null,
       "#",
       "#",
-      34,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      35,
-      null,
-      null,
-      "#",
-      36,
-      null,
-      null,
-      null,
-      "#",
-      37,
-      38,
-      null,
-      null,
-      null,
-      null,
-      null
-    ],
-    [
-      "#",
-      "#",
-      39,
-      40,
-      null,
-      null,
-      null,
-      null,
-      41,
-      null,
-      null,
-      null,
-      null,
-      null,
       "#",
       "#"
     ],
     [
+      30,
+      null,
+      null,
+      31,
+      "#",
+      32,
+      null,
+      33,
+      "#",
+      "#",
+      34,
+      35,
+      36,
+      37,
+      38
+    ],
+    [
+      39,
+      null,
+      null,
+      null,
+      40,
+      null,
+      null,
+      null,
+      41,
       42,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
       43,
       null,
       null,
       null,
       null,
-      null,
+      "#",
       "#",
       44,
       null,
       null,
-      null,
       "#",
       45,
-      46,
-      47
+      null,
+      null,
+      null
     ],
     [
-      48,
-      null,
-      null,
-      null,
-      null,
       "#",
+      "#",
+      "#",
+      "#",
+      46,
+      47,
+      48,
       "#",
       49,
       null,
-      null,
-      null,
-      null,
       50,
-      null,
-      null,
-      null
-    ],
-    [
+      "#",
       51,
       null,
-      null,
-      null,
-      "#",
-      52,
-      53,
-      null,
-      null,
-      null,
-      null,
-      "#",
-      54,
-      null,
-      null,
       null
     ],
     [
-      "#",
-      "#",
-      "#",
+      52,
+      53,
+      54,
       55,
+      null,
+      null,
+      null,
       56,
-      null,
-      null,
       null,
       "#",
       57,
-      null,
       58,
       null,
+      null,
+      null
+    ],
+    [
+      59,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
       "#",
+      60,
+      null,
+      null,
+      null,
       "#",
       "#"
     ],
     [
-      59,
-      60,
       61,
       null,
       null,
       null,
       null,
-      null,
+      "#",
       62,
       null,
-      null,
-      null,
-      null,
       63,
+      null,
+      null,
+      null,
+      null,
       64,
       65
     ],
@@ -258,7 +245,6 @@
       null,
       "#",
       68,
-      null,
       null,
       null,
       null
@@ -278,609 +264,581 @@
       71,
       null,
       null,
-      null,
       null
     ]
   ],
   "solution": [
     [
-      "G",
+      "A",
       "L",
+      "S",
       "O",
-      "B",
-      "E",
       "#",
-      "F",
+      "H",
+      "O",
+      "Y",
+      "A",
+      "#",
+      "P",
       "E",
       "T",
       "A",
-      "#",
-      "S",
-      "W",
-      "A",
-      "M",
-      "P"
+      "L"
     ],
     [
-      "S",
-      "A",
-      "R",
-      "A",
-      "N",
-      "#",
-      "R",
+      "C",
       "E",
-      "I",
-      "D",
-      "#",
       "O",
-      "A",
       "S",
-      "I",
-      "S"
-    ],
-    [
+      "#",
       "A",
-      "B",
-      "B",
-      "O",
-      "T",
-      "T",
-      "E",
       "L",
-      "E",
-      "M",
-      "E",
-      "N",
-      "T",
+      "A",
+      "S",
+      "#",
+      "O",
+      "V",
       "A",
       "R",
       "Y"
     ],
     [
-      "#",
-      "#",
-      "#",
-      "B",
+      "H",
+      "O",
+      "U",
+      "S",
+      "E",
       "R",
       "E",
+      "D",
+      "S",
+      "#",
+      "L",
+      "I",
+      "G",
+      "E",
+      "R"
+    ],
+    [
+      "#",
+      "#",
+      "P",
+      "I",
+      "L",
       "E",
       "#",
       "D",
       "I",
-      "R",
-      "G",
+      "A",
+      "L",
+      "T",
+      "O",
+      "N",
+      "E"
+    ],
+    [
+      "S",
+      "A",
+      "L",
       "E",
+      "M",
+      "#",
+      "G",
+      "A",
+      "S",
+      "G",
+      "I",
+      "A",
+      "N",
+      "T",
+      "S"
+    ],
+    [
+      "A",
+      "L",
+      "A",
+      "#",
+      "S",
+      "E",
+      "E",
+      "#",
+      "T",
+      "O",
+      "W",
+      "#",
       "#",
       "#",
       "#"
     ],
     [
-      "U",
-      "R",
-      "S",
       "A",
-      "#",
-      "A",
-      "P",
-      "R",
-      "O",
-      "N",
-      "S",
-      "#",
-      "R",
-      "A",
-      "M",
-      "P"
-    ],
-    [
-      "R",
-      "A",
-      "B",
-      "B",
+      "L",
+      "D",
       "I",
-      "T",
+      "#",
       "R",
-      "U",
-      "N",
+      "A",
+      "E",
       "#",
       "#",
       "O",
-      "L",
-      "L",
-      "I",
+      "H",
+      "G",
+      "E",
       "E"
     ],
     [
+      "B",
+      "A",
       "L",
+      "L",
+      "P",
+      "A",
+      "R",
+      "K",
+      "F",
+      "I",
+      "G",
+      "U",
+      "R",
       "E",
-      "A",
+      "S"
+    ],
+    [
+      "S",
+      "H",
+      "E",
+      "L",
+      "L",
       "#",
-      "A",
-      "R",
-      "I",
-      "D",
       "#",
-      "R",
-      "I",
-      "C",
+      "E",
       "O",
-      "A",
-      "C",
+      "N",
+      "#",
+      "T",
+      "O",
+      "R",
       "T"
     ],
     [
       "#",
       "#",
-      "L",
-      "A",
-      "M",
-      "A",
-      "Z",
-      "E",
-      "M",
+      "#",
+      "#",
+      "O",
+      "T",
+      "S",
+      "#",
       "E",
       "T",
-      "H",
-      "O",
-      "D",
-      "#",
-      "#"
-    ],
-    [
-      "G",
-      "O",
-      "O",
-      "D",
-      "B",
-      "Y",
-      "E",
-      "#",
-      "O",
-      "L",
-      "E",
-      "O",
-      "#",
-      "D",
-      "A",
-      "P"
-    ],
-    [
-      "E",
-      "X",
-      "A",
-      "M",
       "S",
       "#",
-      "#",
+      "U",
       "I",
-      "M",
-      "A",
-      "M",
-      "A",
-      "Z",
-      "I",
-      "N",
-      "G"
+      "E"
     ],
     [
-      "M",
-      "O",
-      "N",
-      "O",
-      "#",
+      "E",
+      "V",
+      "I",
+      "L",
+      "T",
       "W",
-      "A",
-      "S",
-      "A",
-      "B",
       "I",
-      "#",
-      "A",
       "N",
-      "Y",
-      "A"
-    ],
-    [
-      "#",
-      "#",
-      "#",
-      "N",
-      "A",
-      "I",
-      "L",
       "S",
       "#",
-      "E",
+      "A",
       "S",
       "P",
+      "E",
+      "R"
+    ],
+    [
+      "B",
+      "E",
       "N",
+      "I",
+      "H",
+      "A",
+      "N",
+      "A",
       "#",
+      "S",
+      "L",
+      "E",
+      "D",
       "#",
       "#"
     ],
     [
+      "B",
       "R",
-      "E",
-      "L",
-      "I",
-      "G",
-      "I",
-      "O",
       "U",
-      "S",
-      "L",
-      "E",
+      "N",
+      "O",
+      "#",
+      "G",
       "A",
-      "D",
-      "E",
+      "M",
+      "M",
+      "A",
       "R",
+      "A",
+      "Y",
       "S"
     ],
     [
       "E",
-      "R",
-      "A",
+      "D",
       "S",
       "E",
+      "L",
       "#",
-      "H",
       "E",
-      "H",
-      "E",
-      "#",
-      "P",
-      "E",
-      "R",
       "C",
+      "R",
+      "U",
+      "#",
+      "U",
+      "T",
+      "A",
       "H"
     ],
     [
-      "P",
-      "A",
-      "T",
-      "H",
+      "D",
+      "E",
+      "E",
+      "R",
+      "E",
+      "#",
       "S",
+      "P",
+      "I",
+      "T",
       "#",
-      "A",
-      "D",
-      "H",
-      "D",
-      "#",
-      "A",
-      "R",
-      "R",
-      "A",
-      "Y"
+      "M",
+      "E",
+      "M",
+      "E"
     ]
   ],
   "clues": {
     "Across": [
       [
         1,
-        "Feature of the UNICEF logo"
+        "\"While we're on the subject ... \""
       ],
       [
-        6,
-        "Spanakopita cheese"
+        5,
+        "Georgetown athlete"
       ],
       [
-        10,
-        "Alligator abode"
+        9,
+        "Flower part"
+      ],
+      [
+        14,
+        "Business VIPs"
       ],
       [
         15,
-        "Wrap sheet"
+        "Resigned expression"
       ],
       [
         16,
-        "Andy who coached the Chiefs to three Super Bowl wins"
+        "Egg-producing organ"
       ],
       [
         17,
-        "Desert retreat"
+        "Cheap wines at some restaurants"
       ],
       [
-        18,
-        "*Quinta Brunson sitcom set in a school"
+        19,
+        "Big cat hybrid"
+      ],
+      [
+        20,
+        "Loose organization unit"
       ],
       [
         21,
-        "Marcia's \"Desperate Housewives\" role"
-      ],
-      [
-        22,
-        "Track of one's tears?"
+        "Increasingly quaint phone sound"
       ],
       [
         23,
-        "__ Minor"
+        "Massachusetts city that becomes a tourist hot spot in October"
+      ],
+      [
+        25,
+        "Large planets made mostly of hydrogen and helium"
       ],
       [
         26,
-        "Kitchen cover-ups"
+        "In the style of"
       ],
       [
-        28,
-        "Incline"
+        27,
+        "Set eyes on"
+      ],
+      [
+        29,
+        "Pull behind"
+      ],
+      [
+        30,
+        "Discount grocery chain"
       ],
       [
         32,
-        "*First John Updike novel to feature Harry Angstrom"
+        "Writer/actress Issa"
       ],
       [
         34,
-        "Skateboard trick"
-      ],
-      [
-        35,
-        "Pasture"
-      ],
-      [
-        36,
-        "Extremely dry"
-      ],
-      [
-        37,
-        "Fed. anti-mob law"
+        "\"Well, shucks!\""
       ],
       [
         39,
-        "*Delivery room breathing technique"
+        "Rough estimates, and what can be found at the ends of 17-, 25-, 52-, and 62-Across"
       ],
       [
-        42,
-        "Parting word"
+        43,
+        "Turtle cover"
       ],
       [
         44,
-        "Toast spread"
+        "Impossibly long stretch"
       ],
       [
         45,
-        "Fist bump"
+        "Wrongful act"
       ],
       [
-        48,
-        "Tests"
+        46,
+        "Tiebreakers, briefly"
       ],
       [
         49,
-        "*\"Get a load of me!\""
+        "UFO occupants"
       ],
       [
         51,
-        "Part of MSG"
+        "Illegal turn, maybe"
       ],
       [
         52,
-        "Hot condiment"
-      ],
-      [
-        54,
-        "Actress Taylor-Joy"
-      ],
-      [
-        55,
-        "Totally aces"
+        "Some sinister siblings"
       ],
       [
         57,
-        "\"NBA Today\" airer"
+        "According to"
       ],
       [
         59,
-        "Keepers of the faith, and what can be found in the answers to the starred clues"
+        "Hibachi-style restaurant chain"
+      ],
+      [
+        60,
+        "Go downhill fast?"
+      ],
+      [
+        61,
+        "Pop singer Mars"
+      ],
+      [
+        62,
+        "Emissions that turned Bruce Banner into the Incredible Hulk"
       ],
       [
         66,
-        "Totally remove"
+        "Ford flop"
       ],
       [
         67,
-        "Sly chuckle"
+        "Neutral shade"
       ],
       [
         68,
-        "Bar in a birdcage"
+        "Great Salt Lake state"
       ],
       [
         69,
-        "Walkways"
+        "Big name in field equipment"
       ],
       [
         70,
-        "Adderall target, briefly"
+        "Rotisserie rod"
       ],
       [
         71,
-        "Wide variety"
+        "Viral post"
       ]
     ],
     "Down": [
       [
         1,
-        "Student-led support org."
+        "German \"Bah!\""
       ],
       [
         2,
-        "Chem class"
+        "Sign between Cancer and Virgo"
       ],
       [
         3,
-        "Poetic 1-Across"
+        "Scoop in a tureen"
       ],
       [
         4,
-        "Madagascar tree"
+        "\"Do the Right Thing\" actor Davis"
       ],
       [
         5,
-        "__'acte"
+        "Big hopper"
       ],
       [
         6,
-        "Marketing gimmick"
+        "The Grand __ Opry"
       ],
       [
         7,
-        "Long swimmer"
+        "When repeated, \"et cetera\""
       ],
       [
         8,
-        "Attached, in a way"
+        "Lend a hand"
       ],
       [
         9,
-        "Syst. overseer"
+        "Tadpole"
       ],
       [
         10,
-        "Playlist unit"
+        "Andrew Lloyd Webber musical set in Argentina"
       ],
       [
         11,
-        "Belgian site of an 1815 battle"
+        "Include as an extra"
       ],
       [
         12,
-        "Red __ beet"
+        "\"__ you sweet!\""
       ],
       [
         13,
-        "Former Russian space station"
+        "Ancient harps"
       ],
       [
-        14,
-        "Social science subj."
+        18,
+        "Stately trees"
       ],
       [
-        19,
-        "Platter with a pot, cups, and saucers"
-      ],
-      [
-        20,
-        "Hesitant sounds"
+        22,
+        "Previously"
       ],
       [
         23,
-        "Link letters"
+        "Bygone Swedish autos"
       ],
       [
         24,
-        "Singer Carly __ Jepsen"
+        "God of Islam"
       ],
       [
         25,
-        "Govt. funds for a mom-and-pop shop"
+        "Equipment"
       ],
       [
-        27,
-        "\"I can't believe you said that!\""
-      ],
-      [
-        29,
-        "Disney film with Jafar and Jasmine"
-      ],
-      [
-        30,
-        "Podcaster's need"
+        28,
+        "Notable period"
       ],
       [
         31,
-        "Touch tenderly"
+        "Down and out"
       ],
       [
         33,
-        "Poetic feet"
+        "__ out a living"
       ],
       [
-        34,
-        "Astronaut Ellen who was the first Latina in space"
+        35,
+        "Modest home"
+      ],
+      [
+        36,
+        "Social outing for couples"
       ],
       [
         37,
-        "Like many of Costco's Kirkland brand products"
+        "Otherworldly"
       ],
       [
         38,
-        "List in detail, in Liverpool"
+        "Poly- ending"
       ],
       [
         40,
-        "Reprimand"
+        "Logical oversight in a story"
       ],
       [
         41,
-        "NYC cultural center"
+        "Enemies"
       ],
       [
         42,
-        "Aquamarine, e.g."
-      ],
-      [
-        43,
-        "Brand of ergonomic kitchen tools"
-      ],
-      [
-        46,
-        "\"__ luck?\""
+        "Picked-off pass, for short"
       ],
       [
         47,
-        "The Masters org."
+        "Carrier whose JFK terminal is now a landmark hotel"
       ],
       [
-        49,
-        "Came out with"
+        48,
+        "Scorches"
       ],
       [
         50,
-        "Diminutive related to Alex"
+        "Casa chamber"
       ],
       [
         52,
-        "Nintendo console"
+        "Receded"
       ],
       [
         53,
-        "Waikiki welcome"
+        "Colorado's Mesa __ National Park"
+      ],
+      [
+        54,
+        "Not available"
+      ],
+      [
+        55,
+        "Cruise ship"
       ],
       [
         56,
-        "Many moons"
+        "Civil rights org."
       ],
       [
         58,
-        "Daddy"
-      ],
-      [
-        59,
-        "Sales agt."
+        "Blood component"
       ],
       [
         60,
-        "Timeline stretch"
-      ],
-      [
-        61,
-        "Delt neighbor"
-      ],
-      [
-        62,
-        "\"Quiet, please!\""
+        "Filthy material"
       ],
       [
         63,
-        "Make a mistake"
+        "CT scan kin"
       ],
       [
         64,
-        "Color TV pioneer"
+        "Orange tuber"
       ],
       [
         65,
-        "Bashful"
+        "That girl"
       ]
     ]
   }
