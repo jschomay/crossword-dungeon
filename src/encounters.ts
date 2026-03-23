@@ -92,7 +92,7 @@ export type Encounter = MonsterEncounter | TrapEncounter | TreasureEncounter;
 
 // ---- Encounter style (symbol + color per kind) ----
 
-export const UNKNOWN_COLOR = '#aaaaaa';  // unactivated room '?' and flavor text
+export const UNKNOWN_COLOR = '#888888';  // unactivated room '?' and flavor text
 export const ENCOUNTER_STYLE: Record<'monster' | 'trap' | 'treasure', { symbol: string; color: string }> = {
   monster:  { symbol: '*', color: '#ff6666' },
   trap:     { symbol: '!', color: '#cc66ff' },

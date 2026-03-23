@@ -2,12 +2,15 @@ import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
 import { ENCOUNTER_STYLE, UNKNOWN_COLOR } from './encounters';
 
-const WALL_FG = '#888888';
+const WALL_FG = '#666666';
 const UNKNOWN_FG = UNKNOWN_COLOR;
 const SOLVED_FG = '#ffffff';
 const DOT_FG = '#4444ff';
 const PLAYER_FG = '#ffdd44';
 const BLACK = '#000000';
+const BG_FG = '#333333';
+const BG_CHARS = [';', ',', "'", '^', '/', '%', '`', '~', '.', ':'];
+const BG_DENSITY = 0.01; // fraction of empty cells that get a char
 
 // The 8 interior non-center cells in a 5×5 room, left-to-right, top-to-bottom
 const DOT_POSITIONS: [number, number][] = [
@@ -20,6 +23,7 @@ export default class Dungeon {
   readonly displayWidth: number;
   readonly displayHeight: number;
   private puzzle: Puzzle;
+  private dungeonCells: Set<string>;
 
   constructor(puzzle: Puzzle) {
     this.puzzle = puzzle;
@@ -28,11 +32,59 @@ export default class Dungeon {
     // Total = gridSize * 6 - 1 cells, plus 1-cell padding each side = gridSize * 6 + 1
     this.displayWidth = width * 6 + 1;
     this.displayHeight = height * 6 + 1;
+    this.dungeonCells = this.buildDungeonCells();
+  }
+
+  private buildDungeonCells(): Set<string> {
+    const cells = new Set<string>();
+    const { width, height } = this.puzzle.ipuz.dimensions;
+    for (let gy = 0; gy < height; gy++) {
+      for (let gx = 0; gx < width; gx++) {
+        if (!this.hasRoom(gx, gy)) continue;
+        const rx = 1 + gx * 6;
+        const ry = 1 + gy * 6;
+        for (let lx = 0; lx < 5; lx++)
+          for (let ly = 0; ly < 5; ly++)
+            cells.add(`${rx + lx},${ry + ly}`);
+        if (this.hasRoom(gx + 1, gy)) {
+          cells.add(`${rx + 5},${ry + 1}`);
+          cells.add(`${rx + 5},${ry + 2}`);
+          cells.add(`${rx + 5},${ry + 3}`);
+        }
+        if (this.hasRoom(gx, gy + 1)) {
+          cells.add(`${rx + 1},${ry + 5}`);
+          cells.add(`${rx + 2},${ry + 5}`);
+          cells.add(`${rx + 3},${ry + 5}`);
+        }
+      }
+    }
+    return cells;
+  }
+
+  private bgChar(wx: number, wy: number): string | null {
+    // Stable per-cell hash to decide density and char choice
+    const h = Math.abs((wx * 2654435761) ^ (wy * 2246822519)) >>> 0;
+    if ((h & 0xff) / 255 > BG_DENSITY) return null;
+    return BG_CHARS[(h >> 8) % BG_CHARS.length];
+  }
+
+  drawBackground(display: ROT.Display, camera?: { x: number; y: number }): void {
+    const { width: vpW, height: vpH } = display.getOptions();
+    for (let sy = 0; sy < vpH; sy++) {
+      for (let sx = 0; sx < vpW; sx++) {
+        const wx = camera ? sx + camera.x : sx;
+        const wy = camera ? sy + camera.y : sy;
+        if (this.dungeonCells.has(`${wx},${wy}`)) continue;
+        const ch = this.bgChar(wx, wy);
+        if (ch) display.draw(sx, sy, ch, BG_FG, BLACK);
+      }
+    }
   }
 
   render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer = false, camera?: { x: number; y: number }): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     display.clear();
+    this.drawBackground(display, camera);
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
@@ -69,7 +121,6 @@ export default class Dungeon {
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
     const encounterKind = state?.encounter.kind ?? 'monster';
-    const potentialLevel = this.puzzle.potentialLevels[gy][gx];
     const hasPlayer = !hidePlayer && playerPos.x === gx && playerPos.y === gy;
 
     for (let lx = 0; lx < 5; lx++) {
@@ -101,22 +152,10 @@ export default class Dungeon {
       }
     }
 
-    const plusFg = ENCOUNTER_STYLE[encounterKind].color;
-    if (solved !== null) {
-      // Solved: show only activated plusses, no dots
+    if (solved === null) {
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
-        display.draw(dx + lx, dy + ly, '+', plusFg, BLACK);
-      }
-    } else {
-      // Unsolved: activated plusses first, then potential dots
-      for (let i = 0; i < potentialLevel; i++) {
-        const [lx, ly] = DOT_POSITIONS[i];
-        if (i < activatedLevel) {
-          display.draw(dx + lx, dy + ly, '+', plusFg, BLACK);
-        } else {
-          display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
-        }
+        display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
       }
     }
   }

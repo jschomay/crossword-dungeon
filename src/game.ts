@@ -40,14 +40,14 @@ function roomKey(x: number, y: number): string {
   return `${x},${y}`;
 }
 
-const VIEWPORT_W = 37;
-const VIEWPORT_H = 37;
+const VIEWPORT_W = 43;
+const VIEWPORT_H = 43;
 
-const BASE_MANA = 10;
+const BASE_MANA = 20;
 const BASE_HP = 50;
 const BASE_DMG = 10;
 const XP_PER_LEVEL = 100;
-const BASE_WORD_COUNT = 5;
+const BASE_WORD_COUNT = 10;
 const WORD_COUNT_STEP = 2;
 const MAX_WORD_COUNT = 20;
 
@@ -108,9 +108,9 @@ export default class Game {
   private showMap: boolean = false;
   private pendingItem: TreasureItemStats | null = null;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
-  private hpPotions: number = 0;
-  private manaPotions: number = 0;
-  private revealScrolls: number = 0;
+  private hpPotions: number = 1;
+  private manaPotions: number = 2;
+  private revealScrolls: number = 3;
 
   private fullIpuz!: ReturnType<typeof validateIpuz>;
 
@@ -231,9 +231,9 @@ export default class Game {
     this.xp = 0;
     this.pendingItem = null;
     this.equipped = { weapon: null, armor: null, amulet: null };
-    this.hpPotions = 0;
-    this.manaPotions = 0;
-    this.revealScrolls = 0;
+    this.hpPotions = 1;
+    this.manaPotions = 2;
+    this.revealScrolls = 3;
     this.gameOver = false;
     this.puzzleComplete = false;
     this.combatRunning = false;
@@ -840,7 +840,8 @@ export default class Game {
       this.statusEl.classList.add('hidden');
       this.encounterEl.classList.remove('hidden');
       const clues = this.puzzle.getCluesAt(this.playerPos);
-      const lines = clues.map(({ direction, clue }) => `${direction}: ${clue}`);
+      const dirLabel = (d: 'Across' | 'Down') => d === 'Across' ? '&#9664; &#9654;' : '&#9650; &#9660;';
+      const lines = clues.map(({ direction, clue }) => `${dirLabel(direction)} ${clue}`);
       while (lines.length < 2) lines.push('&nbsp;');
       this.cluesEl.innerHTML = lines.join('<br>');
     }

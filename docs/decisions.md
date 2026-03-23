@@ -37,3 +37,11 @@ When building a sparse dungeon via the frontier expansion algorithm, some seeds 
 The retry loop is capped at 20 attempts. For standard 15×15 puzzles this is never reached; it exists to prevent an infinite loop when loading small puzzles (e.g. `?puzzle=demo`) where the parity constraint may make the target unreachable. In that case the best available result is used.
 
 Both approaches were prototyped. Cell-by-cell movement (one display character per keypress) was rejected because it required too many keypresses to navigate, felt slow, and gave no gameplay reason to visit corridor cells. Room-to-room movement (one keypress = jump to adjacent letter room) was kept as it matches the crossword structure and feels snappy.
+
+## Room Dot Rendering: Potential vs Activated Levels
+
+Originally each room rendered two layers of dots in its interior cells: potential level dots (blue, showing how many activations were possible based on neighboring words) and activated level dots (encounter color, replacing potential dots as the room leveled up). Solved rooms showed activated dots in encounter color.
+
+**Changed to:** Only activated level dots are shown, in the potential dot color (blue), and only for unsolved rooms. Solved rooms show no dots — just the revealed letter. Potential dots are removed entirely.
+
+**Reason:** Visual clutter. The potential dot layer added noise without meaningful gameplay signal — players don't need to see the theoretical maximum, only the current activation state. Using a single neutral color (blue) for activated dots decouples the dot display from encounter type, keeping the room center character as the sole encounter indicator.

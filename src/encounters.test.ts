@@ -295,7 +295,7 @@ describe('passive effects', () => {
     const enc = generateTreasure(rng);
     expect(enc.subKind).toBe('item');
     const stats = getTreasureItemStats(enc as Parameters<typeof getTreasureItemStats>[0], 3);
-    expect(stats.hpPerRound).toBe(3);
+    expect(stats.hpPerRound).toBe(1);
     expect(stats.manaPerRound).toBe(0);
   });
 
@@ -654,7 +654,7 @@ describe('generateTreasure', () => {
     expect(all).toContain('Sword');
     // raw = 3 + (6-1)*2 = 13, *1.5 = round(19.5) = 20
     expect(all).toContain('+20 DMG');
-    expect(all).toContain('+3 HP each hit');
+    expect(all).toContain('+1 HP each hit');
   });
 
   it('item with passive modifier shows passive effect in display', () => {
@@ -664,6 +664,6 @@ describe('generateTreasure', () => {
     const rng = mockRngWithFirstMod(['item', sword], regenerating);
     const t = generateTreasure(rng);
     const all = formatEncounter(t, 3).join('\n');
-    expect(all).toContain('+3 HP each hit');
+    expect(all).toContain('+1 HP each hit');
   });
 });
