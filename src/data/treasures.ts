@@ -20,9 +20,8 @@ export const TREASURE_CONSUMABLES = [
 export const TREASURE_IMMEDIATE = [
   { name: 'Healing Shrine', description: 'Ancient altar radiating warmth', effect: 'restore_hp' as const, base_amount: 10, amount_growth: 5 },
   { name: 'Mana Well', description: 'Pool of glowing arcane energy', effect: 'restore_mana' as const, base_amount: 5, amount_growth: 2 },
-  { name: 'Blessed Fountain', description: 'Sacred waters of renewal', effect: 'increase_max_hp' as const, base_amount: 2, amount_growth: 2 },
-  { name: 'Arcane Nexus', description: 'Swirling vortex of pure magic', effect: 'increase_max_mana' as const, base_amount: 2, amount_growth: 2 },
   { name: 'Experience Tome', description: 'Ancient book of wisdom', effect: 'grant_xp' as const, base_amount: 10, amount_growth: 10 },
+  { name: 'Gold Chest', description: 'A chest brimming with coins', effect: 'grant_gold' as const, base_amount: 20, amount_growth: 11 },
 ] as const;
 
 export const TREASURE_MODIFIERS = [

@@ -7,6 +7,7 @@ const UNKNOWN_FG = UNKNOWN_COLOR;
 const SOLVED_FG = '#ffffff';
 const DOT_FG = '#4444ff';
 const PLAYER_FG = '#ffdd44';
+const SHOP_FG = '#44ffcc';
 const BLACK = '#000000';
 const BG_FG = '#333333';
 const BG_CHARS = [';', ',', "'", '^', '/', '%', '`', '~', '.', ':'];
@@ -27,11 +28,13 @@ export default class Dungeon {
   readonly displayWidth: number;
   readonly displayHeight: number;
   private puzzle: Puzzle;
+  private shopPos: { x: number; y: number } | null;
   private dungeonCells: Set<string>;
   private wallCells: Set<string>;
 
-  constructor(puzzle: Puzzle) {
+  constructor(puzzle: Puzzle, shopPos: { x: number; y: number } | null = null) {
     this.puzzle = puzzle;
+    this.shopPos = shopPos;
     const { width, height } = puzzle.ipuz.dimensions;
     // Each grid cell = 5×5 room; adjacent rooms share a 1-cell corridor gap.
     // Total = gridSize * 6 - 1 cells, plus 1-cell padding each side = gridSize * 6 + 1
@@ -110,7 +113,12 @@ export default class Dungeon {
     }
   }
 
+  isShop(gx: number, gy: number): boolean {
+    return this.shopPos !== null && this.shopPos.x === gx && this.shopPos.y === gy;
+  }
+
   hasRoom(gx: number, gy: number): boolean {
+    if (this.isShop(gx, gy)) return true;
     const { width, height } = this.puzzle.ipuz.dimensions;
     if (gx < 0 || gy < 0 || gx >= width || gy >= height) return false;
     const v = this.puzzle.ipuz.solution[gy][gx];
@@ -132,6 +140,7 @@ export default class Dungeon {
     const connRight = this.hasRoom(gx + 1, gy);
 
     const state = roomStates.get(`${gx},${gy}`);
+    const shopRoom = this.isShop(gx, gy);
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
     const encounterKind = state?.encounter.kind ?? 'monster';
@@ -139,34 +148,37 @@ export default class Dungeon {
 
     for (let lx = 0; lx < 5; lx++) {
       for (let ly = 0; ly < 5; ly++) {
-        if (lx === 2 && ly === 2) {
-          let centerChar: string;
-          let centerFg: string;
-          if (hasPlayer) {
-            centerChar = '@'; centerFg = PLAYER_FG;
-          } else if (solved !== null) {
-            centerChar = solved; centerFg = SOLVED_FG;
-          } else if (activatedLevel > 0) {
-            const style = ENCOUNTER_STYLE[encounterKind];
-            centerChar = style.symbol; centerFg = style.color;
-          } else {
-            centerChar = '?'; centerFg = UNKNOWN_FG;
-          }
-          display.draw(dx + lx, dy + ly, centerChar, centerFg, BLACK);
-          continue;
-        }
-
         const wall = this.isWall(lx, ly, connUp, connDown, connLeft, connRight);
         if (wall) {
           display.draw(dx + lx, dy + ly, '#', WALL_FG, BLACK);
+          continue;
+        }
+
+        if (lx === 2 && ly === 2) {
+          // Center cell
+          let ch: string;
+          let fg: string;
+          if (hasPlayer) {
+            ch = '@'; fg = PLAYER_FG;
+          } else if (shopRoom) {
+            ch = '%'; fg = SHOP_FG;
+          } else if (solved !== null) {
+            ch = solved; fg = SOLVED_FG;
+          } else if (activatedLevel > 0) {
+            const style = ENCOUNTER_STYLE[encounterKind];
+            ch = style.symbol; fg = style.color;
+          } else {
+            ch = '?'; fg = UNKNOWN_FG;
+          }
+          display.draw(dx + lx, dy + ly, ch, fg, BLACK);
+        } else if (shopRoom) {
         } else {
-          // Clear interior floor cells so stale chars don't linger
           display.draw(dx + lx, dy + ly, ' ', BLACK, BLACK);
         }
       }
     }
 
-    if (solved === null) {
+    if (!shopRoom && solved === null) {
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
         display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
@@ -242,11 +254,15 @@ export default class Dungeon {
           const lx = x - (1 + gx * 6);
           const ly = y - (1 + gy * 6);
           const state = roomStates.get(`${gx},${gy}`);
+          const shopCell = this.isShop(gx, gy);
           if (lx === 2 && ly === 2) {
             if (playerPos.x === gx && playerPos.y === gy) { ch = '@'; fg = PLAYER_FG; }
+            else if (shopCell) { ch = '%'; fg = SHOP_FG; }
             else if (state?.solvedLetter) { ch = state.solvedLetter; fg = SOLVED_FG; }
             else if (state?.activatedLevel ?? 0 > 0) { const s = ENCOUNTER_STYLE[state!.encounter.kind]; ch = s.symbol; fg = s.color; }
             else { ch = '?'; fg = UNKNOWN_FG; }
+          } else if (shopCell) {
+            // non-center shop cells: leave blank
           } else {
             const dotIdx = DOT_POSITIONS.findIndex(([dlx, dly]) => dlx === lx && dly === ly);
             if (dotIdx >= 0 && dotIdx < (state?.activatedLevel ?? 0) && state?.solvedLetter === null) {

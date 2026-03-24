@@ -17,10 +17,10 @@ import {
   type MonsterEncounter,
   type TrapEncounter,
   type TreasureEncounter,
-  type TreasureItemEncounter,
   type TreasureItemStats,
   type Rng,
 } from './encounters';
+import { TREASURE_ITEMS, TREASURE_MODIFIERS } from './data/treasures';
 
 const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
   ArrowUp: { dx: 0, dy: -1 },
@@ -53,15 +53,29 @@ const MAX_WORD_COUNT = 20;
 
 // ---- Inventory list rendering ----
 
-function equipLine(item: TreasureItemStats): string {
-  const fullName = [...item.modNames, item.name].join(' ');
-  const parts: string[] = [];
-  if (item.damageBonus > 0) parts.push(`+${item.damageBonus} DMG`);
-  if (item.defenseBonus > 0) parts.push(`+${item.defenseBonus} DEF`);
-  if (item.maxHpBonus > 0) parts.push(`+${item.maxHpBonus} max HP`);
-  if (item.maxManaBonus > 0) parts.push(`+${item.maxManaBonus} max MANA`);
-  parts.push(...item.passiveEffects);
-  return `◆ ${fullName} (${parts.join(', ')})`;
+function modEffectLabel(mod: typeof TREASURE_MODIFIERS[number]): string {
+  if ('stat_multiplier' in mod) return `+${Math.round((mod.stat_multiplier - 1) * 100)}% base stat`;
+  if ('passive_effect' in mod) return mod.passive_effect === 'hp_per_combat_round' ? `+${mod.passive_amount} HP/hit` : `+${mod.passive_amount} MANA/hit`;
+  return mod.bonus_effect === 'max_hp' ? `+${mod.bonus_amount} max HP` : `+${mod.bonus_amount} max MANA`;
+}
+
+function baseStatLabel(item: TreasureItemStats): string {
+  switch (item.statType) {
+    case 'damage':   return `(+${item.baseStat} DMG)`;
+    case 'defense':  return `(+${item.baseStat} DEF)`;
+    case 'max_hp':   return `(+${item.baseStat} max HP)`;
+    case 'max_mana': return `(+${item.baseStat} max MANA)`;
+  }
+}
+
+function equipLines(item: TreasureItemStats): string[] {
+  const lines = [`◆ ${item.name}  Lv.${item.level}  ${baseStatLabel(item)}`];
+  for (const modName of item.modNames) {
+    const mod = TREASURE_MODIFIERS.find(m => m.name === modName);
+    if (mod) lines.push(`  ${mod.name} — ${mod.description} (${modEffectLabel(mod)})`);
+    else lines.push(`  ${modName}`);
+  }
+  return lines;
 }
 
 
@@ -107,12 +121,17 @@ export default class Game {
   private combatRunning: boolean = false;
   private pulseRunning: boolean = false;
   private showMap: boolean = false;
-  private pendingItem: TreasureItemStats | null = null;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
+  private gold: number = 0;
   private hpPotions: number = 1;
   private manaPotions: number = 2;
   private revealScrolls: number = 3;
   private intoneScrolls: number = 3;
+  private shopPos: { x: number; y: number } | null = null;
+  private shopItem: TreasureItemStats | null = null;       // one-time equipment offer
+  private shopItemLevel: number = 1;
+  private shopModTarget: TreasureItemStats | null = null;  // item to receive modifier
+  private shopModifier: typeof TREASURE_MODIFIERS[number] | null = null;
 
   private fullIpuz!: ReturnType<typeof validateIpuz>;
 
@@ -148,7 +167,11 @@ export default class Game {
     } while (selected.size < target && attempts < 20);
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
-    this.dungeon = new Dungeon(this.puzzle);
+    this.shopPos = this.pickShopPos();
+    this.shopItem = null;
+    this.shopModTarget = null;
+    this.shopModifier = null;
+    this.dungeon = new Dungeon(this.puzzle, this.shopPos);
     this.totalRooms = this.puzzle.getRooms().length;
     this.dungeonEl.innerHTML = '';
     this.showMap = false;
@@ -218,10 +241,82 @@ export default class Game {
         incorrectGuesses: [],
       });
     }
+    this.generateShopInventory();
+  }
+
+  private pickShopPos(): { x: number; y: number } | null {
+    const rooms = this.puzzle.getRooms();
+    const { width, height } = this.puzzle.ipuz.dimensions;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+    // Collect all candidate cells: adjacent to a room, not already a room, within bounds
+    const candidates: { x: number; y: number }[] = [];
+    const roomSet = new Set(rooms.map(r => `${r.x},${r.y}`));
+    for (const { x, y } of rooms) {
+      for (const { dx, dy } of dirs) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        if (roomSet.has(`${nx},${ny}`)) continue;
+        if (!candidates.find(c => c.x === nx && c.y === ny)) {
+          // Check this cell is not a puzzle letter (already verified above) and not '#'
+          const v = this.puzzle.ipuz.solution[ny]?.[nx];
+          if (v === null || v === '#') candidates.push({ x: nx, y: ny });
+        }
+      }
+    }
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  private generateShopInventory(): void {
+    const rng = this.makeRng();
+    // Random equipment item — no mods, computed at dungeonLevel
+    const base = rng.getItem(TREASURE_ITEMS);
+    let statType: import('./encounters').TreasureItemEncounter['statType'];
+    let baseStat: number;
+    let statGrowth: number;
+    if ('base_damage_bonus' in base) {
+      statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
+    } else if ('base_defense_bonus' in base) {
+      statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
+    } else if ('base_max_hp_bonus' in base) {
+      statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
+    } else {
+      statType = 'max_mana'; baseStat = base.base_max_mana_bonus; statGrowth = base.max_mana_bonus_growth;
+    }
+    // Use a dummy mod that has no effect (Fine with mult=1 would change stats; use first mod but level stays 1 so mods don't apply)
+    // Simpler: compute stats at level 1 to skip mod application, then re-scale to dungeonLevel manually.
+    // Actually: just pass a no-op: create enc with level such that no mods apply (level < 3).
+    // getTreasureItemStats only applies mod1 at level>=3, mod2 at level>=6. So passing level=1 skips all mods.
+    // We want stats at dungeonLevel but no mods — compute base stat directly.
+    const rawStat = Math.round(baseStat + (this.dungeonLevel - 1) * statGrowth);
+    const noMod = TREASURE_MODIFIERS[0]; // Fine — won't be applied since we use level=1 trick
+    const itemEnc: import('./encounters').TreasureItemEncounter = {
+      kind: 'treasure', subKind: 'item',
+      baseName: base.name, baseDescription: base.description,
+      slot: base.slot, statType, baseStat: rawStat, statGrowth: 0, mod1: noMod, mod2: noMod,
+    };
+    this.shopItem = getTreasureItemStats(itemEnc, 1); // level=1 → no mods applied
+    this.shopItemLevel = this.dungeonLevel;
+
+    // Random modifier upgrade — pick an equipped item that still has at least one mod it doesn't already have
+    const equipped = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet].filter((i): i is TreasureItemStats => i !== null);
+    this.shopModTarget = null;
+    this.shopModifier = null;
+    if (equipped.length > 0) {
+      const candidates = equipped.filter(i => TREASURE_MODIFIERS.some(m => !i.modNames.includes(m.name)));
+      if (candidates.length > 0) {
+        const target = rng.getItem(candidates);
+        const availableMods = TREASURE_MODIFIERS.filter(m => !target.modNames.includes(m.name));
+        this.shopModTarget = target;
+        this.shopModifier = rng.getItem(availableMods);
+      }
+    }
   }
 
   private async restart(): Promise<void> {
     this.dungeonLevel = 1;
+    this.equipped = { weapon: null, armor: null, amulet: null };
     await this.regenDungeon();
     this.initRoomStates();
     this.mana = BASE_MANA;
@@ -231,8 +326,7 @@ export default class Game {
     this.dmg = BASE_DMG;
     this.level = 1;
     this.xp = 0;
-    this.pendingItem = null;
-    this.equipped = { weapon: null, armor: null, amulet: null };
+    this.gold = 0;
     this.hpPotions = 1;
     this.manaPotions = 2;
     this.revealScrolls = 3;
@@ -249,10 +343,10 @@ export default class Game {
   }
 
   private async advancePuzzle(): Promise<void> {
+    this.gold += this.dungeonLevel * 100;
     this.dungeonLevel++;
     await this.regenDungeon();
     this.initRoomStates();
-    this.pendingItem = null;
     this.puzzleComplete = false;
     this.combatRunning = false;
     this.combatMonsterHp = null;
@@ -312,24 +406,6 @@ export default class Game {
     if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
     for (const e of item.passiveEffects) lines.push(e);
     return lines;
-  }
-
-  private showEquipDialog(item: TreasureItemStats): void {
-    const current = this.equipped[item.slot];
-    const newName = [...item.modNames, item.name].join(' ');
-    const newStats = this.itemStatLines(item).join(', ') || 'no bonuses';
-    let html = `<span style="color:#ffcc44;font-size:16px">Found: ${esc(newName)}</span><br>`;
-    html += `<span style="color:#aaa">${esc(newStats)}</span><br><br>`;
-    if (current) {
-      const curName = [...current.modNames, current.name].join(' ');
-      const curStats = this.itemStatLines(current).join(', ') || 'no bonuses';
-      html += `<span style="color:#888">Replaces: ${esc(curName)}</span><br>`;
-      html += `<span style="color:#666">${esc(curStats)}</span><br><br>`;
-    } else {
-      html += `<span style="color:#888">${esc(item.slot)} slot is empty</span><br><br>`;
-    }
-    html += `<span style="color:#aaa">[Y] Equip  [N] Discard</span>`;
-    this.statusEl.innerHTML = html;
   }
 
   private useConsumable(slot: 1 | 2 | 3 | 4): void {
@@ -595,13 +671,6 @@ export default class Game {
       ? this.resolveTrap(enc as TrapEncounter, level)
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
-    if (this.pendingItem) {
-      // Item equip dialog was shown by resolveTreasure — don't overwrite it
-      if (preamble) this.showInteraction([preamble]);
-      this.render();
-      return;
-    }
-
     if (preamble) logLines.unshift(preamble);
     this.checkPuzzleComplete();
     if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
@@ -624,8 +693,9 @@ export default class Game {
 
   private resolveTreasure(enc: TreasureEncounter, level: number): string[] {
     const lines = [`You claim the treasure: ${enc.baseName}!`];
+    // Only immediate effects remain in treasure encounters
     if (enc.subKind === 'immediate') {
-      const amount = enc.baseAmount + (level - 1) * enc.amountGrowth;
+      const amount = Math.round(enc.baseAmount + (level - 1) * enc.amountGrowth);
       if (enc.effect === 'restore_hp') {
         this.hp = Math.min(this.effectiveMaxHp(), this.hp + amount);
         lines.push(`+${amount} HP`);
@@ -636,34 +706,130 @@ export default class Game {
         const leveledUp = this.gainXp(amount);
         lines.push(`+${amount} XP`);
         if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
-      } else if (enc.effect === 'increase_max_hp') {
-        this.maxHp += amount;
-        this.hp = Math.min(this.hp + amount, this.effectiveMaxHp());
-        lines.push(`+${amount} max HP`);
-      } else if (enc.effect === 'increase_max_mana') {
-        this.maxMana += amount;
-        this.mana = Math.min(this.mana + amount, this.effectiveMaxMana());
-        lines.push(`+${amount} max MANA`);
-      }
-    } else if (enc.subKind === 'item') {
-      const item = getTreasureItemStats(enc as TreasureItemEncounter, level);
-      this.pendingItem = item;
-      this.showEquipDialog(item);
-      return lines;
-    } else if (enc.subKind === 'consumable') {
-      const quantity = enc.baseQuantity + Math.floor((level - 1) * enc.quantityGrowth);
-      if (enc.effect === 'restore_hp') {
-        this.hpPotions += quantity;
-        lines.push(`+${quantity} Health Potion${quantity > 1 ? 's' : ''}`);
-      } else if (enc.effect === 'restore_mana') {
-        this.manaPotions += quantity;
-        lines.push(`+${quantity} Mana Potion${quantity > 1 ? 's' : ''}`);
-      } else if (enc.effect === 'reveal_letter') {
-        this.revealScrolls += quantity;
-        lines.push(`+${quantity} Letter Reveal Scroll${quantity > 1 ? 's' : ''}`);
+      } else if (enc.effect === 'grant_gold') {
+        this.gold += amount;
+        lines.push(`+${amount} GOLD`);
       }
     }
     return lines;
+  }
+
+  // ---- Shop ----
+
+  private shopItemLine(num: number, label: string, price: number): string {
+    const priceColor = this.gold >= price ? '#ffdd44' : '#ff6666';
+    const priceStr = `<span style="color:${priceColor}">${price} GOLD</span>`;
+    return `<span style="color:#aaa">[${num}] ${esc(label)}</span>  ${priceStr}`;
+  }
+
+  private renderShopPanel(): void {
+    const SHOP_COLOR = '#44ffcc';
+    let html = `<span style="color:${SHOP_COLOR};font-size:16px">% Merchant  Lv.${this.dungeonLevel}</span><br>`;
+    html += `<span style="color:#888">Wares and wonder, for the right price.</span><br><br>`;
+
+    let num = 1;
+
+    // Always-available consumables ~10g each
+    html += this.shopItemLine(num++, 'Health Potion (+20 HP)', 10) + '<br>';
+    html += this.shopItemLine(num++, 'Mana Potion (+10 MANA)', 10) + '<br>';
+    html += this.shopItemLine(num++, 'Inscribe Scroll (reveal letter)', 10) + '<br>';
+    html += this.shopItemLine(num++, 'Intone Scroll (reveal word)', 10) + '<br>';
+
+    // Random equipment item (always available)
+    if (this.shopItem) {
+      const item = this.shopItem;
+      const stats = this.itemStatLines(item).join(', ') || 'no bonuses';
+      const current = this.equipped[item.slot];
+      html += this.shopItemLine(num++, `${item.name} Lv.${this.shopItemLevel} [${item.slot}] ${stats}`, 500) + '<br>';
+      if (current) html += `<span style="color:#888">    replaces ${esc(current.name)}</span><br>`;
+    }
+
+    // Random modifier upgrade (only shown if available)
+    if (this.shopModTarget && this.shopModifier) {
+      const modEffect = modEffectLabel(this.shopModifier);
+      html += this.shopItemLine(num, `Add ${this.shopModifier.name} (${modEffect}) to ${this.shopModTarget.name}`, 500) + '<br>';
+    }
+
+    this.encounterEl.classList.remove('hidden');
+    this.encounterEl.innerHTML = html;
+  }
+
+  private shopPurchase(slot: number): void {
+    const CONSUMABLE_PRICE = 10;
+    const ITEM_PRICE = 500;
+
+    if (slot === 1) {
+      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= CONSUMABLE_PRICE;
+      this.hpPotions++;
+      this.showInteraction([`Purchased Health Potion.`]);
+    } else if (slot === 2) {
+      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= CONSUMABLE_PRICE;
+      this.manaPotions++;
+      this.showInteraction([`Purchased Mana Potion.`]);
+    } else if (slot === 3) {
+      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= CONSUMABLE_PRICE;
+      this.revealScrolls++;
+      this.showInteraction([`Purchased Inscribe Scroll.`]);
+    } else if (slot === 4) {
+      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= CONSUMABLE_PRICE;
+      this.intoneScrolls++;
+      this.showInteraction([`Purchased Intone Scroll.`]);
+    } else if (slot === 5 && this.shopItem) {
+      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= ITEM_PRICE;
+      const item = this.shopItem;
+      this.shopItem = null;
+      this.equipItem(item);
+      // If mod target was displaced, try to reroll to another eligible equipped item
+      if (this.shopModTarget && !Object.values(this.equipped).includes(this.shopModTarget)) {
+        const rng = this.makeRng();
+        const candidates = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+          .filter((i): i is TreasureItemStats => i !== null)
+          .filter(i => TREASURE_MODIFIERS.some(m => !i.modNames.includes(m.name)));
+        if (candidates.length > 0) {
+          const newTarget = rng.getItem(candidates);
+          const availableMods = TREASURE_MODIFIERS.filter(m => !newTarget.modNames.includes(m.name));
+          this.shopModTarget = newTarget;
+          this.shopModifier = rng.getItem(availableMods);
+        } else {
+          this.shopModTarget = null;
+          this.shopModifier = null;
+        }
+      }
+      this.showInteraction([`Purchased and equipped: ${item.name}.`]);
+    } else if (slot === (this.shopItem ? 6 : 5) && (this.shopModTarget && this.shopModifier)) {
+      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= ITEM_PRICE;
+      const target = this.shopModTarget;
+      const mod = this.shopModifier;
+      this.shopModTarget = null;
+      this.shopModifier = null;
+      // Apply modifier to the item in place
+      target.modNames.push(mod.name);
+      if ('stat_multiplier' in mod) {
+        target.damageBonus  = Math.round(target.damageBonus  * mod.stat_multiplier);
+        target.defenseBonus = Math.round(target.defenseBonus * mod.stat_multiplier);
+        target.maxHpBonus   = Math.round(target.maxHpBonus   * mod.stat_multiplier);
+        target.maxManaBonus = Math.round(target.maxManaBonus * mod.stat_multiplier);
+      } else if ('passive_effect' in mod) {
+        if (mod.passive_effect === 'hp_per_combat_round')   target.hpPerRound   += mod.passive_amount;
+        if (mod.passive_effect === 'mana_per_combat_round') target.manaPerRound += mod.passive_amount;
+      } else {
+        if (mod.bonus_effect === 'max_hp')   target.maxHpBonus   += mod.bonus_amount;
+        if (mod.bonus_effect === 'max_mana') target.maxManaBonus += mod.bonus_amount;
+      }
+      // Re-cap HP/mana after potential max bonus
+      this.hp   = Math.min(this.hp,   this.effectiveMaxHp());
+      this.mana = Math.min(this.mana, this.effectiveMaxMana());
+      const targetName = [...target.modNames, target.name].join(' ');
+      this.showInteraction([`Upgraded to: ${targetName}.`]);
+    }
+    this.render();
   }
 
   private runCombatAnimation(
@@ -731,28 +897,22 @@ export default class Game {
       return;
     }
 
-    if (this.pendingItem) {
-      if (e.key === 'y' || e.key === 'Y') {
-        this.equipItem(this.pendingItem);
-        const name = [...this.pendingItem.modNames, this.pendingItem.name].join(' ');
-        this.pendingItem = null;
-        this.showInteraction([`Equipped: ${name}`]);
-      } else if (e.key === 'n' || e.key === 'N') {
-        this.pendingItem = null;
-        this.showInteraction([`Discarded.`]);
-      } else {
-        return;
-      }
-      this.checkPuzzleComplete();
-      this.render();
-      return;
-    }
-
     if (e.key === ' ') {
       this.showMap = !this.showMap;
       this.applyDisplaySize();
       this.render();
       return;
+    }
+
+    // Shop room: number keys purchase, letter keys do nothing, arrows still work
+    if (this.shopPos && this.playerPos.x === this.shopPos.x && this.playerPos.y === this.shopPos.y) {
+      if (/^[1-9]$/.test(e.key)) {
+        this.clearLogs();
+        this.shopPurchase(parseInt(e.key));
+        return;
+      }
+      if (/^[a-z]$/.test(e.key)) return; // no guessing in shop
+      // fall through to arrow key handling
     }
 
     if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
@@ -762,7 +922,7 @@ export default class Game {
 
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
-      if (this.dungeon.hasRoom(x, y)) {
+      if (this.dungeon.hasRoom(x, y) && !this.dungeon.isShop(x, y)) {
         this.clearLogs();
         this.tryGuess(x, y, e.key.toUpperCase());
         if (!this.pulseRunning) this.render();
@@ -794,9 +954,9 @@ export default class Game {
     const xpFlash = flash(this.xp, this.prevXp);
     const lvlFlash = flash(this.level, this.prevLevel);
 
-    const equipLines = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+    const equipBlock = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
       .filter((item): item is TreasureItemStats => item !== null)
-      .map(item => esc(equipLine(item)))
+      .flatMap(item => equipLines(item).map(l => esc(l)))
       .join('\n');
 
     const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:24%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
@@ -824,11 +984,14 @@ export default class Game {
       `<div>` +
       `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
       `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
-      `<div><span${xpFlash} style="color:${C_XP}">XP:  ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
+      `</div>` +
+      `<div>` +
+      `<div><span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
+      `<div><span style="color:#ffdd44">GOLD: ${this.gold}</span></div>` +
       `</div>` +
       `</div>` +
       `\n` +
-      (equipLines ? `<span style="color:${C_DIM}">${equipLines}</span>\n\n` : '') +
+      (equipBlock ? `<span style="color:${C_DIM}">${equipBlock}</span>\n\n` : '') +
       bagHtml;
 
     this.prevHp = this.hp;
@@ -872,19 +1035,23 @@ export default class Game {
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.encounterEl.classList.add('hidden');
     } else if (this.puzzleComplete) {
+      const bonus = this.dungeonLevel * 100;
       this.statusEl.innerHTML =
-        `<span style="color:#44ff88;font-size:20px">PUZZLE COMPLETE</span><br><br>` +
+        `<span style="color:#44ff88;font-size:20px">PUZZLE COMPLETE</span><br>` +
+        `<span style="color:#ffdd44">+${bonus} gold bonus!</span><br><br>` +
         `<span style="color:#aaa">[SPACE] Continue to Dungeon Level ${this.dungeonLevel + 1}</span>`;
       this.statusEl.classList.remove('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.encounterEl.classList.add('hidden');
-    } else if (this.pendingItem) {
-      this.statusEl.classList.remove('hidden');
-      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-      this.encounterEl.classList.add('hidden');
-      return;
     } else {
       this.statusEl.classList.add('hidden');
+      const { x, y } = this.playerPos;
+      const inShop = this.shopPos !== null && x === this.shopPos.x && y === this.shopPos.y;
+      if (inShop) {
+        this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
+        this.renderShopPanel();
+        return;
+      }
       this.encounterEl.classList.remove('hidden');
       const clues = this.puzzle.getCluesAt(this.playerPos);
       const dirLabel = (d: 'Across' | 'Down') => d === 'Across' ? '&#9664; &#9654;' : '&#9650; &#9660;';

@@ -1,7 +1,7 @@
 import { hpBar } from './utils';
 import { MONSTER_TYPES, MONSTER_MODIFIERS } from './data/monsters';
 import { TRAP_TYPES, TRAP_MODIFIERS } from './data/traps';
-import { TREASURE_ITEMS, TREASURE_CONSUMABLES, TREASURE_IMMEDIATE, TREASURE_MODIFIERS } from './data/treasures';
+import { TREASURE_IMMEDIATE, TREASURE_MODIFIERS } from './data/treasures';
 
 // Minimal RNG interface so we can inject a seeded RNG or Math.random in tests
 export interface Rng {
@@ -78,7 +78,7 @@ export type TreasureImmediateEncounter = {
   subKind: 'immediate';
   baseName: string;
   baseDescription: string;
-  effect: string;
+  effect: 'restore_hp' | 'restore_mana' | 'grant_xp' | 'grant_gold';
   baseAmount: number;
   amountGrowth: number;
 };
@@ -112,13 +112,11 @@ function pickTwo<T>(arr: readonly T[], rng: Rng): [T, T] {
 
 function effectLabel(effect: string, amount: number): string {
   switch (effect) {
-    case 'restore_hp':       return `+${amount} HP`;
-    case 'restore_mana':     return `+${amount} MANA`;
-    case 'increase_max_hp':  return `+${amount} max HP`;
-    case 'increase_max_mana':return `+${amount} max MANA`;
-    case 'grant_xp':         return `+${amount} XP`;
-    case 'reveal_letter':    return amount === 1 ? 'Reveals 1 letter' : `Reveals ${amount} letters`;
-    default:                 return `${effect}: ${amount}`;
+    case 'restore_hp':   return `+${amount} HP`;
+    case 'restore_mana': return `+${amount} MANA`;
+    case 'grant_xp':     return `+${amount} XP`;
+    case 'grant_gold':   return `+${amount} GOLD`;
+    default:             return `${effect}: ${amount}`;
   }
 }
 
@@ -180,63 +178,15 @@ export function generateTrap(rng: Rng): TrapEncounter {
 }
 
 export function generateTreasure(rng: Rng): TreasureEncounter {
-  const roll = rng.getItem(['item', 'consumable', 'immediate'] as const);
-
-  if (roll === 'consumable') {
-    const base = rng.getItem(TREASURE_CONSUMABLES);
-    return {
-      kind: 'treasure',
-      subKind: 'consumable',
-      baseName: base.name,
-      baseDescription: base.description,
-      effect: base.effect,
-      restoreAmount: base.restore_amount,
-      baseQuantity: base.base_quantity,
-      quantityGrowth: base.quantity_growth,
-    };
-  }
-
-  if (roll === 'immediate') {
-    const base = rng.getItem(TREASURE_IMMEDIATE);
-    return {
-      kind: 'treasure',
-      subKind: 'immediate',
-      baseName: base.name,
-      baseDescription: base.description,
-      effect: base.effect,
-      baseAmount: base.base_amount,
-      amountGrowth: base.amount_growth,
-    };
-  }
-
-  // item — always roll both mods; apply at display time based on level
-  const base = rng.getItem(TREASURE_ITEMS);
-  const [mod1, mod2] = pickTwo(TREASURE_MODIFIERS, rng);
-
-  let statType: TreasureItemEncounter['statType'];
-  let baseStat: number;
-  let statGrowth: number;
-  if ('base_damage_bonus' in base) {
-    statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
-  } else if ('base_defense_bonus' in base) {
-    statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
-  } else if ('base_max_hp_bonus' in base) {
-    statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
-  } else {
-    statType = 'max_mana'; baseStat = base.base_max_mana_bonus; statGrowth = base.max_mana_bonus_growth;
-  }
-
+  const base = rng.getItem(TREASURE_IMMEDIATE);
   return {
     kind: 'treasure',
-    subKind: 'item',
+    subKind: 'immediate',
     baseName: base.name,
     baseDescription: base.description,
-    slot: base.slot,
-    statType,
-    baseStat,
-    statGrowth,
-    mod1,
-    mod2,
+    effect: base.effect,
+    baseAmount: base.base_amount,
+    amountGrowth: base.amount_growth,
   };
 }
 
@@ -306,6 +256,9 @@ export function getTrapStats(
 export type TreasureItemStats = {
   slot: 'weapon' | 'armor' | 'amulet';
   name: string;
+  level: number;
+  statType: 'damage' | 'defense' | 'max_hp' | 'max_mana';
+  baseStat: number;  // primary stat before mod bonuses, for display
   modNames: string[];
   passiveEffects: string[];
   damageBonus: number;
@@ -352,6 +305,9 @@ export function getTreasureItemStats(enc: TreasureItemEncounter, level: number):
   return {
     slot: enc.slot,
     name: enc.baseName,
+    level,
+    statType: enc.statType,
+    baseStat: stat,
     modNames,
     passiveEffects,
     damageBonus:  enc.statType === 'damage'   ? stat : 0,
