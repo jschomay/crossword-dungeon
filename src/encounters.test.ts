@@ -6,13 +6,12 @@ import {
   formatEncounter,
   getMonsterStats,
   getTrapStats,
-  getTreasureItemStats,
   resolveCombat,
   type Rng,
 } from './encounters';
 import { MONSTER_TYPES, MONSTER_MODIFIERS } from './data/monsters';
 import { TRAP_TYPES, TRAP_MODIFIERS } from './data/traps';
-import { TREASURE_ITEMS, TREASURE_IMMEDIATE, TREASURE_MODIFIERS } from './data/treasures';
+import { TREASURE_IMMEDIATE } from './data/treasures';
 
 // Returns items from a queue in order. shuffle returns the array as-is (stable order = first two are mod1/mod2).
 function mockRng(queue: unknown[]): Rng {
@@ -287,66 +286,10 @@ describe('resolveCombat', () => {
   });
 });
 
-function makeItemEnc(itemIdx: number, mod1: typeof TREASURE_MODIFIERS[number], mod2: typeof TREASURE_MODIFIERS[number]) {
-  const base = TREASURE_ITEMS[itemIdx];
-  let statType: 'damage' | 'defense' | 'max_hp' | 'max_mana';
-  let baseStat: number;
-  let statGrowth: number;
-  if ('base_damage_bonus' in base) { statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth; }
-  else if ('base_defense_bonus' in base) { statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth; }
-  else if ('base_max_hp_bonus' in base) { statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth; }
-  else { statType = 'max_mana'; baseStat = (base as { base_max_mana_bonus: number }).base_max_mana_bonus; statGrowth = (base as { max_mana_bonus_growth: number }).max_mana_bonus_growth; }
-  return { kind: 'treasure' as const, subKind: 'item' as const, baseName: base.name, baseDescription: base.description, slot: base.slot, statType, baseStat, statGrowth, mod1, mod2 };
-}
 
-// ---- Passive effects ----
+// ---- Passive effects (combat) ----
 
 describe('passive effects', () => {
-  it('getTreasureItemStats: Regenerating mod gives hpPerRound', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[1], TREASURE_MODIFIERS[0]); // Regenerating first
-    const stats = getTreasureItemStats(enc, 3);
-    expect(stats.hpPerRound).toBe(1);
-    expect(stats.manaPerRound).toBe(0);
-  });
-
-  it('getTreasureItemStats: Arcane mod gives manaPerRound', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[2], TREASURE_MODIFIERS[0]); // Arcane first
-    const stats = getTreasureItemStats(enc, 3);
-    expect(stats.manaPerRound).toBe(2);
-    expect(stats.hpPerRound).toBe(0);
-  });
-
-  it('getTreasureItemStats: Fortifying mod adds maxHpBonus', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[3], TREASURE_MODIFIERS[0]); // Fortifying first
-    const stats = getTreasureItemStats(enc, 3);
-    expect(stats.maxHpBonus).toBe(5);
-    expect(stats.maxManaBonus).toBe(0);
-    expect(stats.hpPerRound).toBe(0);
-  });
-
-  it('getTreasureItemStats: Imbued mod adds maxManaBonus', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[4], TREASURE_MODIFIERS[0]); // Imbued first
-    const stats = getTreasureItemStats(enc, 3);
-    expect(stats.maxManaBonus).toBe(4);
-    expect(stats.maxHpBonus).toBe(0);
-    expect(stats.manaPerRound).toBe(0);
-  });
-
-  it('Fortifying stacks with item base max_hp stat', () => {
-    // Amulet of Vitality [8]: base_max_hp_bonus=5, growth=2; Fortifying adds +5
-    const enc = makeItemEnc(8, TREASURE_MODIFIERS[3], TREASURE_MODIFIERS[0]); // Fortifying first
-    const stats = getTreasureItemStats(enc, 3);
-    // base = 5 + (3-1)*2 = 9, +5 Fortifying = 14
-    expect(stats.maxHpBonus).toBe(14);
-  });
-
-  it('Fortifying/Imbued display shows equipped bonus in formatEncounter', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[3], TREASURE_MODIFIERS[0]); // Fortifying first
-    const all = formatEncounter(enc, 3).join('\n');
-    expect(all).toContain('Fortifying');
-    expect(all).toContain('+5 max HP');
-  });
-
   it('resolveCombat: hpPerRound heals player on player attack turn', () => {
     // player dmg=5, hp=20; monster dmg=3, hp=12; hpPerRound=3
     // turn 0 (player): hits 5 (mon hp=7), regen +3 (pl stays 20, capped at max)
@@ -602,76 +545,6 @@ describe('generateTreasure', () => {
     expect(all).toContain('+31 GOLD on loot');
   });
 
-  it('item level 1-2: no modifiers in display (via formatEncounter directly)', () => {
-    // Sword: base_damage_bonus=3, damage_bonus_growth=2; mod1=Fine, mod2=Regenerating
-    const sword = TREASURE_ITEMS[0];
-    const fine = TREASURE_MODIFIERS[0];
-    const regen = TREASURE_MODIFIERS[1];
-    const enc = {
-      kind: 'treasure' as const, subKind: 'item' as const,
-      baseName: sword.name, baseDescription: sword.description,
-      slot: sword.slot, statType: 'damage' as const,
-      baseStat: sword.base_damage_bonus, statGrowth: sword.damage_bonus_growth,
-      mod1: fine, mod2: regen,
-    };
-    const all = formatEncounter(enc, 1).join('\n');
-    expect(all).toContain('Sword');
-    expect(all).not.toContain('Fine');
-    expect(all).toContain('+3 DMG');
-  });
-
-  it('item level 3: mod1 multiplies stat (via formatEncounter directly)', () => {
-    const sword = TREASURE_ITEMS[0];
-    const fine = TREASURE_MODIFIERS[0];
-    const regen = TREASURE_MODIFIERS[1];
-    const enc = {
-      kind: 'treasure' as const, subKind: 'item' as const,
-      baseName: sword.name, baseDescription: sword.description,
-      slot: sword.slot, statType: 'damage' as const,
-      baseStat: sword.base_damage_bonus, statGrowth: sword.damage_bonus_growth,
-      mod1: fine, mod2: regen,
-    };
-    const all = formatEncounter(enc, 3).join('\n');
-    expect(all).toContain('Fine');
-    expect(all).toContain('Sword');
-    // raw = 3 + (3-1)*2 = 7, *1.5 = round(10.5) = 11
-    expect(all).toContain('+11 DMG');
-  });
-
-  it('item level 6: mod1 Fine and mod2 Regenerating stack (via formatEncounter directly)', () => {
-    const sword = TREASURE_ITEMS[0];
-    const fine = TREASURE_MODIFIERS[0];
-    const regen = TREASURE_MODIFIERS[1];
-    const enc = {
-      kind: 'treasure' as const, subKind: 'item' as const,
-      baseName: sword.name, baseDescription: sword.description,
-      slot: sword.slot, statType: 'damage' as const,
-      baseStat: sword.base_damage_bonus, statGrowth: sword.damage_bonus_growth,
-      mod1: fine, mod2: regen,
-    };
-    const all = formatEncounter(enc, 6).join('\n');
-    expect(all).toContain('Fine');
-    expect(all).toContain('Regenerating');
-    expect(all).toContain('Sword');
-    // raw = 3 + (6-1)*2 = 13, *1.5 = round(19.5) = 20
-    expect(all).toContain('+20 DMG');
-    expect(all).toContain('+1 HP each hit');
-  });
-
-  it('item with passive modifier shows passive effect in display (via formatEncounter directly)', () => {
-    const sword = TREASURE_ITEMS[0];
-    const regen = TREASURE_MODIFIERS[1];
-    const fine = TREASURE_MODIFIERS[0];
-    const enc = {
-      kind: 'treasure' as const, subKind: 'item' as const,
-      baseName: sword.name, baseDescription: sword.description,
-      slot: sword.slot, statType: 'damage' as const,
-      baseStat: sword.base_damage_bonus, statGrowth: sword.damage_bonus_growth,
-      mod1: regen, mod2: fine,
-    };
-    const all = formatEncounter(enc, 3).join('\n');
-    expect(all).toContain('+1 HP each hit');
-  });
 });
 
 // ---- Shop gold chest scaling ----
@@ -702,27 +575,3 @@ describe('gold chest scaling', () => {
 
 // ---- Shop modifier application ----
 
-describe('shop modifier application', () => {
-  it('Fine multiplier scales damage bonus', () => {
-    const enc = makeItemEnc(0, TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]); // Fine, Regen
-    const stats = getTreasureItemStats(enc, 3);
-    // raw = 3 + 2*2 = 7, *1.5 = round(10.5) = 11
-    expect(stats.damageBonus).toBe(11);
-  });
-
-  it('getTreasureItemStats: stat_multiplier applies only to base stat', () => {
-    // Amulet of Vitality with Fine mod at level 1: base 5, no growth, *1.5 = 8
-    const enc = makeItemEnc(8, TREASURE_MODIFIERS[0], TREASURE_MODIFIERS[1]);
-    const stats = getTreasureItemStats(enc, 3);
-    // base = 5 + (3-1)*2 = 9, *1.5 = round(13.5) = 14
-    expect(stats.maxHpBonus).toBe(14);
-  });
-
-  it('Fortifying adds bonus on top of scaled stat', () => {
-    // Amulet of Vitality [8] with Fortifying [3]: base 5 + 2*(lvl-1), +5 bonus
-    const enc = makeItemEnc(8, TREASURE_MODIFIERS[3], TREASURE_MODIFIERS[1]);
-    const stats = getTreasureItemStats(enc, 3);
-    // base = 5 + (3-1)*2 = 9 (no multiplier), +5 Fortifying = 14
-    expect(stats.maxHpBonus).toBe(14);
-  });
-});

@@ -1,7 +1,7 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
 import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord } from './puzzle';
-import { consumeProgression, fetchPuzzle } from './progression';
+import { consumeProgression, fetchPuzzle, getOverridePuzzle } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
@@ -129,7 +129,6 @@ export default class Game {
   private intoneScrolls: number = 3;
   private shopPos: { x: number; y: number } | null = null;
   private shopItem: TreasureItemStats | null = null;       // one-time equipment offer
-  private shopItemLevel: number = 1;
   private shopModTarget: TreasureItemStats | null = null;  // item to receive modifier
   private shopModifier: typeof TREASURE_MODIFIERS[number] | null = null;
 
@@ -212,6 +211,7 @@ export default class Game {
     game.applyTilt();
     game.initRoomStates();
     game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
+    if (getOverridePuzzle()) game.gold = 3000;
     game.render();
     window.addEventListener('keydown', (e) => game.handleKey(e));
     return game;
@@ -284,20 +284,12 @@ export default class Game {
     } else {
       statType = 'max_mana'; baseStat = base.base_max_mana_bonus; statGrowth = base.max_mana_bonus_growth;
     }
-    // Use a dummy mod that has no effect (Fine with mult=1 would change stats; use first mod but level stays 1 so mods don't apply)
-    // Simpler: compute stats at level 1 to skip mod application, then re-scale to dungeonLevel manually.
-    // Actually: just pass a no-op: create enc with level such that no mods apply (level < 3).
-    // getTreasureItemStats only applies mod1 at level>=3, mod2 at level>=6. So passing level=1 skips all mods.
-    // We want stats at dungeonLevel but no mods — compute base stat directly.
-    const rawStat = Math.round(baseStat + (this.dungeonLevel - 1) * statGrowth);
-    const noMod = TREASURE_MODIFIERS[0]; // Fine — won't be applied since we use level=1 trick
     const itemEnc: import('./encounters').TreasureItemEncounter = {
       kind: 'treasure', subKind: 'item',
       baseName: base.name, baseDescription: base.description,
-      slot: base.slot, statType, baseStat: rawStat, statGrowth: 0, mod1: noMod, mod2: noMod,
+      slot: base.slot, statType, baseStat, statGrowth,
     };
-    this.shopItem = getTreasureItemStats(itemEnc, 1); // level=1 → no mods applied
-    this.shopItemLevel = this.dungeonLevel;
+    this.shopItem = getTreasureItemStats(itemEnc, this.dungeonLevel);
 
     // Random modifier upgrade — pick an equipped item that still has at least one mod it doesn't already have
     const equipped = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet].filter((i): i is TreasureItemStats => i !== null);
@@ -404,7 +396,6 @@ export default class Game {
     if (item.defenseBonus > 0) lines.push(`+${item.defenseBonus} DEF`);
     if (item.maxHpBonus > 0) lines.push(`+${item.maxHpBonus} max HP`);
     if (item.maxManaBonus > 0) lines.push(`+${item.maxManaBonus} max MANA`);
-    for (const e of item.passiveEffects) lines.push(e);
     return lines;
   }
 
@@ -611,6 +602,7 @@ export default class Game {
       this.pulseRunning = true;
       this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; }, [200, 0, 0], 2, 60);
       this.showInteraction(logLines);
+      this.render();
       return;
     }
 
@@ -740,7 +732,7 @@ export default class Game {
       const item = this.shopItem;
       const stats = this.itemStatLines(item).join(', ') || 'no bonuses';
       const current = this.equipped[item.slot];
-      html += this.shopItemLine(num++, `${item.name} Lv.${this.shopItemLevel} [${item.slot}] ${stats}`, 500) + '<br>';
+      html += this.shopItemLine(num++, `${item.name} Lv.${item.level} [${item.slot}] ${stats}`, 500) + '<br>';
       if (current) html += `<span style="color:#888">    replaces ${esc(current.name)}</span><br>`;
     }
 
@@ -802,7 +794,6 @@ export default class Game {
       }
       this.showInteraction([`Purchased and equipped: ${item.name}.`]);
     } else if (slot === (this.shopItem ? 6 : 5) && (this.shopModTarget && this.shopModifier)) {
-      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
       if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
       this.gold -= ITEM_PRICE;
       const target = this.shopModTarget;
