@@ -2,8 +2,8 @@ import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
 import { ENCOUNTER_STYLE, UNKNOWN_COLOR } from './encounters';
 
-const WALL_FG = '#666666';
-const UNKNOWN_FG = UNKNOWN_COLOR;
+const WALL_FG = '#6b3f14';
+const UNKNOWN_FG = '#518F91';
 const SOLVED_FG = '#ffffff';
 const DOT_FG = '#4444ff';
 const PLAYER_FG = '#ffdd44';
