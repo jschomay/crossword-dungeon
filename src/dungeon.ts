@@ -1,6 +1,6 @@
 import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
-import { ENCOUNTER_STYLE, UNKNOWN_COLOR } from './encounters';
+import { ENCOUNTER_STYLE } from './encounters';
 
 const WALL_FG = '#6b3f14';
 const UNKNOWN_FG = '#518F91';
@@ -12,6 +12,9 @@ const BLACK = '#000000';
 const BG_FG = '#333333';
 const BG_CHARS = [';', ',', "'", '^', '/', '%', '`', '~', '.', ':'];
 const BG_DENSITY = 0.01; // fraction of empty cells that get a char
+
+const TORCH_RADIUS = 6;
+const TORCH_MAX_BOOST = 90;
 
 const PULSE_COLOR: [number, number, number] = [255, 255, 255];
 const PULSE_INTERVAL_MS = 20;
@@ -102,15 +105,44 @@ export default class Dungeon {
     const { width, height } = this.puzzle.ipuz.dimensions;
     display.clear();
     this.drawBackground(display, camera);
+
+    // Record all drawn dungeon cells for torch pass
+    const cellMap = new Map<string, { ch: string; fg: string }>();
+    const recordDraw = (wx: number, wy: number, ch: string, fg: string) => {
+      cellMap.set(`${wx},${wy}`, { ch, fg });
+      const sx = camera ? wx - camera.x : wx;
+      const sy = camera ? wy - camera.y : wy;
+      display.draw(sx, sy, ch, fg, BLACK);
+    };
+
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
-          this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer, camera);
-          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera);
-          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera);
+          this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer, camera, recordDraw);
+          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera, recordDraw);
+          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera, recordDraw);
         }
       }
     }
+
+    // Torch: brighten cells based on FOV distance from player
+    const pwx = 1 + playerPos.x * 6 + 2;
+    const pwy = 1 + playerPos.y * 6 + 2;
+    const fov = new ROT.FOV.RecursiveShadowcasting(
+      (x, y) => !this.wallCells.has(`${x},${y}`),
+      { topology: 8 },
+    );
+    fov.compute(pwx, pwy, TORCH_RADIUS, (x, y, r) => {
+      const cell = cellMap.get(`${x},${y}`);
+      if (!cell || cell.fg === BLACK) return;
+      const boost = Math.round(TORCH_MAX_BOOST * Math.pow(1 - r / (TORCH_RADIUS + 1), 1.2));
+      if (boost <= 0) return;
+      const base = ROT.Color.fromString(cell.fg);
+      const brightened = ROT.Color.add(base, [boost, Math.round(boost * 0.7), Math.round(boost * 0.4)]);
+      const sx = camera ? x - camera.x : x;
+      const sy = camera ? y - camera.y : y;
+      display.draw(sx, sy, cell.ch, ROT.Color.toHex(brightened), BLACK);
+    });
   }
 
   isShop(gx: number, gy: number): boolean {
@@ -125,7 +157,7 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
-  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean, camera?: { x: number; y: number }): void {
+  private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean, camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wx = 1 + gx * 6;
     const wy = 1 + gy * 6;
     const dx = camera ? wx - camera.x : wx;
@@ -150,7 +182,7 @@ export default class Dungeon {
       for (let ly = 0; ly < 5; ly++) {
         const wall = this.isWall(lx, ly, connUp, connDown, connLeft, connRight);
         if (wall) {
-          display.draw(dx + lx, dy + ly, '#', WALL_FG, BLACK);
+          recordDraw(wx + lx, wy + ly, '#', WALL_FG);
           continue;
         }
 
@@ -170,10 +202,10 @@ export default class Dungeon {
           } else {
             ch = '?'; fg = UNKNOWN_FG;
           }
-          display.draw(dx + lx, dy + ly, ch, fg, BLACK);
+          recordDraw(wx + lx, wy + ly, ch, fg);
         } else if (shopRoom) {
         } else {
-          display.draw(dx + lx, dy + ly, ' ', BLACK, BLACK);
+          recordDraw(wx + lx, wy + ly, ' ', BLACK);
         }
       }
     }
@@ -181,7 +213,7 @@ export default class Dungeon {
     if (!shopRoom && solved === null) {
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
-        display.draw(dx + lx, dy + ly, '.', DOT_FG, BLACK);
+        recordDraw(wx + lx, wy + ly, '.', DOT_FG);
       }
     }
 
@@ -197,23 +229,19 @@ export default class Dungeon {
   }
 
   // Corridor column between (gx, gy) and (gx+1, gy): walls at rows 1 and 3, open at center
-  private drawHCorridor(display: ROT.Display, gx: number, gy: number, camera?: { x: number; y: number }): void {
+  private drawHCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wcx = 1 + gx * 6 + 5;
     const wry = 1 + gy * 6;
-    const cx = camera ? wcx - camera.x : wcx;
-    const ry = camera ? wry - camera.y : wry;
-    display.draw(cx, ry + 1, '#', WALL_FG, BLACK);
-    display.draw(cx, ry + 3, '#', WALL_FG, BLACK);
+    recordDraw(wcx, wry + 1, '#', WALL_FG);
+    recordDraw(wcx, wry + 3, '#', WALL_FG);
   }
 
   // Corridor row between (gx, gy) and (gx, gy+1): walls at cols 1 and 3, open at center
-  private drawVCorridor(display: ROT.Display, gx: number, gy: number, camera?: { x: number; y: number }): void {
+  private drawVCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wrx = 1 + gx * 6;
     const wcy = 1 + gy * 6 + 5;
-    const rx = camera ? wrx - camera.x : wrx;
-    const cy = camera ? wcy - camera.y : wcy;
-    display.draw(rx + 1, cy, '#', WALL_FG, BLACK);
-    display.draw(rx + 3, cy, '#', WALL_FG, BLACK);
+    recordDraw(wrx + 1, wcy, '#', WALL_FG);
+    recordDraw(wrx + 3, wcy, '#', WALL_FG);
   }
 
   private isWallCell(wx: number, wy: number): boolean {
