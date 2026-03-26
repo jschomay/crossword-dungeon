@@ -241,6 +241,17 @@ export default class Game {
         incorrectGuesses: [],
       });
     }
+
+    // Pre-solve occurrences of N random letters, where N = dungeon level
+    const rooms = this.puzzle.getRooms();
+    const letters = rooms.map(({ x, y }) => (this.puzzle.ipuz.solution[y][x] as string)).filter(Boolean);
+    const unique = rng.shuffle([...new Set(letters)]).slice(0, this.dungeonLevel);
+    for (const { x, y } of rooms) {
+      if (unique.includes(this.puzzle.ipuz.solution[y][x] as string)) {
+        this.getRoomState(x, y).solvedLetter = this.puzzle.ipuz.solution[y][x] as string;
+      }
+    }
+
     this.generateShopInventory();
   }
 
