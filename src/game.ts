@@ -1,7 +1,7 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
 import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord } from './puzzle';
-import { consumeProgression, fetchPuzzle, getOverridePuzzle } from './progression';
+import { consumeProgression, fetchPuzzle, getOverridePuzzle, isTutorial, completeTutorial } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
@@ -157,7 +157,7 @@ export default class Game {
     const { puzzleNumber, parityFlip } = consumeProgression();
     this.fullIpuz = await fetchPuzzle(puzzleNumber);
     const target = this.wordCount();
-    const parityOffset = parityFlip ? 1 : 0;
+    const parityOffset: 0 | 1 = (getOverridePuzzle() || isTutorial() || parityFlip) ? 1 : 0;
     let selected: Set<string>;
     let attempts = 0;
     do {
@@ -211,7 +211,7 @@ export default class Game {
     game.applyTilt();
     game.initRoomStates();
     game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
-    if (getOverridePuzzle()) game.gold = 3000;
+    if (getOverridePuzzle() === 'debug') game.gold = 3000;
     game.render();
     window.addEventListener('keydown', (e) => game.handleKey(e));
     return game;
@@ -346,6 +346,7 @@ export default class Game {
   }
 
   private async advancePuzzle(): Promise<void> {
+    if (isTutorial()) completeTutorial();
     this.gold += this.dungeonLevel * 100;
     this.dungeonLevel++;
     await this.regenDungeon();

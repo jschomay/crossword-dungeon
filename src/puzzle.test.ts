@@ -3,6 +3,7 @@ import { validateIpuz, computePotentialLevel, computePotentialLevels, getWords, 
 import Puzzle from './puzzle';
 import testPuzzleJson from '../tests/fixtures/test-potential.json';
 import demoJson from '../tests/fixtures/demo.json';
+import tutorialJson from '../public/puzzles/tutorial.json';
 
 // Layout (x=col, y=row):
 //   x: 0  1  2  3  4
@@ -356,5 +357,22 @@ describe('getIntoneWord', () => {
   it('returns the word when current cell is solved but word has unsolved cells', () => {
     const states = makeRoomStates({ '2,3': 'O' });
     expect(getIntoneWord(demoIpuz, { x: 2, y: 3 }, states)).not.toBeNull();
+  });
+});
+
+describe('tutorial puzzle', () => {
+  it('validates and loads without error', () => {
+    expect(() => validateIpuz(tutorialJson)).not.toThrow();
+  });
+
+  it('has rooms (non-black cells)', () => {
+    const ipuz = validateIpuz(tutorialJson);
+    const puzzle = new Puzzle(ipuz);
+    expect(puzzle.getRooms().length).toBeGreaterThan(0);
+  });
+
+  it('has words', () => {
+    const ipuz = validateIpuz(tutorialJson);
+    expect(getWords(ipuz).length).toBeGreaterThan(0);
   });
 });
