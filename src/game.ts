@@ -97,6 +97,7 @@ export default class Game {
   private encounterEl: HTMLElement;
   private dungeonEl: HTMLElement;
   private interactionLogEl: HTMLElement;
+  private helpOverlayEl: HTMLElement;
   private combatMonsterHp: number | null = null;
   private prevHp: number = BASE_HP;
   private maxMana: number = BASE_MANA;
@@ -191,6 +192,7 @@ export default class Game {
     this.cluesEl = document.getElementById('clues')!;
     this.encounterEl = document.getElementById('encounter')!;
     this.interactionLogEl = document.getElementById('interaction-log')!;
+    this.helpOverlayEl = document.getElementById('help-overlay')!;
   }
 
   private applyDisplaySize(): void {
@@ -213,6 +215,7 @@ export default class Game {
     game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
     if (getOverridePuzzle() === 'debug') game.gold = 3000;
     game.render();
+    if (isTutorial() || getOverridePuzzle() === 'tutorial') game.showHelp();
     window.addEventListener('keydown', (e) => game.handleKey(e));
     return game;
   }
@@ -888,8 +891,63 @@ export default class Game {
     setTimeout(() => showTurn(0), 700);
   }
 
+  private showHelp(): void {
+    const C_TITLE  = '#aaaaff';
+    const C_SECT   = '#ffdd44';
+    const C_KEY    = '#aaa';
+    const C_BODY   = '#888';
+    const s = (color: string, text: string) => `<span style="color:${color}">${esc(text)}</span>`;
+    const row = (key: string, desc: string) =>
+      s(C_KEY, key.padEnd(14)) + s(C_BODY, desc) + '\n';
+    const sect = (title: string) => s(C_SECT, title) + '\n';
+    const hr = `<hr style="border-color:#444;margin:4px 0">`;
+
+    const html =
+      `<span style="color:${C_TITLE};font-size:18px">Crossword Dungeon Help</span>\n` +
+      s(C_BODY, '[Esc] to close') + '\n' +
+      hr +
+      `<span style="color:${C_BODY}">Solve the crossword to escape the dungeon. Each room holds one letter of a word.\nSolving a letter raises the level of connected rooms — plan your path or face foes above your level.\n</span>` +
+      hr +
+      sect('MOVE') +
+      row('← ↑ ↓ →', 'Move') +
+      row('[SPACE]', 'Toggle map') +
+      hr +
+      sect('SOLVE ROOMS') +
+      row('[A-Z]', 'Guess letter') +
+      s(C_BODY, 'Each guess costs 1 MANA\nMANA = 0 → game over\n') +
+      hr +
+      sect('ENCOUNTERS') +
+      row('*  Monster', '') +
+      row('!  Trap', '') +
+      row('$  Treasure', '') +
+      s(C_BODY, 'Combat is automatic\nHP = 0 → game over\n') +
+      hr +
+      sect('ITEMS  (press number to use)') +
+      row('[1] Heal', '+20 HP') +
+      row('[2] Restore', '+10 MANA') +
+      row('[3] Inscribe', 'Reveal letter') +
+      row('[4] Intone', 'Reveal word') +
+      s(C_BODY, 'Reveal spells skip the encounter and grant no reward');
+
+    document.getElementById('help-content')!.innerHTML = html;
+    this.helpOverlayEl.classList.remove('hidden');
+  }
+
   private handleKey(e: KeyboardEvent): void {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === 'Escape') {
+      this.helpOverlayEl.classList.add('hidden');
+      return;
+    }
+
+    if (!this.helpOverlayEl.classList.contains('hidden')) return;
+
+    if (e.key === '?') {
+      this.showHelp();
+      return;
+    }
+
     if (this.combatRunning || this.pulseRunning) return;
 
     if (this.gameOver || this.puzzleComplete) {
@@ -1008,7 +1066,7 @@ export default class Game {
     const mapHint = this.showMap ? 'Exit map' : 'Full map';
     this.dungeonLevelEl.innerHTML =
       `<span style="color:#aaaaff">Dungeon Level ${this.dungeonLevel}</span>` +
-      `<span style="color:#777">  [SPACE] ${mapHint}</span>`;
+      `<span style="color:#777">  [SPACE] ${mapHint}  [?] Help</span>`;
   }
 
   private camera(): { x: number; y: number } | undefined {
