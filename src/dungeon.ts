@@ -143,6 +143,25 @@ export default class Dungeon {
       const sy = camera ? y - camera.y : y;
       display.draw(sx, sy, cell.ch, ROT.Color.toHex(brightened), BLACK);
     });
+
+    // Shop glow: second FOV source at the shop % symbol
+    if (this.shopPos) {
+      const swx = 1 + this.shopPos.x * 6 + 2;
+      const swy = 1 + this.shopPos.y * 6 + 2;
+      const shopColor = ROT.Color.fromString(SHOP_FG);
+      const SHOP_BOOST = TORCH_MAX_BOOST * 2.4;
+      fov.compute(swx, swy, 3, (x, y, r) => {
+        const cell = cellMap.get(`${x},${y}`);
+        if (!cell || cell.fg === BLACK) return;
+        const boost = Math.round(SHOP_BOOST * Math.pow(1 - r / 4, 1.2));
+        if (boost <= 0) return;
+        const base = ROT.Color.fromString(cell.fg);
+        const tinted = ROT.Color.add(base, [Math.round(boost * shopColor[0] / 255), Math.round(boost * shopColor[1] / 255), Math.round(boost * shopColor[2] / 255)]);
+        const sx = camera ? x - camera.x : x;
+        const sy = camera ? y - camera.y : y;
+        display.draw(sx, sy, cell.ch, ROT.Color.toHex(tinted), BLACK);
+      });
+    }
   }
 
   isShop(gx: number, gy: number): boolean {
@@ -204,6 +223,8 @@ export default class Dungeon {
           }
           recordDraw(wx + lx, wy + ly, ch, fg);
         } else if (shopRoom) {
+          const corner = (lx === 1 || lx === 3) && (ly === 1 || ly === 3);
+          if (corner) recordDraw(wx + lx, wy + ly, '+', WALL_FG);
         } else {
           recordDraw(wx + lx, wy + ly, ' ', BLACK);
         }
