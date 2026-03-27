@@ -243,11 +243,10 @@ describe('selectWords', () => {
     }
   });
 
-  it('seed word is always in the selected set', () => {
-    // rng returns 0 first → seed = eligible[0] = '5A'
+  it('always returns the target number of words when reachable', () => {
     const rng = seededRng([0, 0.5, 0.5, 0.5, 0.5]);
     const selected = selectWords(ipuz, 2, rng);
-    expect(selected.has('5A')).toBe(true);
+    expect(selected.size).toBe(2);
   });
 });
 

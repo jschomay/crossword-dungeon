@@ -156,18 +156,31 @@ function wordClue(ipuz: Ipuz, word: Word): string {
 // Across words must lie on a row matching parity; down words on a col matching parity.
 // Expansion only happens through intersection cells matching parity (col for across, row for down).
 // This ensures every selected word is always fully included — no partial word stubs.
-// parity=1 means odd rows/cols (default); parity=0 means even rows/cols.
-export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number, parity: 0 | 1 = 1): Set<string> {
-  const allWords = getWords(ipuz);
+export function getEligibleWordCount(ipuz: Ipuz, parity: 0 | 1): number {
+  return getEligibleWords(ipuz, parity).length;
+}
 
-  // Only eligible words: across on rows matching parity, down on cols matching parity,
-  // and clue must not reference another clue number (e.g. "See 58-Down").
-  const eligible = allWords.filter(w =>
+function getEligibleWords(ipuz: Ipuz, parity: 0 | 1): Word[] {
+  return getWords(ipuz).filter(w =>
     (w.direction === 'across' ? w.cells[0].y % 2 === parity : w.cells[0].x % 2 === parity) &&
     !CROSS_REF_CLUE_RE.test(wordClue(ipuz, w))
   );
+}
+
+// parity=1 means odd rows/cols (default); parity=0 means even rows/cols.
+// seedIndex: if provided, use that eligible word as the seed instead of picking randomly.
+export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number, parity: 0 | 1 = 1, seedIndex?: number): Set<string> {
+  // Only eligible words: across on rows matching parity, down on cols matching parity,
+  // and clue must not reference another clue number (e.g. "See 58-Down").
+  const eligible = getEligibleWords(ipuz, parity);
   if (eligible.length === 0) return new Set();
   const clampedTarget = Math.min(targetCount, eligible.length);
+
+  // Shuffle eligible words so seed order is random each call
+  for (let i = eligible.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [eligible[i], eligible[j]] = [eligible[j], eligible[i]];
+  }
 
   // Build a map: for each cell, which eligible words cover it
   const cellToWords = new Map<string, Word[]>();
@@ -179,9 +192,9 @@ export function selectWords(ipuz: Ipuz, targetCount: number, rng: () => number, 
     }
   }
 
-  // Seed: random word from all eligible words
-  const seedIndex = Math.floor(rng() * eligible.length);
-  const seed = eligible[seedIndex];
+  // Seed: use provided index or pick randomly
+  const resolvedSeedIndex = seedIndex !== undefined ? seedIndex % eligible.length : Math.floor(rng() * eligible.length);
+  const seed = eligible[resolvedSeedIndex];
   const selected = new Set<string>([seed.key]);
 
   // selectedCells: parity-matching cells of selected words, used for centroid

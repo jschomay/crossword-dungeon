@@ -1,6 +1,6 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
-import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord } from './puzzle';
+import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord, getEligibleWordCount } from './puzzle';
 import { consumeProgression, fetchPuzzle, getOverridePuzzle, isTutorial, completeTutorial } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
@@ -158,13 +158,25 @@ export default class Game {
     const { puzzleNumber, parityFlip } = consumeProgression();
     this.fullIpuz = await fetchPuzzle(puzzleNumber);
     const target = this.wordCount();
-    const parityOffset: 0 | 1 = (getOverridePuzzle() || isTutorial() || parityFlip) ? 1 : 0;
-    let selected: Set<string>;
-    let attempts = 0;
-    do {
-      selected = selectWords(this.fullIpuz, target, Math.random, parityOffset);
-      attempts++;
-    } while (selected.size < target && attempts < 20);
+    const isOverride = !!getOverridePuzzle() || isTutorial();
+    let parityOffset: 0 | 1 = (isOverride || parityFlip) ? 1 : 0;
+    let selected: Set<string> = new Set();
+    let seedIndex = 0;
+    while (selected.size < target) {
+      const eligibleCount = getEligibleWordCount(this.fullIpuz, parityOffset);
+      if (seedIndex < eligibleCount) {
+        const candidate = selectWords(this.fullIpuz, target, Math.random, parityOffset, seedIndex);
+        if (candidate.size > selected.size) selected = candidate;
+        seedIndex++;
+        if (isOverride && seedIndex >= eligibleCount) break; // accept best effort for overrides
+      } else {
+        // Exhausted all seeds for this puzzle/parity — advance progression and try next
+        const next = consumeProgression();
+        this.fullIpuz = await fetchPuzzle(next.puzzleNumber);
+        parityOffset = next.parityFlip ? 1 : 0;
+        seedIndex = 0;
+      }
+    }
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
     this.shopPos = this.pickShopPos();
