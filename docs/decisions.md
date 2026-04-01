@@ -46,6 +46,20 @@ Originally each room rendered two layers of dots in its interior cells: potentia
 
 **Reason:** Visual clutter. The potential dot layer added noise without meaningful gameplay signal — players don't need to see the theoretical maximum, only the current activation state. Using a single neutral color (blue) for activated dots decouples the dot display from encounter type, keeping the room center character as the sole encounter indicator.
 
+## Extra Room Architecture: Registry + Observer Pattern
+
+As the dungeon gains multiple special room types (shop, boss, future rooms), a registry pattern keeps the code extensible without scattered if/else chains.
+
+**ExtraRoomDef** (static, one per type): holds `glowColor`, `centerChar`, `lockedCenterChar`, `cornerChar`, and three handlers — `createState(context)`, `onEvent(room, event, context)`, `renderPanel(room, context)`, `handleInput(room, key, context)`.
+
+**ExtraRoom** (per-level instance): `type`, `pos`, `locked`, `state` (type-specific mutable data). Most state resets on level change; run-level state (e.g. arch puzzle progress) lives in `RunContext` instead.
+
+**DungeonEvent** observer: game emits `level:start`, `room:solved`, `puzzle:complete` events. Each active ExtraRoom's def receives the event via `onEvent` and mutates `room.locked` or `room.state` accordingly. Unlock conditions differ per type (shop: always unlocked on level start; boss: unlocks on `puzzle:complete`).
+
+**RunContext**: shared mutable game state passed into all handlers — player stats, puzzle ref, emit callback, log helpers. Avoids back-references from defs into Game.
+
+**Dungeon** takes `extraRooms: ExtraRoom[]` instead of `shopPos`. Iterates the array for `hasRoom`, rendering (center char, corners, glow FOV), and locked corridor visuals (`=` replacing open corridor cell).
+
 ## Encounter Panel: Hidden for Solved Rooms
 
 Originally solved rooms showed a summary in the encounter panel ("Defeated.", "Disarmed.", "Claimed.") with the encounter heading and a dim flavor line.
@@ -53,3 +67,7 @@ Originally solved rooms showed a summary in the encounter panel ("Defeated.", "D
 **Changed to:** The encounter panel is hidden entirely when standing in a solved room.
 
 **Reason:** Cleaner UI, and removes misleading flavor when a room was solved via Inscribe or Intone scrolls rather than direct combat or encounter resolution. "Defeated." after using a scroll is inaccurate. The dungeon map already communicates solved state visually via the revealed letter.
+
+## Room Locks: Room-Level, Extra Rooms Only
+
+Locks live on `ExtraRoom.locked` (boolean per room instance). `isLockedBetween` checks if either room adjacent to a corridor is locked, blocking all of that room's corridors equally. If future designs need per-corridor locks (e.g. unlock only the north door) or conditional unlocks (both neighboring rooms must be solved first), the model would need a corridor-keyed lock set on `Dungeon`. For now locks only apply to extra rooms.

@@ -5,6 +5,16 @@ import { consumeProgression, fetchPuzzle, getOverridePuzzle, isTutorial, complet
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
+  SHOP_DEF,
+  BOSS_DEF,
+  getDef,
+  selectArchWord,
+  type ExtraRoom,
+  type ArchPuzzleState,
+  type RunContext,
+  type DungeonEvent,
+} from './extraRooms';
+import {
   generateEncounter,
   formatEncounter,
   getMonsterStats,
@@ -116,7 +126,6 @@ export default class Game {
   private xp: number = 0;
   private gameOver: boolean = false;
   private gameOverReason: 'hp' | 'mana' | null = null;
-  private puzzleComplete: boolean = false;
   private dungeonLevel: number = 1;
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
@@ -128,10 +137,13 @@ export default class Game {
   private manaPotions: number = 2;
   private revealScrolls: number = 3;
   private intoneScrolls: number = 3;
-  private shopPos: { x: number; y: number } | null = null;
+  private extraRooms: ExtraRoom[] = [];
   private shopItem: TreasureItemStats | null = null;       // one-time equipment offer
   private shopModTarget: TreasureItemStats | null = null;  // item to receive modifier
   private shopModifier: typeof TREASURE_MODIFIERS[number] | null = null;
+  private archPuzzle: ArchPuzzleState | null = null;       // persists across dungeon levels
+  private gameWon: boolean = false;
+  private puzzleComplete: boolean = false;
 
   private fullIpuz!: ReturnType<typeof validateIpuz>;
 
@@ -179,11 +191,21 @@ export default class Game {
     }
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
-    this.shopPos = this.pickShopPos();
+
+    // Generate arch puzzle on first run (uses first puzzle's unused words)
+    if (!this.archPuzzle) {
+      const arch = selectArchWord(this.fullIpuz, selected);
+      if (arch) {
+        this.archPuzzle = { word: arch.word, clue: arch.clue, guessedLetters: new Set() };
+      }
+    }
+
+    this.extraRooms = this.buildExtraRooms();
+    this.emitDungeonEvent({ type: 'level:start' });
     this.shopItem = null;
     this.shopModTarget = null;
     this.shopModifier = null;
-    this.dungeon = new Dungeon(this.puzzle, this.shopPos);
+    this.dungeon = new Dungeon(this.puzzle, this.extraRooms);
     this.totalRooms = this.puzzle.getRooms().length;
     this.dungeonEl.innerHTML = '';
     this.showMap = false;
@@ -270,21 +292,20 @@ export default class Game {
     this.generateShopInventory();
   }
 
-  private pickShopPos(): { x: number; y: number } | null {
+  private pickAdjacentEmptyCell(exclude: Set<string>): { x: number; y: number } | null {
     const rooms = this.puzzle.getRooms();
     const { width, height } = this.puzzle.ipuz.dimensions;
     const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
-    // Collect all candidate cells: adjacent to a room, not already a room, within bounds
-    const candidates: { x: number; y: number }[] = [];
     const roomSet = new Set(rooms.map(r => `${r.x},${r.y}`));
+    const candidates: { x: number; y: number }[] = [];
     for (const { x, y } of rooms) {
       for (const { dx, dy } of dirs) {
         const nx = x + dx;
         const ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-        if (roomSet.has(`${nx},${ny}`)) continue;
+        const key = `${nx},${ny}`;
+        if (roomSet.has(key) || exclude.has(key)) continue;
         if (!candidates.find(c => c.x === nx && c.y === ny)) {
-          // Check this cell is not a puzzle letter (already verified above) and not '#'
           const v = this.puzzle.ipuz.solution[ny]?.[nx];
           if (v === null || v === '#') candidates.push({ x: nx, y: ny });
         }
@@ -292,6 +313,53 @@ export default class Game {
     }
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  private buildExtraRooms(): ExtraRoom[] {
+    const rooms: ExtraRoom[] = [];
+    const used = new Set<string>();
+
+    const shopPos = this.pickAdjacentEmptyCell(used);
+    if (shopPos) {
+      used.add(`${shopPos.x},${shopPos.y}`);
+      rooms.push({ type: 'shop', pos: shopPos, locked: false, glowColor: SHOP_DEF.glowColor, state: {} });
+    }
+
+    const bossPos = this.pickAdjacentEmptyCell(used);
+    if (bossPos) {
+      used.add(`${bossPos.x},${bossPos.y}`);
+      rooms.push({ type: 'boss', pos: bossPos, locked: true, glowColor: BOSS_DEF.glowColor, state: { failPending: false } });
+    }
+
+    return rooms;
+  }
+
+  private emitDungeonEvent(event: DungeonEvent): void {
+    const ctx = this.makeRunContext();
+    for (const room of this.extraRooms) {
+      getDef(room.type).onEvent(room, event, ctx);
+    }
+  }
+
+  private makeRunContext(): RunContext {
+    return {
+      dungeonLevel: this.dungeonLevel,
+      gold: this.gold,
+      archPuzzle: this.archPuzzle,
+      puzzleComplete: this.puzzleComplete,
+      showInteraction: (lines) => this.showInteraction(lines),
+      clearLogs: () => this.clearLogs(),
+      render: () => this.render(),
+      advancePuzzle: () => this.advancePuzzle(),
+      triggerVictory: () => this.triggerVictory(),
+      renderShopPanel: () => this.renderShopPanel(),
+      shopPurchase: (slot) => this.shopPurchase(slot),
+    };
+  }
+
+  private triggerVictory(): void {
+    this.gameWon = true;
+    this.render();
   }
 
   private generateShopInventory(): void {
@@ -335,6 +403,8 @@ export default class Game {
   private async restart(): Promise<void> {
     this.dungeonLevel = 1;
     this.equipped = { weapon: null, armor: null, amulet: null };
+    this.archPuzzle = null;
+    this.gameWon = false;
     await this.regenDungeon();
     this.initRoomStates();
     this.mana = BASE_MANA;
@@ -350,7 +420,6 @@ export default class Game {
     this.revealScrolls = 3;
     this.intoneScrolls = 3;
     this.gameOver = false;
-    this.puzzleComplete = false;
     this.combatRunning = false;
     this.combatMonsterHp = null;
     this.gameOverReason = null;
@@ -364,9 +433,9 @@ export default class Game {
     if (isTutorial()) completeTutorial();
     this.gold += this.dungeonLevel * 100;
     this.dungeonLevel++;
+    this.puzzleComplete = false;
     await this.regenDungeon();
     this.initRoomStates();
-    this.puzzleComplete = false;
     this.combatRunning = false;
     this.combatMonsterHp = null;
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
@@ -450,9 +519,11 @@ export default class Game {
       this.revealScrolls--;
       const letter = this.puzzle.ipuz.solution[y][x] as string;
       this.markRoomSolved(x, y, letter);
-      this.checkPuzzleComplete();
-      this.showInteraction([`You inscribe the '${letter}' rune. It burns into the stone.`]);
-      if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+      const completeLine = this.checkPuzzleComplete();
+      const lines = [`You inscribe the '${letter}' rune. It burns into the stone.`];
+      if (completeLine) lines.push(completeLine);
+      this.showInteraction(lines);
+      if (this.mana === 0) this.triggerManaGameOver();
       else this.render();
       return;
     } else if (slot === 4) {
@@ -481,9 +552,11 @@ export default class Game {
         const letter = this.puzzle.ipuz.solution[cell.y][cell.x] as string;
         this.markRoomSolved(cell.x, cell.y, letter);
       }
-      this.checkPuzzleComplete();
-      this.showInteraction([`Your voice echoes through the hall. The letters burn into the stone.`]);
-      if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+      const completeLine = this.checkPuzzleComplete();
+      const lines = [`Your voice echoes through the hall. The letters burn into the stone.`];
+      if (completeLine) lines.push(completeLine);
+      this.showInteraction(lines);
+      if (this.mana === 0) this.triggerManaGameOver();
       else this.render();
       return;
     }
@@ -507,12 +580,26 @@ export default class Game {
     return false;
   }
 
+  private interactionLines: string[] = [];
+
   private clearLogs(): void {
-    this.interactionLogEl.textContent = '';
+    this.interactionLines = [];
   }
 
   private showInteraction(lines: string[]): void {
-    this.interactionLogEl.textContent = lines.join('\n');
+    this.interactionLines = lines;
+  }
+
+  private renderInteractionLog(): void {
+    if (this.interactionLines.length > 0) {
+      this.interactionLogEl.textContent = this.interactionLines.join('\n');
+    } else {
+      const { x, y } = this.playerPos;
+      const inBossRoom = this.dungeon.getExtraRoomAt(x, y)?.type === 'boss';
+      this.interactionLogEl.textContent = (this.puzzleComplete && !inBossRoom)
+        ? 'Dungeon solved! Find a way out...'
+        : '';
+    }
   }
 
   private markRoomSolved(x: number, y: number, letter: string): void {
@@ -527,14 +614,15 @@ export default class Game {
     }
   }
 
-  private checkPuzzleComplete(): void {
-    if (this.countSolved() === this.totalRooms) this.puzzleComplete = true;
+  private checkPuzzleComplete(): string | null {
+    if (this.countSolved() === this.totalRooms) {
+      this.puzzleComplete = true;
+      this.emitDungeonEvent({ type: 'puzzle:complete' });
+      return `The dungeon trembles. You hear a lock click in the distance...`;
+    }
+    return null;
   }
 
-  private solveRoom(x: number, y: number, letter: string): void {
-    this.markRoomSolved(x, y, letter);
-    this.checkPuzzleComplete();
-  }
 
   private triggerGameOver(): void {
     this.gameOver = true;
@@ -621,7 +709,7 @@ export default class Game {
         this.triggerGameOver();
         return;
       }
-      if (this.mana === 0 && !this.puzzleComplete) {
+      if (this.mana === 0) {
         this.triggerManaGameOver();
         return;
       }
@@ -640,17 +728,20 @@ export default class Game {
         'Nearby chambers stir at the light.',
         'Something shifts in the rooms beyond.',
       ];
-      this.solveRoom(x, y, letter);
+      this.markRoomSolved(x, y, letter);
+      const completeLine = this.checkPuzzleComplete();
       const awaken = AWAKEN_LINES[x % AWAKEN_LINES.length];
       const logLines = [
         `The '${letter}' rune glows. Light seeps through the cracks.`,
         awaken,
       ];
-      if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+      if (completeLine) logLines.push(completeLine);
+      if (this.mana === 0) this.triggerManaGameOver();
       else {
         this.pulseRunning = true;
         this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
         this.showInteraction(logLines);
+        this.render();
       }
       return;
     }
@@ -691,8 +782,9 @@ export default class Game {
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
     if (preamble) logLines.unshift(preamble);
-    this.checkPuzzleComplete();
-    if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+    const completeLine = this.checkPuzzleComplete();
+    if (completeLine) logLines.push(completeLine);
+    if (this.mana === 0) this.triggerManaGameOver();
     else { this.showInteraction(logLines); this.render(); }
   }
 
@@ -879,12 +971,13 @@ export default class Game {
         this.combatMonsterHp = null;
         if (playerWon) {
           const leveledUp = this.gainXp(xpGained);
-          this.checkPuzzleComplete();
+          const completeLine = this.checkPuzzleComplete();
           this.combatRunning = false;
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+          if (completeLine) lines.push(completeLine);
           this.showInteraction(lines);
-          if (this.mana === 0 && !this.puzzleComplete) this.triggerManaGameOver();
+          if (this.mana === 0) this.triggerManaGameOver();
           this.render();
         } else if (manaGameOver) {
           this.combatRunning = false;
@@ -962,12 +1055,17 @@ export default class Game {
 
     if (this.combatRunning || this.pulseRunning) return;
 
-    if (this.gameOver || this.puzzleComplete) {
-      if (e.key === ' ') {
-        if (this.puzzleComplete) this.advancePuzzle();
-        else this.restart();
-      }
+    if (this.gameOver || this.gameWon) {
+      if (e.key === ' ') this.restart();
       return;
+    }
+
+    // Extra room: delegate input to the room's def handler
+    const currentExtraRoom = this.dungeon.getExtraRoomAt(this.playerPos.x, this.playerPos.y);
+    if (currentExtraRoom) {
+      const consumed = getDef(currentExtraRoom.type).handleInput(currentExtraRoom, e.key, this.makeRunContext());
+      if (consumed) return;
+      // not consumed — fall through to arrow key / map toggle handling
     }
 
     if (e.key === ' ') {
@@ -977,25 +1075,16 @@ export default class Game {
       return;
     }
 
-    // Shop room: number keys purchase, letter keys do nothing, arrows still work
-    if (this.shopPos && this.playerPos.x === this.shopPos.x && this.playerPos.y === this.shopPos.y) {
-      if (/^[1-9]$/.test(e.key)) {
-        this.clearLogs();
-        this.shopPurchase(parseInt(e.key));
-        return;
-      }
-      if (/^[a-z]$/.test(e.key)) return; // no guessing in shop
-      // fall through to arrow key handling
+    if (!currentExtraRoom) {
+      if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
+      if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
+      if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
+      if (e.key === '4') { this.clearLogs(); this.useConsumable(4); return; }
     }
-
-    if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
-    if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
-    if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
-    if (e.key === '4') { this.clearLogs(); this.useConsumable(4); return; }
 
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
-      if (this.dungeon.hasRoom(x, y) && !this.dungeon.isShop(x, y)) {
+      if (this.dungeon.hasRoom(x, y) && !currentExtraRoom) {
         this.clearLogs();
         this.tryGuess(x, y, e.key.toUpperCase());
         if (!this.pulseRunning) this.render();
@@ -1008,6 +1097,11 @@ export default class Game {
     const nx = this.playerPos.x + dir.dx;
     const ny = this.playerPos.y + dir.dy;
     if (this.dungeon.hasRoom(nx, ny)) {
+      if (this.dungeon.isLockedBetween(this.playerPos.x, this.playerPos.y, nx, ny)) {
+        this.showInteraction([`The passage to this room is locked.`]);
+        this.render();
+        return;
+      }
       this.clearLogs();
       this.playerPos = { x: nx, y: ny };
       this.render();
@@ -1091,11 +1185,27 @@ export default class Game {
   }
 
   private render(): void {
-    const ended = this.gameOver || this.puzzleComplete;
+    const ended = this.gameOver || this.gameWon;
     this.dungeon.render(this.display, this.playerPos, this.roomStates, ended, this.camera());
     this.renderHeroPanel();
 
-    // Status panel: game over / puzzle complete
+    // Status panel: game over / puzzle complete / victory
+    if (this.gameWon) {
+      const arch = this.archPuzzle;
+      this.statusEl.innerHTML =
+        `<span style="color:#ffdd44;font-size:20px">YOU ESCAPED!</span><br>` +
+        `<span style="color:#44ff88">You utter the magic spell — the door unlocks and you escape the dungeon!</span><br><br>` +
+        `<span style="color:#aaaaff">The word was: ${arch?.word ?? '?'}</span><br>` +
+        `<span style="color:#888">Dungeon levels survived: ${this.dungeonLevel}</span><br>` +
+        `<span style="color:#888">Player level: ${this.level}</span><br>` +
+        `<span style="color:#888">HP remaining: ${this.hp}/${this.effectiveMaxHp()}</span><br><br>` +
+        `<span style="color:#aaa">[SPACE] New run</span>`;
+      this.statusEl.classList.remove('hidden');
+      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
+      this.encounterEl.classList.add('hidden');
+      return;
+    }
+
     if (this.gameOver) {
       const reason = this.gameOverReason === 'mana'
         ? 'You have exhausted your magic.'
@@ -1107,22 +1217,18 @@ export default class Game {
       this.statusEl.classList.remove('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.encounterEl.classList.add('hidden');
-    } else if (this.puzzleComplete) {
-      const bonus = this.dungeonLevel * 100;
-      this.statusEl.innerHTML =
-        `<span style="color:#44ff88;font-size:20px">PUZZLE COMPLETE</span><br>` +
-        `<span style="color:#ffdd44">+${bonus} gold bonus!</span><br><br>` +
-        `<span style="color:#aaa">[SPACE] Continue to Dungeon Level ${this.dungeonLevel + 1}</span>`;
-      this.statusEl.classList.remove('hidden');
-      this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-      this.encounterEl.classList.add('hidden');
     } else {
       this.statusEl.classList.add('hidden');
       const { x, y } = this.playerPos;
-      const inShop = this.shopPos !== null && x === this.shopPos.x && y === this.shopPos.y;
-      if (inShop) {
+      const currentExtraRoom = this.dungeon.getExtraRoomAt(x, y);
+      if (currentExtraRoom) {
         this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-        this.renderShopPanel();
+        const html = getDef(currentExtraRoom.type).renderPanel(currentExtraRoom, this.makeRunContext());
+        if (html) {
+          this.encounterEl.classList.remove('hidden');
+          this.encounterEl.innerHTML = html;
+        }
+        this.renderInteractionLog();
         return;
       }
       this.encounterEl.classList.remove('hidden');
@@ -1133,7 +1239,7 @@ export default class Game {
       this.cluesEl.innerHTML = lines.join('<br>');
     }
 
-    if (!this.gameOver && !this.puzzleComplete) {
+    if (!this.gameOver) {
       const { x, y } = this.playerPos;
       const state = this.getRoomState(x, y);
       const style = ENCOUNTER_STYLE[state.encounter.kind];
@@ -1154,5 +1260,7 @@ export default class Game {
         this.encounterEl.innerHTML = html;
       }
     }
+
+    this.renderInteractionLog();
   }
 }

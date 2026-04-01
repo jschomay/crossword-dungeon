@@ -1,13 +1,13 @@
 import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
 import { ENCOUNTER_STYLE } from './encounters';
+import type { ExtraRoom } from './extraRooms';
 
 const WALL_FG = '#6b3f14';
 const UNKNOWN_FG = '#518F91';
 const SOLVED_FG = '#ffffff';
 const DOT_FG = '#4444ff';
 const PLAYER_FG = '#ffdd44';
-const SHOP_FG = '#44ffcc';
 const BLACK = '#000000';
 const BG_FG = '#333333';
 const BG_CHARS = [';', ',', "'", '^', '/', '%', '`', '~', '.', ':'];
@@ -27,17 +27,19 @@ const DOT_POSITIONS: [number, number][] = [
   [1, 3], [2, 3], [3, 3],
 ];
 
+const LOCKED_CORRIDOR_FG = '#777777';
+
 export default class Dungeon {
   readonly displayWidth: number;
   readonly displayHeight: number;
   private puzzle: Puzzle;
-  private shopPos: { x: number; y: number } | null;
+  private extraRooms: ExtraRoom[];
   private dungeonCells: Set<string>;
   private wallCells: Set<string>;
 
-  constructor(puzzle: Puzzle, shopPos: { x: number; y: number } | null = null) {
+  constructor(puzzle: Puzzle, extraRooms: ExtraRoom[] = []) {
     this.puzzle = puzzle;
-    this.shopPos = shopPos;
+    this.extraRooms = extraRooms;
     const { width, height } = puzzle.ipuz.dimensions;
     // Each grid cell = 5×5 room; adjacent rooms share a 1-cell corridor gap.
     // Total = gridSize * 6 - 1 cells, plus 1-cell padding each side = gridSize * 6 + 1
@@ -144,19 +146,23 @@ export default class Dungeon {
       display.draw(sx, sy, cell.ch, ROT.Color.toHex(brightened), BLACK);
     });
 
-    // Shop glow: second FOV source at the shop % symbol
-    if (this.shopPos) {
-      const swx = 1 + this.shopPos.x * 6 + 2;
-      const swy = 1 + this.shopPos.y * 6 + 2;
-      const shopColor = ROT.Color.fromString(SHOP_FG);
-      const SHOP_BOOST = TORCH_MAX_BOOST * 2.4;
-      fov.compute(swx, swy, 3, (x, y, r) => {
+    // Extra room glows: one FOV pass per extra room
+    for (const room of this.extraRooms) {
+      const rwx = 1 + room.pos.x * 6 + 2;
+      const rwy = 1 + room.pos.y * 6 + 2;
+      const glowRgb = ROT.Color.fromString(room.glowColor);
+      const GLOW_BOOST = TORCH_MAX_BOOST * 2.4;
+      fov.compute(rwx, rwy, 3, (x, y, r) => {
         const cell = cellMap.get(`${x},${y}`);
         if (!cell || cell.fg === BLACK) return;
-        const boost = Math.round(SHOP_BOOST * Math.pow(1 - r / 4, 1.2));
+        const boost = Math.round(GLOW_BOOST * Math.pow(1 - r / 4, 1.2));
         if (boost <= 0) return;
         const base = ROT.Color.fromString(cell.fg);
-        const tinted = ROT.Color.add(base, [Math.round(boost * shopColor[0] / 255), Math.round(boost * shopColor[1] / 255), Math.round(boost * shopColor[2] / 255)]);
+        const tinted = ROT.Color.add(base, [
+          Math.round(boost * glowRgb[0] / 255),
+          Math.round(boost * glowRgb[1] / 255),
+          Math.round(boost * glowRgb[2] / 255),
+        ]);
         const sx = camera ? x - camera.x : x;
         const sy = camera ? y - camera.y : y;
         display.draw(sx, sy, cell.ch, ROT.Color.toHex(tinted), BLACK);
@@ -164,12 +170,31 @@ export default class Dungeon {
     }
   }
 
+  /** Returns true if the corridor between two adjacent grid cells is locked. */
+  isLockedBetween(x1: number, y1: number, x2: number, y2: number): boolean {
+    const dx = x2 - x1, dy = y2 - y1;
+    if (dx === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked);
+    if (dx === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked);
+    if (dy === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked);
+    if (dy === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked);
+    return false;
+  }
+
+  /** Returns the ExtraRoom at (gx, gy), or null. */
+  getExtraRoomAt(gx: number, gy: number): ExtraRoom | null {
+    return this.extraRooms.find(r => r.pos.x === gx && r.pos.y === gy) ?? null;
+  }
+
   isShop(gx: number, gy: number): boolean {
-    return this.shopPos !== null && this.shopPos.x === gx && this.shopPos.y === gy;
+    return this.getExtraRoomAt(gx, gy)?.type === 'shop';
+  }
+
+  isBoss(gx: number, gy: number): boolean {
+    return this.getExtraRoomAt(gx, gy)?.type === 'boss';
   }
 
   hasRoom(gx: number, gy: number): boolean {
-    if (this.isShop(gx, gy)) return true;
+    if (this.getExtraRoomAt(gx, gy)) return true;
     const { width, height } = this.puzzle.ipuz.dimensions;
     if (gx < 0 || gy < 0 || gx >= width || gy >= height) return false;
     const v = this.puzzle.ipuz.solution[gy][gx];
@@ -191,7 +216,7 @@ export default class Dungeon {
     const connRight = this.hasRoom(gx + 1, gy);
 
     const state = roomStates.get(`${gx},${gy}`);
-    const shopRoom = this.isShop(gx, gy);
+    const extraRoom = this.getExtraRoomAt(gx, gy);
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
     const encounterKind = state?.encounter.kind ?? 'monster';
@@ -211,8 +236,9 @@ export default class Dungeon {
           let fg: string;
           if (hasPlayer) {
             ch = '@'; fg = PLAYER_FG;
-          } else if (shopRoom) {
-            ch = '%'; fg = SHOP_FG;
+          } else if (extraRoom) {
+            ch = extraRoom.locked ? extraRoom.type === 'boss' ? '/' : '%' : (extraRoom.type === 'shop' ? '%' : '/');
+            fg = extraRoom.type === 'shop' ? '#44ffcc' : '#ff4444';
           } else if (solved !== null) {
             ch = solved; fg = SOLVED_FG;
           } else if (activatedLevel > 0) {
@@ -222,7 +248,7 @@ export default class Dungeon {
             ch = '?'; fg = UNKNOWN_FG;
           }
           recordDraw(wx + lx, wy + ly, ch, fg);
-        } else if (shopRoom) {
+        } else if (extraRoom) {
           const corner = (lx === 1 || lx === 3) && (ly === 1 || ly === 3);
           if (corner) recordDraw(wx + lx, wy + ly, '+', WALL_FG);
         } else {
@@ -231,13 +257,12 @@ export default class Dungeon {
       }
     }
 
-    if (!shopRoom && solved === null) {
+    if (!extraRoom && solved === null) {
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
         recordDraw(wx + lx, wy + ly, '.', DOT_FG);
       }
     }
-
   }
 
   // Determines if local cell (lx, ly) within a 5×5 room is a wall
@@ -249,20 +274,33 @@ export default class Dungeon {
     return false;
   }
 
-  // Corridor column between (gx, gy) and (gx+1, gy): walls at rows 1 and 3, open at center
+  // Corridor column between (gx, gy) and (gx+1, gy)
+  // If the extra room on either side is locked, draw '=' at the open cell
   private drawHCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wcx = 1 + gx * 6 + 5;
     const wry = 1 + gy * 6;
     recordDraw(wcx, wry + 1, '#', WALL_FG);
     recordDraw(wcx, wry + 3, '#', WALL_FG);
+    // Open center cell — draw '=' if either adjacent extra room is locked
+    const leftLocked = this.getExtraRoomAt(gx, gy)?.locked ?? false;
+    const rightLocked = this.getExtraRoomAt(gx + 1, gy)?.locked ?? false;
+    if (leftLocked || rightLocked) {
+      recordDraw(wcx, wry + 2, '=', LOCKED_CORRIDOR_FG);
+    }
   }
 
-  // Corridor row between (gx, gy) and (gx, gy+1): walls at cols 1 and 3, open at center
+  // Corridor row between (gx, gy) and (gx, gy+1)
   private drawVCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wrx = 1 + gx * 6;
     const wcy = 1 + gy * 6 + 5;
     recordDraw(wrx + 1, wcy, '#', WALL_FG);
     recordDraw(wrx + 3, wcy, '#', WALL_FG);
+    // Open center cell — draw '=' if either adjacent extra room is locked
+    const upLocked = this.getExtraRoomAt(gx, gy)?.locked ?? false;
+    const downLocked = this.getExtraRoomAt(gx, gy + 1)?.locked ?? false;
+    if (upLocked || downLocked) {
+      recordDraw(wrx + 2, wcy, '=', LOCKED_CORRIDOR_FG);
+    }
   }
 
   private isWallCell(wx: number, wy: number): boolean {
@@ -303,15 +341,16 @@ export default class Dungeon {
           const lx = x - (1 + gx * 6);
           const ly = y - (1 + gy * 6);
           const state = roomStates.get(`${gx},${gy}`);
-          const shopCell = this.isShop(gx, gy);
+          const extraRoom = this.getExtraRoomAt(gx, gy);
           if (lx === 2 && ly === 2) {
             if (playerPos.x === gx && playerPos.y === gy) { ch = '@'; fg = PLAYER_FG; }
-            else if (shopCell) { ch = '%'; fg = SHOP_FG; }
+            else if (extraRoom?.type === 'shop') { ch = '%'; fg = '#44ffcc'; }
+            else if (extraRoom?.type === 'boss') { ch = '/'; fg = '#ff4444'; }
             else if (state?.solvedLetter) { ch = state.solvedLetter; fg = SOLVED_FG; }
             else if (state?.activatedLevel ?? 0 > 0) { const s = ENCOUNTER_STYLE[state!.encounter.kind]; ch = s.symbol; fg = s.color; }
             else { ch = '?'; fg = UNKNOWN_FG; }
-          } else if (shopCell) {
-            // non-center shop cells: leave blank
+          } else if (extraRoom) {
+            // non-center extra room cells: leave blank
           } else {
             const dotIdx = DOT_POSITIONS.findIndex(([dlx, dly]) => dlx === lx && dly === ly);
             if (dotIdx >= 0 && dotIdx < (state?.activatedLevel ?? 0) && state?.solvedLetter === null) {
