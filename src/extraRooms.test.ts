@@ -151,7 +151,7 @@ describe('SHOP_DEF.onEvent', () => {
 
 describe('BOSS_DEF.onEvent', () => {
   function makeBossRoom(): ExtraRoom {
-    return { type: 'boss', pos: { x: 1, y: 0 }, locked: true, glowColor: '#ff4444', state: {} };
+    return { type: 'boss', pos: { x: 1, y: 0 }, locked: true, glowColor: '#ff4444', state: { failPending: false, exitPending: false } };
   }
 
   it('locks on level:start', () => {
@@ -180,7 +180,7 @@ describe('BOSS_DEF.onEvent', () => {
 
 describe('BOSS_DEF.renderPanel', () => {
   function makeBossRoom(locked = false, failPending = false): ExtraRoom {
-    return { type: 'boss', pos: { x: 1, y: 0 }, locked, glowColor: '#ff4444', state: { failPending } };
+    return { type: 'boss', pos: { x: 1, y: 0 }, locked, glowColor: '#ff4444', state: { failPending, exitPending: false } };
   }
 
   it('shows locked message when room is locked', () => {
@@ -207,10 +207,11 @@ describe('BOSS_DEF.renderPanel', () => {
     expect(html).not.toContain('C _ _');
   });
 
-  it('shows fallback when no arch puzzle', () => {
+  it('shows exit teaser when no arch puzzle', () => {
     const ctx = { archPuzzle: null } as never;
     const html = BOSS_DEF.renderPanel(makeBossRoom(false), ctx);
-    expect(html).toContain('Sealed Door');
+    expect(html).toContain('exit');
+    expect(html).toContain('SPACE');
   });
 });
 
@@ -218,7 +219,7 @@ describe('BOSS_DEF.renderPanel', () => {
 
 describe('BOSS_DEF.handleInput', () => {
   function makeBossRoom(locked = false, failPending = false): ExtraRoom {
-    return { type: 'boss', pos: { x: 0, y: 0 }, locked, glowColor: '#ff4444', state: { failPending } };
+    return { type: 'boss', pos: { x: 0, y: 0 }, locked, glowColor: '#ff4444', state: { failPending, exitPending: false } };
   }
 
   function makeCtx(word: string, guessed: string[] = [], overrides: Partial<{ puzzleComplete: boolean }> = {}) {

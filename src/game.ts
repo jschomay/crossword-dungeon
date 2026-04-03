@@ -57,7 +57,7 @@ const BASE_MANA = 20;
 const BASE_HP = 50;
 const BASE_DMG = 10;
 const XP_PER_LEVEL = 100;
-const BASE_WORD_COUNT = 10;
+const BASE_WORD_COUNT = 5;
 const WORD_COUNT_STEP = 2;
 const MAX_WORD_COUNT = 20;
 
@@ -192,7 +192,9 @@ export default class Game {
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
 
-    // Generate arch puzzle on first run (uses first puzzle's unused words)
+    // Generate arch puzzle from the current level's unused words if not yet set.
+    // Deferred rather than first-level-only so the tutorial (which uses all its words)
+    // doesn't leave archPuzzle null for the whole run.
     if (!this.archPuzzle) {
       const arch = selectArchWord(this.fullIpuz, selected);
       if (arch) {
@@ -328,7 +330,7 @@ export default class Game {
     const bossPos = this.pickAdjacentEmptyCell(used);
     if (bossPos) {
       used.add(`${bossPos.x},${bossPos.y}`);
-      rooms.push({ type: 'boss', pos: bossPos, locked: true, glowColor: BOSS_DEF.glowColor, state: { failPending: false } });
+      rooms.push({ type: 'boss', pos: bossPos, locked: true, glowColor: BOSS_DEF.glowColor, state: { failPending: false, exitPending: false } });
     }
 
     return rooms;

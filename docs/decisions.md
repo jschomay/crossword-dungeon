@@ -68,6 +68,10 @@ Originally solved rooms showed a summary in the encounter panel ("Defeated.", "D
 
 **Reason:** Cleaner UI, and removes misleading flavor when a room was solved via Inscribe or Intone scrolls rather than direct combat or encounter resolution. "Defeated." after using a scroll is inaccurate. The dungeon map already communicates solved state visually via the revealed letter.
 
+## Arch Puzzle Generation: Deferred Until Unused Words Are Available
+
+The arch puzzle word is picked from words in the current level's puzzle that weren't used for dungeon generation. On the tutorial level all words are used, leaving no candidates. Rather than generating from a fixed first puzzle, generation is deferred — each `regenDungeon` call attempts to pick an arch word if one isn't set yet. This means the arch puzzle may not exist on level 1 (tutorial). The boss room handles the null case with a two-step "you found the exit but fall through" sequence before the arch puzzle becomes available on a later level.
+
 ## Room Locks: Room-Level, Extra Rooms Only
 
 Locks live on `ExtraRoom.locked` (boolean per room instance). `isLockedBetween` checks if either room adjacent to a corridor is locked, blocking all of that room's corridors equally. If future designs need per-corridor locks (e.g. unlock only the north door) or conditional unlocks (both neighboring rooms must be solved first), the model would need a corridor-keyed lock set on `Dungeon`. For now locks only apply to extra rooms.

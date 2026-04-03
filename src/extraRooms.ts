@@ -22,7 +22,7 @@ export type DungeonEvent =
 /** Type-specific per-level state for a room instance. */
 export type ShopRoomState = Record<string, never>; // all shop state lives on RunContext
 
-export type BossRoomState = { failPending: boolean };
+export type BossRoomState = { failPending: boolean; exitPending: boolean };
 
 export type ExtraRoomState = ShopRoomState | BossRoomState;
 
@@ -106,13 +106,15 @@ export function selectArchWord(
     const dir = w.direction === 'across' ? 'Across' : 'Down';
     const clue = ipuz.clues[dir].find(([n]) => n === w.number)?.[1] ?? '';
     if (!clue) continue;
-    candidates.push({ word: wordStr, clue, len: wordStr.length });
+    if (wordStr.length < 10) candidates.push({ word: wordStr, clue, len: wordStr.length });
   }
   if (candidates.length === 0) return null;
 
-  candidates.sort((a, b) => a.len - b.len);
-  const mid = candidates[Math.floor(candidates.length / 2)];
-  return { word: mid.word, clue: mid.clue };
+  // Sort descending by length, pick randomly from the top 3
+  candidates.sort((a, b) => b.len - a.len);
+  const pool = candidates.slice(0, 3);
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return { word: pick.word, clue: pick.clue };
 }
 
 /**
@@ -190,6 +192,7 @@ export const BOSS_DEF: ExtraRoomDef = {
     if (event.type === 'level:start') {
       room.locked = true;
       (room.state as BossRoomState).failPending = false;
+      (room.state as BossRoomState).exitPending = false;
     }
     if (event.type === 'puzzle:complete') room.locked = false;
   },
@@ -200,15 +203,25 @@ export const BOSS_DEF: ExtraRoomDef = {
     const s = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
     const bossState = room.state as BossRoomState;
 
-    if (!arch) {
-      return s(BOSS_COLOR, '/ The Sealed Door') + '<br>' +
-        s('#888', 'The magic seal glows faintly.') + '<br>';
-    }
-
     if (room.locked) {
       return s(BOSS_COLOR, '/ The Sealed Door') + '<br>' +
         s('#888', 'You hear a rumbling beyond the sealed door.') + '<br>' +
         s('#666', 'Complete the dungeon to break the seal.') + '<br>';
+    }
+
+    // No arch puzzle yet (e.g. tutorial level) — show exit teaser, then fall
+    if (!arch) {
+      if (bossState.exitPending) {
+        let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
+        html += s('#888', 'As you reach for the door, it seals with a magical lock!') + '<br>';
+        html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
+        html += s('#888', '[SPACE] Continue') + '<br>';
+        return html;
+      }
+      let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
+      html += s('#888', 'You found the exit! Freedom is within reach.') + '<br><br>';
+      html += s('#888', '[SPACE] Escape the dungeon') + '<br>';
+      return html;
     }
 
     if (bossState.failPending) {
@@ -245,8 +258,21 @@ export const BOSS_DEF: ExtraRoomDef = {
       return true; // consume all input while failure is pending
     }
 
+    // No arch puzzle yet — SPACE triggers exit-then-fall two-step
+    if (!arch) {
+      if (key === ' ') {
+        if (bossState.exitPending) {
+          bossState.exitPending = false;
+          ctx.advancePuzzle();
+        } else {
+          bossState.exitPending = true;
+          ctx.render();
+        }
+      }
+      return true;
+    }
+
     if (!/^[a-z]$/.test(key)) return false;
-    if (!arch) return true;
     if (room.locked) return true;
 
     const result = processBossGuess(arch, key.toUpperCase());

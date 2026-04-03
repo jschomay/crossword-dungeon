@@ -5,10 +5,18 @@ const PUZZLE_COUNT = 30;
 // Index 0 is reserved for the tutorial. Normal puzzles start at index 1.
 const TUTORIAL_INDEX = 0;
 
+// Session-only tutorial flag: true if ?puzzle=tutorial was in the URL on page load.
+// completeTutorial() clears it in memory so the run continues normally after beating it,
+// but reloading the page re-reads the URL param and starts tutorial again.
+let sessionTutorial: boolean = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('puzzle') === 'tutorial';
+
 export function getOverridePuzzle(): string | null {
   const val = new URLSearchParams(window.location.search).get('puzzle');
   if (val === null) return null;
-  if (val === 'debug' || val === 'tutorial') return val;
+  if (val === 'debug') return val;
+  // 'tutorial' is handled via sessionTutorial, not as a persistent override
+  if (val === 'tutorial') return null;
   throw new Error(`Unknown puzzle override: "${val}"`);
 }
 
@@ -21,14 +29,16 @@ function setProgressionIndex(index: number): void {
   localStorage.setItem(STORAGE_KEY, String(index));
 }
 
-/** True when the current session is the tutorial (first-time player, no override). */
+/** True when the current session should load the tutorial puzzle. */
 export function isTutorial(): boolean {
+  if (sessionTutorial) return true;
   return getOverridePuzzle() === null && getProgressionIndex() === TUTORIAL_INDEX;
 }
 
-/** Call when the tutorial puzzle is solved. Bumps progression past the tutorial. */
+/** Call when the tutorial puzzle is solved. Clears session flag and bumps progression. */
 export function completeTutorial(): void {
-  setProgressionIndex(1);
+  sessionTutorial = false;
+  if (getProgressionIndex() === TUTORIAL_INDEX) setProgressionIndex(1);
 }
 
 /** Returns { puzzleNumber (1-based), parityFlip } for current index, then bumps.
@@ -43,15 +53,15 @@ export function consumeProgression(): { puzzleNumber: number; parityFlip: boolea
 }
 
 export async function fetchPuzzle(puzzleNumber: number) {
+  if (isTutorial()) {
+    const res = await fetch('puzzles/tutorial.json');
+    if (!res.ok) throw new Error(`Failed to load tutorial puzzle: ${res.status}`);
+    return validateIpuz(await res.json());
+  }
   const override = getOverridePuzzle();
   if (override) {
     const res = await fetch(`puzzles/${override}.json`);
     if (!res.ok) throw new Error(`Failed to load puzzle puzzles/${override}.json: ${res.status}`);
-    return validateIpuz(await res.json());
-  }
-  if (isTutorial()) {
-    const res = await fetch('puzzles/tutorial.json');
-    if (!res.ok) throw new Error(`Failed to load tutorial puzzle: ${res.status}`);
     return validateIpuz(await res.json());
   }
   const res = await fetch(`puzzles/${puzzleNumber}.json`);
