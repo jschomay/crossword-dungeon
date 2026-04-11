@@ -107,7 +107,11 @@ export default class Game {
   private encounterEl: HTMLElement;
   private dungeonEl: HTMLElement;
   private interactionLogEl: HTMLElement;
+  private interactionPopupEl: HTMLElement;
+  private sidebarEl: HTMLElement;
   private helpOverlayEl: HTMLElement;
+  private popupOpen: boolean = false;
+  private popupFromSolve: boolean = false;
   private combatMonsterHp: number | null = null;
   private prevHp: number = BASE_HP;
   private maxMana: number = BASE_MANA;
@@ -228,6 +232,8 @@ export default class Game {
     this.cluesEl = document.getElementById('clues')!;
     this.encounterEl = document.getElementById('encounter')!;
     this.interactionLogEl = document.getElementById('interaction-log')!;
+    this.interactionPopupEl = document.getElementById('interaction-popup')!;
+    this.sidebarEl = document.getElementById('sidebar')!;
     this.helpOverlayEl = document.getElementById('help-overlay')!;
   }
 
@@ -582,20 +588,41 @@ export default class Game {
     return false;
   }
 
-  private interactionLines: string[] = [];
-
   private clearLogs(): void {
-    this.interactionLines = [];
+    this.dismissPopup();
   }
 
-  private showInteraction(lines: string[]): void {
-    this.interactionLines = lines;
+  private showInteraction(lines: string[], castLetter?: string): void {
+    const header = castLetter
+      ? `<span style="color:#ccaa66">You cast the '${esc(castLetter)}' rune  (-1 MANA)</span>\n`
+      : '';
+    const body = lines.map(l => `<span style="color:#ccaa66">${esc(l)}</span>`).join('\n');
+    const isCombat = lines.some(l => l.includes('fight') || l.includes('defeated') || l.includes('defeated by'));
+    const footer = isCombat && this.combatRunning
+      ? ''
+      : '\n\n<span style="color:#fff">[SPACE]</span><span style="color:#888"> Continue</span>';
+    this.popupFromSolve = !!castLetter;
+    this.openPopup(header + body + footer, isCombat);
+  }
+
+  private openPopup(html: string, combat = false): void {
+    this.popupOpen = true;
+    this.interactionPopupEl.innerHTML = html;
+    this.interactionPopupEl.classList.remove('hidden');
+    if (combat) this.sidebarEl.classList.add('popup-open');
+    else this.sidebarEl.classList.remove('popup-open');
+  }
+
+  private dismissPopup(): void {
+    this.popupOpen = false;
+    this.popupFromSolve = false;
+    this.combatMonsterHp = null;
+    this.interactionPopupEl.classList.add('hidden');
+    this.sidebarEl.classList.remove('popup-open');
   }
 
   private renderInteractionLog(): void {
-    if (this.interactionLines.length > 0) {
-      this.interactionLogEl.textContent = this.interactionLines.join('\n');
-    } else {
+    if (!this.popupOpen) {
       const { x, y } = this.playerPos;
       const inBossRoom = this.dungeon.getExtraRoomAt(x, y)?.type === 'boss';
       this.interactionLogEl.textContent = (this.puzzleComplete && !inBossRoom)
@@ -655,10 +682,9 @@ export default class Game {
 
       if (level === 0) {
         // Dark room — no encounter revealed, no damage
-        logLines.push(`You cast the '${letter}' rune into the darkness...`);
-        logLines.push(`It fades. Nothing changes.`);
+        logLines.push(`The rune glows briefly then fades into the darkness.`);
       } else {
-        logLines.push(`You cast the '${letter}' rune... but it fades away.`);
+        logLines.push(`The rune glows briefly but then fades away.`);
 
         if (enc.kind === 'monster') {
           const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
@@ -718,7 +744,7 @@ export default class Game {
 
       this.pulseRunning = true;
       this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; }, [200, 0, 0], 2, 60);
-      this.showInteraction(logLines);
+      this.showInteraction(logLines, letter);
       this.render();
       return;
     }
@@ -734,7 +760,7 @@ export default class Game {
       const completeLine = this.checkPuzzleComplete();
       const awaken = AWAKEN_LINES[x % AWAKEN_LINES.length];
       const logLines = [
-        `The '${letter}' rune glows. Light seeps through the cracks.`,
+        `The rune glows. Light seeps through the cracks.`,
         awaken,
       ];
       if (completeLine) logLines.push(completeLine);
@@ -742,7 +768,7 @@ export default class Game {
       else {
         this.pulseRunning = true;
         this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
-        this.showInteraction(logLines);
+        this.showInteraction(logLines, letter);
         this.render();
       }
       return;
@@ -774,7 +800,7 @@ export default class Game {
         },
         { dmg: stats.dmg, hp: stats.hp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
       );
-      this.runCombatAnimation(enc as MonsterEncounter, result, stats.hp, preamble);
+      this.runCombatAnimation(enc as MonsterEncounter, result, stats.hp, letter, preamble);
       return;
     }
 
@@ -787,7 +813,7 @@ export default class Game {
     const completeLine = this.checkPuzzleComplete();
     if (completeLine) logLines.push(completeLine);
     if (this.mana === 0) this.triggerManaGameOver();
-    else { this.showInteraction(logLines); this.render(); }
+    else { this.showInteraction(logLines, letter); this.render(); }
   }
 
   private resolveTrap(enc: TrapEncounter, level: number): string[] {
@@ -832,7 +858,7 @@ export default class Game {
   private shopItemLine(num: number, label: string, price: number): string {
     const priceColor = this.gold >= price ? '#ffdd44' : '#ff6666';
     const priceStr = `<span style="color:${priceColor}">${price} GOLD</span>`;
-    return `<span style="color:#aaa">[${num}] ${esc(label)}</span>  ${priceStr}`;
+    return `<span style="color:#fff">[${num}]</span><span style="color:#888"> ${esc(label)}</span>  ${priceStr}`;
   }
 
   private renderShopPanel(): void {
@@ -948,6 +974,7 @@ export default class Game {
     enc: MonsterEncounter,
     result: ReturnType<typeof resolveCombat>,
     initialMonsterHp: number,
+    letter: string,
     preamble?: string,
   ): void {
     this.combatRunning = true;
@@ -956,9 +983,9 @@ export default class Game {
     this.combatMonsterHp = initialMonsterHp;
 
     const openingLines = preamble
-      ? [preamble, `You fight the ${enc.baseName}!`]
-      : [`You fight the ${enc.baseName}!`];
-    this.showInteraction(openingLines);
+      ? [preamble, `You fight the ${enc.baseName}...`]
+      : [`You fight the ${enc.baseName}...`];
+    this.showInteraction(openingLines, letter);
     this.render();
 
     const showTurn = (idx: number) => {
@@ -970,7 +997,7 @@ export default class Game {
         this.render();
         setTimeout(() => showTurn(idx + 1), 700);
       } else {
-        this.combatMonsterHp = null;
+        this.combatMonsterHp = 0;
         if (playerWon) {
           const leveledUp = this.gainXp(xpGained);
           const completeLine = this.checkPuzzleComplete();
@@ -978,7 +1005,7 @@ export default class Game {
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
           if (completeLine) lines.push(completeLine);
-          this.showInteraction(lines);
+          this.showInteraction(lines, letter);
           if (this.mana === 0) this.triggerManaGameOver();
           this.render();
         } else if (manaGameOver) {
@@ -989,7 +1016,7 @@ export default class Game {
           this.combatRunning = false;
           this.gameOver = true;
           this.gameOverReason = 'hp';
-          this.showInteraction([`You were defeated by the ${enc.baseName}.`]);
+          this.showInteraction([`You were defeated by the ${enc.baseName}.`], letter);
           this.render();
         }
       }
@@ -1001,33 +1028,60 @@ export default class Game {
   private showHelp(): void {
     const C_TITLE  = '#aaaaff';
     const C_SECT   = '#ffdd44';
-    const C_KEY    = '#aaa';
     const C_BODY   = '#888';
     const s = (color: string, text: string) => `<span style="color:${color}">${esc(text)}</span>`;
-    const row = (key: string, desc: string) =>
-      s(C_KEY, key.padEnd(14)) + s(C_BODY, desc) + '\n';
-    const sect = (title: string) => s(C_SECT, title) + '\n';
+    const bracketKey = (k: string) =>
+      k.replace(/\[([^\]]+)\]/g, `<span style="color:#fff">[$1]</span>`) +
+      ' '.repeat(Math.max(0, 14 - k.length));
+    const row = (k: string, desc: string) =>
+      `<span style="color:#888">${bracketKey(k)}</span>` + s(C_BODY, desc) + '\n';
+    const sect = (title: string) =>
+      `<span style="color:${C_SECT}">${title.replace(/\[([^\]]+)\]/g, `</span><span style="color:#fff">[$1]</span><span style="color:${C_SECT}">`)}</span>` + '\n';
     const hr = `<hr style="border-color:#444;margin:4px 0">`;
 
+    const C_MONSTER = '#ff6666';
+    const C_TRAP = '#cc66ff';
+    const C_TREASURE = '#ffaa00';
+    const C_PLAYER = '#ffdd44';
+
+    const imgAndLegend =
+      `<div style="display:inline-block;vertical-align:top">` +
+      `<img src="dungeon-rooms.jpg" style="display:block;height:80px;image-rendering:pixelated">` +
+      `<div style="margin-top:4px">` +
+      `<span style="color:${C_PLAYER}">@</span>${s(C_BODY,' you  ')}` +
+      `<span style="color:${C_TREASURE}">$</span>${s(C_BODY,' treasure  ')}` +
+      `<span style="color:${C_TRAP}">!</span>${s(C_BODY,' trap  ')}` +
+      `<span style="color:${C_MONSTER}">*</span>${s(C_BODY,' monster')}` +
+      `</div>` +
+      `<div style="margin-top:4px">${s(C_BODY, 'The dots around a room show its level')}</div>` +
+      `</div>`;
+
+    const monsterPanelHtml =
+      `<div style="display:inline-block;vertical-align:top;margin-left:32px;border:1px solid #444;padding:6px 10px;font-size:12px;line-height:1.7;width:240px">` +
+      `<span style="color:${C_MONSTER}">* [MONSTER] Goblin  Lv.1</span>\n` +
+      `<span style="color:${C_HP}">HP: ██████████  12</span>\n` +
+      `<span style="color:#ff8833">DMG: 3</span>\n\n` +
+      `<span style="color:#888">REWARD</span>\n` +
+      `<span style="color:#9966ff">+ 10 XP  on defeat</span>` +
+      `</div>`;
+
+
     const html =
-      `<span style="color:${C_TITLE};font-size:18px">Crossword Dungeon Help</span>\n` +
-      s(C_BODY, '[Esc] to close') + '\n' +
+      `<span style="color:${C_TITLE};font-size:18px">How to play Crossword Dungeon</span>\n` +
+      `<span style="color:#fff">[Esc]</span><span style="color:#888"> to close</span>` + '\n' +
       hr +
-      `<span style="color:${C_BODY}">Solve the crossword to escape the dungeon. Each room holds one letter of a word.\nSolving a letter raises the level of connected rooms — plan your path or face foes above your level.\n</span>` +
+      `<span style="color:${C_BODY}">Solve the crossword to escape the dungeon. Each room holds one letter of a word and a dungeon encounter.\n</span>` +
+      s(C_BODY, 'Solving a letter raises the level of connected rooms — if you play it like a crossword, the dungeon will overpower you.') + '\n' +
+      `<div style="margin:6px 0">` + imgAndLegend + monsterPanelHtml + `</div>` + '\n' +
+      s(C_BODY, 'For example, if you solve the treasure first, the monster and trap will level up.\nFace them first while they\'re still weak.') + '\n' +
       hr +
       sect('MOVE') +
       row('← ↑ ↓ →', 'Move') +
-      row('[SPACE]', 'Toggle map') +
+      row('[SPACE]', 'Show full map') +
       hr +
       sect('SOLVE ROOMS') +
       row('[A-Z]', 'Guess letter') +
-      s(C_BODY, 'Each guess costs 1 MANA\nMANA = 0 → game over\n') +
-      hr +
-      sect('ENCOUNTERS') +
-      row('*  Monster', '') +
-      row('!  Trap', '') +
-      row('$  Treasure', '') +
-      s(C_BODY, 'Combat is automatic\nHP = 0 → game over\n') +
+      s(C_BODY, 'Each guess costs 1 MANA\nMANA = 0 → game over\nCombat is automatic\nHP = 0 → game over\n') +
       hr +
       sect('ITEMS  (press number to use)') +
       row('[1] Heal', '+20 HP') +
@@ -1057,8 +1111,15 @@ export default class Game {
 
     if (this.combatRunning || this.pulseRunning) return;
 
-    if (this.gameOver || this.gameWon) {
-      if (e.key === ' ') this.restart();
+    if (this.popupOpen) {
+      if (e.key === ' ') {
+        if (this.gameOver || this.gameWon) {
+          this.restart();
+        } else {
+          this.dismissPopup();
+          this.render();
+        }
+      }
       return;
     }
 
@@ -1130,7 +1191,7 @@ export default class Game {
 
     const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:24%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
     const itemBox = (key: string, label: string, effect: string, count: number) =>
-      `<div style="${boxStyle}"><span style="color:#aaa">[${key}] ${esc(label)} ×${count}</span><br>` +
+      `<div style="${boxStyle}"><span style="color:#fff">[${key}]</span><span style="color:#888"> ${esc(label)} ×${count}</span><br>` +
       `<span style="color:#777">${esc(effect)}</span></div>`;
     const bagHtml =
       `<div style="display:flex;justify-content:space-between;width:100%">` +
@@ -1174,7 +1235,7 @@ export default class Game {
     const mapHint = this.showMap ? 'Exit map' : 'Full map';
     this.dungeonLevelEl.innerHTML =
       `<span style="color:#aaaaff">Dungeon Level ${this.dungeonLevel}</span>` +
-      `<span style="color:#777">  [SPACE] ${mapHint}  [?] Help</span>`;
+      `  <span style="color:#fff">[SPACE]</span><span style="color:#888"> ${mapHint}  </span><span style="color:#fff">[?]</span><span style="color:#888"> Help</span>`;
   }
 
   private camera(): { x: number; y: number } | undefined {
@@ -1194,17 +1255,17 @@ export default class Game {
     // Status panel: game over / puzzle complete / victory
     if (this.gameWon) {
       const arch = this.archPuzzle;
-      this.statusEl.innerHTML =
-        `<span style="color:#ffdd44;font-size:20px">YOU ESCAPED!</span><br>` +
-        `<span style="color:#44ff88">You utter the magic spell — the door unlocks and you escape the dungeon!</span><br><br>` +
-        `<span style="color:#aaaaff">The word was: ${arch?.word ?? '?'}</span><br>` +
-        `<span style="color:#888">Dungeon levels survived: ${this.dungeonLevel}</span><br>` +
-        `<span style="color:#888">Player level: ${this.level}</span><br>` +
-        `<span style="color:#888">HP remaining: ${this.hp}/${this.effectiveMaxHp()}</span><br><br>` +
-        `<span style="color:#aaa">[SPACE] New run</span>`;
-      this.statusEl.classList.remove('hidden');
+      this.statusEl.classList.add('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-      this.encounterEl.classList.add('hidden');
+      this.openPopup(
+        `<span style="color:#ffdd44;font-size:20px">YOU ESCAPED!</span>\n` +
+        `<span style="color:#44ff88">You utter the magic spell — the door unlocks and you escape the dungeon!</span>\n\n` +
+        `<span style="color:#aaaaff">The word was: ${esc(arch?.word ?? '?')}</span>\n` +
+        `<span style="color:#888">Dungeon levels survived: ${this.dungeonLevel}</span>\n` +
+        `<span style="color:#888">Player level: ${this.level}</span>\n` +
+        `<span style="color:#888">HP remaining: ${this.hp}/${this.effectiveMaxHp()}</span>\n\n` +
+        `<span style="color:#fff">[SPACE]</span><span style="color:#888"> New run</span>`
+      );
       return;
     }
 
@@ -1212,13 +1273,13 @@ export default class Game {
       const reason = this.gameOverReason === 'mana'
         ? 'You have exhausted your magic.'
         : 'You have been slain.';
-      this.statusEl.innerHTML =
-        `<span style="color:#ff3333;font-size:20px">GAME OVER</span><br>` +
-        `<span style="color:#888">${reason}</span><br><br>` +
-        `<span style="color:#aaa">[SPACE] Restart</span>`;
-      this.statusEl.classList.remove('hidden');
+      this.statusEl.classList.add('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-      this.encounterEl.classList.add('hidden');
+      this.openPopup(
+        `<span style="color:#ff3333;font-size:20px">GAME OVER</span>\n` +
+        `<span style="color:#888">${esc(reason)}</span>\n\n` +
+        `<span style="color:#fff">[SPACE]</span><span style="color:#888"> Restart</span>`
+      );
     } else {
       this.statusEl.classList.add('hidden');
       const { x, y } = this.playerPos;
@@ -1247,7 +1308,7 @@ export default class Game {
       const style = ENCOUNTER_STYLE[state.encounter.kind];
       this.encounterEl.style.color = '';
 
-      if (state.solvedLetter !== null && !this.combatRunning) {
+      if (state.solvedLetter !== null && !this.combatRunning && !this.popupFromSolve) {
         this.encounterEl.classList.add('hidden');
       } else {
         this.encounterEl.classList.remove('hidden');

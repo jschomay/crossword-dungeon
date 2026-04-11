@@ -258,9 +258,10 @@ export default class Dungeon {
     }
 
     if (!extraRoom && solved === null) {
+      const dotColor = state?.encounter ? ENCOUNTER_STYLE[state.encounter.kind].color : DOT_FG;
       for (let i = 0; i < activatedLevel; i++) {
         const [lx, ly] = DOT_POSITIONS[i];
-        recordDraw(wx + lx, wy + ly, '.', DOT_FG);
+        recordDraw(wx + lx, wy + ly, '.', dotColor);
       }
     }
   }
@@ -354,7 +355,7 @@ export default class Dungeon {
           } else {
             const dotIdx = DOT_POSITIONS.findIndex(([dlx, dly]) => dlx === lx && dly === ly);
             if (dotIdx >= 0 && dotIdx < (state?.activatedLevel ?? 0) && state?.solvedLetter === null) {
-              ch = '.'; fg = DOT_FG;
+              ch = '.'; fg = state?.encounter ? ENCOUNTER_STYLE[state.encounter.kind].color : DOT_FG;
             }
           }
         }

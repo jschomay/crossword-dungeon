@@ -215,12 +215,12 @@ export const BOSS_DEF: ExtraRoomDef = {
         let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
         html += s('#888', 'As you reach for the door, it seals with a magical lock!') + '<br>';
         html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
-        html += s('#888', '[SPACE] Continue') + '<br>';
+        html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Continue') + '<br>';
         return html;
       }
       let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
       html += s('#888', 'You found the exit! Freedom is within reach.') + '<br><br>';
-      html += s('#888', '[SPACE] Escape the dungeon') + '<br>';
+      html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Escape the dungeon') + '<br>';
       return html;
     }
 
@@ -228,7 +228,7 @@ export const BOSS_DEF: ExtraRoomDef = {
       let html = s(BOSS_COLOR, '/ The Sealed Door') + '<br>';
       html += s('#888', 'The rune corrupts the spell.') + '<br>';
       html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
-      html += s('#888', '[SPACE] Continue') + '<br>';
+      html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Continue') + '<br>';
       return html;
     }
 
@@ -283,6 +283,7 @@ export const BOSS_DEF: ExtraRoomDef = {
     }
     if (result === 'correct') {
       if (isWordSolved(arch.word, arch.guessedLetters)) {
+        ctx.render();
         ctx.triggerVictory();
       } else {
         ctx.showInteraction([`The rune glows and burns into the seal.`]);
