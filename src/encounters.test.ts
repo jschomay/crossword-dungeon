@@ -573,5 +573,27 @@ describe('gold chest scaling', () => {
   });
 });
 
+// ---- formatEncounter puzzleMult ----
+
+describe('formatEncounter puzzleMult', () => {
+  it('monster: stats scale with puzzleMult', () => {
+    // Rat: base_hp=8, base_dmg=2, base_xp=8 — with puzzleMult=2 all should double
+    const rng = mockRng([MONSTER_TYPES[0]]);
+    const m = generateMonster(rng);
+    const all = formatEncounter(m, 1, undefined, 2).join('\n');
+    expect(all).toContain('HP: ██████████  16');
+    expect(all).toContain('DMG: 4');
+    expect(all).toContain('16 XP');
+  });
+
+  it('trap: dmg scales with puzzleMult', () => {
+    // Dart Trap: base_dmg=4 — with puzzleMult=2 should show DMG: 8
+    const rng = mockRng([TRAP_TYPES[0]]);
+    const t = generateTrap(rng);
+    const all = formatEncounter(t, 1, undefined, 2).join('\n');
+    expect(all).toContain('DMG: 8');
+  });
+});
+
 // ---- Shop modifier application ----
 

@@ -1312,7 +1312,7 @@ export default class Game {
         this.encounterEl.classList.add('hidden');
       } else {
         this.encounterEl.classList.remove('hidden');
-        const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined);
+        const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined, this.puzzleMult());
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
         const flashMonsterHp = this.combatMonsterHp !== this.prevCombatMonsterHp;

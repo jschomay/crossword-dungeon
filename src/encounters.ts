@@ -201,7 +201,7 @@ export function getMonsterStats(
     hp:  round((baseHp  + hpBonus)  * puzzleMult),
     dmg: round((baseDmg + dmgBonus) * puzzleMult),
     def: round((baseDef + defBonus) * puzzleMult),
-    xp:  round(baseXp),
+    xp:  round(baseXp * puzzleMult),
     manaDrain,
   };
 }
@@ -360,7 +360,7 @@ const FLAVOR_TEXTS = [
   'The room is empty... for now!',
 ];
 
-export function formatEncounter(encounter: Encounter, displayLevel: number, currentHp?: number): string[] {
+export function formatEncounter(encounter: Encounter, displayLevel: number, currentHp?: number, puzzleMult: number = 1): string[] {
   if (displayLevel === 0) {
     const idx = Math.abs(encounter.baseName.charCodeAt(0)) % FLAVOR_TEXTS.length;
     return [FLAVOR_TEXTS[idx]];
@@ -369,7 +369,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
   const lines: string[] = [];
 
   if (encounter.kind === 'monster') {
-    const stats = getMonsterStats(encounter, displayLevel);
+    const stats = getMonsterStats(encounter, displayLevel, puzzleMult);
     const activeMods: typeof MONSTER_MODIFIERS[number][] = [];
     if (displayLevel >= 3) activeMods.push(encounter.mod1);
     if (displayLevel >= 6) activeMods.push(encounter.mod2);
@@ -393,7 +393,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(`+ ${stats.xp} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
-    const stats = getTrapStats(encounter, displayLevel);
+    const stats = getTrapStats(encounter, displayLevel, puzzleMult);
     const activeMods: typeof TRAP_MODIFIERS[number][] = [];
     if (displayLevel >= 3) activeMods.push(encounter.mod1);
     if (displayLevel >= 6) activeMods.push(encounter.mod2);
