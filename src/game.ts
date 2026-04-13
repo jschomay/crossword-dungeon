@@ -53,10 +53,13 @@ function roomKey(x: number, y: number): string {
 const VIEWPORT_W = 43;
 const VIEWPORT_H = 43;
 
-const BASE_MANA = 20;
+const BASE_MANA = 15;
 const BASE_HP = 50;
-const BASE_DMG = 10;
-const XP_PER_LEVEL = 100;
+const BASE_DMG = 8;
+
+export function xpThreshold(level: number): number {
+  return Math.round(100 * 1.2 ** level / 10) * 10;
+}
 const BASE_WORD_COUNT = 5;
 const WORD_COUNT_STEP = 2;
 const MAX_WORD_COUNT = 20;
@@ -126,6 +129,7 @@ export default class Game {
   private hp: number = BASE_HP;
   private maxHp: number = BASE_HP;
   private dmg: number = BASE_DMG;
+  private baseDef: number = 0;
   private level: number = 1;
   private xp: number = 0;
   private gameOver: boolean = false;
@@ -420,6 +424,7 @@ export default class Game {
     this.hp = BASE_HP;
     this.maxHp = BASE_HP;
     this.dmg = BASE_DMG;
+    this.baseDef = 0;
     this.level = 1;
     this.xp = 0;
     this.gold = 0;
@@ -473,7 +478,8 @@ export default class Game {
   }
 
   private effectiveDef(): number {
-    return (this.equipped.armor?.defenseBonus ?? 0)
+    return this.baseDef
+      + (this.equipped.armor?.defenseBonus ?? 0)
       + (this.equipped.amulet?.defenseBonus ?? 0);
   }
 
@@ -575,12 +581,13 @@ export default class Game {
 
   private gainXp(amount: number): boolean {
     this.xp += amount;
-    const threshold = this.level * XP_PER_LEVEL;
+    const threshold = xpThreshold(this.level);
     if (this.xp >= threshold) {
       this.level++;
       this.maxHp += 10;
       this.maxMana += 5;
       this.dmg += 1;
+      this.baseDef += 1;
       this.hp = this.effectiveMaxHp();
       this.mana = this.effectiveMaxMana();
       return true;
@@ -879,14 +886,14 @@ export default class Game {
       const item = this.shopItem;
       const stats = this.itemStatLines(item).join(', ') || 'no bonuses';
       const current = this.equipped[item.slot];
-      html += this.shopItemLine(num++, `${item.name} Lv.${item.level} [${item.slot}] ${stats}`, 500) + '<br>';
+      html += this.shopItemLine(num++, `${item.name} Lv.${item.level} [${item.slot}] ${stats}`, 200) + '<br>';
       if (current) html += `<span style="color:#888">    replaces ${esc(current.name)}</span><br>`;
     }
 
     // Random modifier upgrade (only shown if available)
     if (this.shopModTarget && this.shopModifier) {
       const modEffect = modEffectLabel(this.shopModifier);
-      html += this.shopItemLine(num, `Add ${this.shopModifier.name} (${modEffect}) to ${this.shopModTarget.name}`, 500) + '<br>';
+      html += this.shopItemLine(num, `Add ${this.shopModifier.name} (${modEffect}) to ${this.shopModTarget.name}`, 200) + '<br>';
     }
 
     this.encounterEl.classList.remove('hidden');
@@ -895,7 +902,7 @@ export default class Game {
 
   private shopPurchase(slot: number): void {
     const CONSUMABLE_PRICE = 10;
-    const ITEM_PRICE = 500;
+    const ITEM_PRICE = 200;
 
     if (slot === 1) {
       if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
@@ -1216,7 +1223,7 @@ export default class Game {
       `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
       `</div>` +
       `<div>` +
-      `<div><span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}/${this.level * XP_PER_LEVEL}</span></div>` +
+      `<div><span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}/${xpThreshold(this.level)}</span></div>` +
       `<div><span style="color:#ffdd44">GOLD: ${this.gold}</span></div>` +
       `</div>` +
       `</div>` +
