@@ -60,6 +60,10 @@ const BASE_DMG = 8;
 export function xpThreshold(level: number): number {
   return Math.round(100 * 1.2 ** level / 10) * 10;
 }
+
+export function shopPrice(base: number, dungeonLevel: number, purchases: number): number {
+  return Math.round(base * (1 + (dungeonLevel - 1) * 0.5 + purchases * 0.25));
+}
 const BASE_WORD_COUNT = 5;
 const WORD_COUNT_STEP = 2;
 const MAX_WORD_COUNT = 20;
@@ -135,13 +139,14 @@ export default class Game {
   private gameOver: boolean = false;
   private gameOverReason: 'hp' | 'mana' | null = null;
   private dungeonLevel: number = 1;
+  private shopBuyCounts: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
   private pulseRunning: boolean = false;
   private showMap: boolean = false;
   private equipped: Equipped = { weapon: null, armor: null, amulet: null };
   private gold: number = 0;
-  private hpPotions: number = 1;
+  private hpPotions: number = 2;
   private manaPotions: number = 2;
   private revealScrolls: number = 3;
   private intoneScrolls: number = 3;
@@ -414,6 +419,7 @@ export default class Game {
 
   private async restart(): Promise<void> {
     this.dungeonLevel = 1;
+    this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.equipped = { weapon: null, armor: null, amulet: null };
     this.archPuzzle = null;
     this.gameWon = false;
@@ -428,7 +434,7 @@ export default class Game {
     this.level = 1;
     this.xp = 0;
     this.gold = 0;
-    this.hpPotions = 1;
+    this.hpPotions = 2;
     this.manaPotions = 2;
     this.revealScrolls = 3;
     this.intoneScrolls = 3;
@@ -446,6 +452,7 @@ export default class Game {
     if (isTutorial()) completeTutorial();
     this.gold += this.dungeonLevel * 100;
     this.dungeonLevel++;
+    this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.puzzleComplete = false;
     await this.regenDungeon();
     this.initRoomStates();
@@ -874,26 +881,28 @@ export default class Game {
     html += `<span style="color:#888">Wares and wonder, for the right price.</span><br><br>`;
 
     let num = 1;
+    const L = this.dungeonLevel;
+    const bc = this.shopBuyCounts;
 
-    // Always-available consumables ~10g each
-    html += this.shopItemLine(num++, 'Health Potion (+20 HP)', 10) + '<br>';
-    html += this.shopItemLine(num++, 'Mana Potion (+10 MANA)', 10) + '<br>';
-    html += this.shopItemLine(num++, 'Inscribe Scroll (reveal letter)', 10) + '<br>';
-    html += this.shopItemLine(num++, 'Intone Scroll (reveal word)', 10) + '<br>';
+    // Always-available consumables
+    html += this.shopItemLine(num++, 'Health Potion (+20 HP)', shopPrice(8, L, bc[0])) + '<br>';
+    html += this.shopItemLine(num++, 'Mana Potion (+10 MANA)', shopPrice(8, L, bc[1])) + '<br>';
+    html += this.shopItemLine(num++, 'Inscribe Scroll (reveal letter)', shopPrice(20, L, bc[2])) + '<br>';
+    html += this.shopItemLine(num++, 'Intone Scroll (reveal word)', shopPrice(30, L, bc[3])) + '<br>';
 
     // Random equipment item (always available)
     if (this.shopItem) {
       const item = this.shopItem;
       const stats = this.itemStatLines(item).join(', ') || 'no bonuses';
       const current = this.equipped[item.slot];
-      html += this.shopItemLine(num++, `${item.name} Lv.${item.level} [${item.slot}] ${stats}`, 200) + '<br>';
+      html += this.shopItemLine(num++, `${item.name} Lv.${item.level} [${item.slot}] ${stats}`, shopPrice(200, L, bc[4])) + '<br>';
       if (current) html += `<span style="color:#888">    replaces ${esc(current.name)}</span><br>`;
     }
 
     // Random modifier upgrade (only shown if available)
     if (this.shopModTarget && this.shopModifier) {
       const modEffect = modEffectLabel(this.shopModifier);
-      html += this.shopItemLine(num, `Add ${this.shopModifier.name} (${modEffect}) to ${this.shopModTarget.name}`, 200) + '<br>';
+      html += this.shopItemLine(num, `Add ${this.shopModifier.name} (${modEffect}) to ${this.shopModTarget.name}`, shopPrice(200, L, bc[5])) + '<br>';
     }
 
     this.encounterEl.classList.remove('hidden');
@@ -901,32 +910,42 @@ export default class Game {
   }
 
   private shopPurchase(slot: number): void {
-    const CONSUMABLE_PRICE = 10;
-    const ITEM_PRICE = 200;
+    const L = this.dungeonLevel;
+    const bc = this.shopBuyCounts;
 
     if (slot === 1) {
-      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= CONSUMABLE_PRICE;
+      const price = shopPrice(8, L, bc[0]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[0]++;
       this.hpPotions++;
       this.showInteraction([`Purchased Health Potion.`]);
     } else if (slot === 2) {
-      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= CONSUMABLE_PRICE;
+      const price = shopPrice(8, L, bc[1]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[1]++;
       this.manaPotions++;
       this.showInteraction([`Purchased Mana Potion.`]);
     } else if (slot === 3) {
-      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= CONSUMABLE_PRICE;
+      const price = shopPrice(20, L, bc[2]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[2]++;
       this.revealScrolls++;
       this.showInteraction([`Purchased Inscribe Scroll.`]);
     } else if (slot === 4) {
-      if (this.gold < CONSUMABLE_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= CONSUMABLE_PRICE;
+      const price = shopPrice(30, L, bc[3]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[3]++;
       this.intoneScrolls++;
       this.showInteraction([`Purchased Intone Scroll.`]);
     } else if (slot === 5 && this.shopItem) {
-      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= ITEM_PRICE;
+      const price = shopPrice(200, L, bc[4]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[4]++;
       const item = this.shopItem;
       this.shopItem = null;
       this.equipItem(item);
@@ -948,8 +967,10 @@ export default class Game {
       }
       this.showInteraction([`Purchased and equipped: ${item.name}.`]);
     } else if (slot === (this.shopItem ? 6 : 5) && (this.shopModTarget && this.shopModifier)) {
-      if (this.gold < ITEM_PRICE) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
-      this.gold -= ITEM_PRICE;
+      const price = shopPrice(200, L, bc[5]);
+      if (this.gold < price) { this.showInteraction(['Insufficient gold.']); this.render(); return; }
+      this.gold -= price;
+      bc[5]++;
       const target = this.shopModTarget;
       const mod = this.shopModifier;
       this.shopModTarget = null;
