@@ -10,6 +10,7 @@ export const MONSTER_TYPES = [
     def_growth: 0,
     base_xp: 8,
     xp_growth: 2,
+    max_level: 3,
   },
   {
     name: 'Goblin',
@@ -58,6 +59,7 @@ export const MONSTER_TYPES = [
     def_growth: 1,
     base_xp: 20,
     xp_growth: 5,
+    min_level: 2,
   },
 ] as const;
 

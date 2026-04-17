@@ -2,6 +2,7 @@ import * as ROT from '../lib/rotjs';
 import Puzzle from './puzzle';
 import { ENCOUNTER_STYLE } from './encounters';
 import type { ExtraRoom } from './extraRooms';
+import { EXTRA_ROOM_DEFS_MAP } from './extraRooms';
 
 const WALL_FG = '#6b3f14';
 const UNKNOWN_FG = '#518F91';
@@ -55,12 +56,15 @@ export default class Dungeon {
     for (let gy = 0; gy < height; gy++) {
       for (let gx = 0; gx < width; gx++) {
         if (!this.hasRoom(gx, gy)) continue;
+        // Hidden/very-hidden rooms are invisible — exclude from dungeon cells so background renders over them
+        const extraForCell = this.getExtraRoomAt(gx, gy);
+        if (extraForCell?.hidden || extraForCell?.veryHidden) continue;
         const rx = 1 + gx * 6;
         const ry = 1 + gy * 6;
-        const connUp    = this.hasRoom(gx, gy - 1);
-        const connDown  = this.hasRoom(gx, gy + 1);
-        const connLeft  = this.hasRoom(gx - 1, gy);
-        const connRight = this.hasRoom(gx + 1, gy);
+        const connUp    = this.areConnected(gx, gy, gx, gy - 1);
+        const connDown  = this.areConnected(gx, gy, gx, gy + 1);
+        const connLeft  = this.areConnected(gx, gy, gx - 1, gy);
+        const connRight = this.areConnected(gx, gy, gx + 1, gy);
         for (let lx = 0; lx < 5; lx++) {
           for (let ly = 0; ly < 5; ly++) {
             const key = `${rx + lx},${ry + ly}`;
@@ -92,11 +96,35 @@ export default class Dungeon {
 
   drawBackground(display: ROT.Display, camera?: { x: number; y: number }): void {
     const { width: vpW, height: vpH } = display.getOptions();
+    // Build set of very-hidden room outline cells for subtle rendering
+    const veryHiddenOutline = new Set<string>();
+    for (const room of this.extraRooms) {
+      if (!room.veryHidden) continue;
+      const rx = 1 + room.pos.x * 6;
+      const ry = 1 + room.pos.y * 6;
+      for (let lx = 0; lx < 5; lx++) {
+        for (let ly = 0; ly < 5; ly++) {
+          // Only the border cells (walls) of the 5×5 room
+          if (lx === 0 || lx === 4 || ly === 0 || ly === 4) {
+            veryHiddenOutline.add(`${rx + lx},${ry + ly}`);
+          }
+        }
+      }
+    }
     for (let sy = 0; sy < vpH; sy++) {
       for (let sx = 0; sx < vpW; sx++) {
         const wx = camera ? sx + camera.x : sx;
         const wy = camera ? sy + camera.y : sy;
         if (this.dungeonCells.has(`${wx},${wy}`)) continue;
+        if (veryHiddenOutline.has(`${wx},${wy}`)) {
+          // ~50% of outline cells get a dim bg char (same color as normal bg chars)
+          const h = Math.abs((wx * 2654435761) ^ (wy * 2246822519)) >>> 0;
+          if ((h & 0xff) / 255 < 0.5) {
+            const ch = BG_CHARS[(h >> 8) % BG_CHARS.length];
+            display.draw(sx, sy, ch, BG_FG, BLACK);
+          }
+          continue;
+        }
         const ch = this.bgChar(wx, wy);
         if (ch) display.draw(sx, sy, ch, BG_FG, BLACK);
       }
@@ -121,8 +149,8 @@ export default class Dungeon {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
           this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer, camera, recordDraw);
-          if (this.hasRoom(gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera, recordDraw);
-          if (this.hasRoom(gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera, recordDraw);
+          if (this.areConnected(gx, gy, gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera, recordDraw);
+          if (this.areConnected(gx, gy, gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera, recordDraw);
         }
       }
     }
@@ -146,8 +174,8 @@ export default class Dungeon {
       display.draw(sx, sy, cell.ch, ROT.Color.toHex(brightened), BLACK);
     });
 
-    // Extra room glows: one FOV pass per extra room
-    for (const room of this.extraRooms) {
+    // Extra room glows: one FOV pass per extra room (skip completed/hidden rooms)
+    for (const room of this.extraRooms.filter(r => !r.completed && !r.hidden && !r.veryHidden)) {
       const rwx = 1 + room.pos.x * 6 + 2;
       const rwy = 1 + room.pos.y * 6 + 2;
       const glowRgb = ROT.Color.fromString(room.glowColor);
@@ -201,6 +229,34 @@ export default class Dungeon {
     return v !== null && v !== '#';
   }
 
+  /**
+   * Returns true if a corridor should be drawn between (gx,gy) and (nx,ny).
+   * Respects connectedTo constraint and hidden room state.
+   */
+  areConnected(gx: number, gy: number, nx: number, ny: number): boolean {
+    if (!this.hasRoom(gx, gy) || !this.hasRoom(nx, ny)) return false;
+    const a = this.getExtraRoomAt(gx, gy);
+    const b = this.getExtraRoomAt(nx, ny);
+    // Hidden/very-hidden rooms don't show corridors until discovered
+    if (a?.hidden || a?.veryHidden || b?.hidden || b?.veryHidden) return false;
+    if (a?.connectedTo && !(a.connectedTo.x === nx && a.connectedTo.y === ny)) return false;
+    if (b?.connectedTo && !(b.connectedTo.x === gx && b.connectedTo.y === gy)) return false;
+    return true;
+  }
+
+  /**
+   * Returns the direction from (gx,gy) to an adjacent hidden room (if any), else null.
+   * Used to render crack indicators in letter room walls.
+   */
+  getAdjacentHiddenRoom(gx: number, gy: number): { room: ExtraRoom; dx: number; dy: number } | null {
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+    for (const { dx, dy } of dirs) {
+      const r = this.getExtraRoomAt(gx + dx, gy + dy);
+      if (r?.hidden) return { room: r, dx, dy };
+    }
+    return null;
+  }
+
   private drawRoom(display: ROT.Display, gx: number, gy: number, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer: boolean, camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wx = 1 + gx * 6;
     const wy = 1 + gy * 6;
@@ -210,13 +266,16 @@ export default class Dungeon {
     // Skip rooms fully outside viewport
     if (camera && (dx + 5 < 0 || dy + 5 < 0 || dx >= vpW || dy >= vpH)) return;
 
-    const connUp    = this.hasRoom(gx, gy - 1);
-    const connDown  = this.hasRoom(gx, gy + 1);
-    const connLeft  = this.hasRoom(gx - 1, gy);
-    const connRight = this.hasRoom(gx + 1, gy);
+    const connUp    = this.areConnected(gx, gy, gx, gy - 1);
+    const connDown  = this.areConnected(gx, gy, gx, gy + 1);
+    const connLeft  = this.areConnected(gx, gy, gx - 1, gy);
+    const connRight = this.areConnected(gx, gy, gx + 1, gy);
+
+    const extraRoom = this.getExtraRoomAt(gx, gy);
+    // Hidden/very-hidden rooms are fully invisible — don't draw anything
+    if (extraRoom?.hidden || extraRoom?.veryHidden) return;
 
     const state = roomStates.get(`${gx},${gy}`);
-    const extraRoom = this.getExtraRoomAt(gx, gy);
     const solved = state?.solvedLetter ?? null;
     const activatedLevel = state?.activatedLevel ?? 0;
     const encounterKind = state?.encounter.kind ?? 'monster';
@@ -226,6 +285,18 @@ export default class Dungeon {
       for (let ly = 0; ly < 5; ly++) {
         const wall = this.isWall(lx, ly, connUp, connDown, connLeft, connRight);
         if (wall) {
+          // Check for crack indicator: wall cell facing a hidden room
+          if (!extraRoom) {
+            const hiddenAdj = this.getAdjacentHiddenRoom(gx, gy);
+            if (hiddenAdj &&
+              ((hiddenAdj.dy === -1 && lx === 2 && ly === 0) ||
+               (hiddenAdj.dy === 1  && lx === 2 && ly === 4) ||
+               (hiddenAdj.dx === -1 && lx === 0 && ly === 2) ||
+               (hiddenAdj.dx === 1  && lx === 4 && ly === 2))) {
+              recordDraw(wx + lx, wy + ly, '+', WALL_FG);
+              continue;
+            }
+          }
           recordDraw(wx + lx, wy + ly, '#', WALL_FG);
           continue;
         }
@@ -236,9 +307,12 @@ export default class Dungeon {
           let fg: string;
           if (hasPlayer) {
             ch = '@'; fg = PLAYER_FG;
+          } else if (extraRoom && (extraRoom.completed || extraRoom.hidden || extraRoom.veryHidden)) {
+            ch = ' '; fg = BLACK;
           } else if (extraRoom) {
-            ch = extraRoom.locked ? extraRoom.type === 'boss' ? '/' : '%' : (extraRoom.type === 'shop' ? '%' : '/');
-            fg = extraRoom.type === 'shop' ? '#44ffcc' : '#ff4444';
+            const def = EXTRA_ROOM_DEFS_MAP[extraRoom.type];
+            ch = def ? (extraRoom.locked ? def.lockedCenterChar : def.centerChar) : '?';
+            fg = extraRoom.glowColor;
           } else if (solved !== null) {
             ch = solved; fg = SOLVED_FG;
           } else if (activatedLevel > 0) {
@@ -248,7 +322,7 @@ export default class Dungeon {
             ch = '?'; fg = UNKNOWN_FG;
           }
           recordDraw(wx + lx, wy + ly, ch, fg);
-        } else if (extraRoom) {
+        } else if (extraRoom && !extraRoom.completed && !extraRoom.hidden && !extraRoom.veryHidden) {
           const corner = (lx === 1 || lx === 3) && (ly === 1 || ly === 3);
           if (corner) recordDraw(wx + lx, wy + ly, '+', WALL_FG);
         } else {
@@ -345,8 +419,12 @@ export default class Dungeon {
           const extraRoom = this.getExtraRoomAt(gx, gy);
           if (lx === 2 && ly === 2) {
             if (playerPos.x === gx && playerPos.y === gy) { ch = '@'; fg = PLAYER_FG; }
-            else if (extraRoom?.type === 'shop') { ch = '%'; fg = '#44ffcc'; }
-            else if (extraRoom?.type === 'boss') { ch = '/'; fg = '#ff4444'; }
+            else if (extraRoom && (extraRoom.completed || extraRoom.hidden || extraRoom.veryHidden)) { ch = ' '; fg = BLACK; }
+            else if (extraRoom) {
+              const def = EXTRA_ROOM_DEFS_MAP[extraRoom.type];
+              ch = def ? (extraRoom.locked ? def.lockedCenterChar : def.centerChar) : '?';
+              fg = extraRoom.glowColor;
+            }
             else if (state?.solvedLetter) { ch = state.solvedLetter; fg = SOLVED_FG; }
             else if (state?.activatedLevel ?? 0 > 0) { const s = ENCOUNTER_STYLE[state!.encounter.kind]; ch = s.symbol; fg = s.color; }
             else { ch = '?'; fg = UNKNOWN_FG; }

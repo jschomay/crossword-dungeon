@@ -595,5 +595,49 @@ describe('formatEncounter puzzleMult', () => {
   });
 });
 
+// ---- Level-based encounter filtering ----
+
+describe('generateMonster level filtering', () => {
+  // Rat has max_level:3, Dragon has min_level:2
+  it('excludes Dragon at dungeon level 1', () => {
+    // Force pick to always return the last item — if pool excludes Dragon, last item is Orc
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]): T { return arr[arr.length - 1]; },
+      shuffle<T>(arr: readonly T[]): T[] { return [...arr]; },
+    };
+    const m = generateMonster(rng, 1);
+    expect(m.baseName).not.toBe('Dragon');
+  });
+
+  it('includes Dragon at dungeon level 2', () => {
+    // Force pick to always return last item — Dragon is last in MONSTER_TYPES
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]): T { return arr[arr.length - 1]; },
+      shuffle<T>(arr: readonly T[]): T[] { return [...arr]; },
+    };
+    const m = generateMonster(rng, 2);
+    expect(m.baseName).toBe('Dragon');
+  });
+
+  it('excludes Rat at dungeon level 4', () => {
+    // Force pick to return first item — if Rat excluded, first is Goblin
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]): T { return arr[0]; },
+      shuffle<T>(arr: readonly T[]): T[] { return [...arr]; },
+    };
+    const m = generateMonster(rng, 4);
+    expect(m.baseName).not.toBe('Rat');
+  });
+
+  it('includes Rat at dungeon level 3', () => {
+    const rng: Rng = {
+      getItem<T>(arr: readonly T[]): T { return arr[0]; },
+      shuffle<T>(arr: readonly T[]): T[] { return [...arr]; },
+    };
+    const m = generateMonster(rng, 3);
+    expect(m.baseName).toBe('Rat');
+  });
+});
+
 // ---- Shop modifier application ----
 

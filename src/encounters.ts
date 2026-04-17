@@ -109,8 +109,14 @@ function effectLabel(effect: string, amount: number): string {
 
 // ---- Generation (rolls base + modifiers, does NOT compute stats) ----
 
-export function generateMonster(rng: Rng): MonsterEncounter {
-  const base = rng.getItem(MONSTER_TYPES);
+export function generateMonster(rng: Rng, dungeonLevel = 1): MonsterEncounter {
+  type LevelBounded = { min_level?: number; max_level?: number };
+  const pool = MONSTER_TYPES.filter(m => {
+    const lm = m as unknown as LevelBounded;
+    return (lm.min_level === undefined || dungeonLevel >= lm.min_level) &&
+           (lm.max_level === undefined || dungeonLevel <= lm.max_level);
+  });
+  const base = rng.getItem(pool.length > 0 ? pool : MONSTER_TYPES);
   const [mod1, mod2] = pickTwo(MONSTER_MODIFIERS, rng);
   return {
     kind: 'monster',
@@ -129,8 +135,14 @@ export function generateMonster(rng: Rng): MonsterEncounter {
   };
 }
 
-export function generateTrap(rng: Rng): TrapEncounter {
-  const base = rng.getItem(TRAP_TYPES);
+export function generateTrap(rng: Rng, dungeonLevel = 1): TrapEncounter {
+  type LevelBounded = { min_level?: number; max_level?: number };
+  const pool = TRAP_TYPES.filter(t => {
+    const lt = t as unknown as LevelBounded;
+    return (lt.min_level === undefined || dungeonLevel >= lt.min_level) &&
+           (lt.max_level === undefined || dungeonLevel <= lt.max_level);
+  });
+  const base = rng.getItem(pool.length > 0 ? pool : TRAP_TYPES);
   const [mod1, mod2] = pickTwo(TRAP_MODIFIERS, rng);
   const isPhysical = base.damage_type === 'hp';
   const baseReward = isPhysical
@@ -155,7 +167,7 @@ export function generateTrap(rng: Rng): TrapEncounter {
   };
 }
 
-export function generateTreasure(rng: Rng): TreasureEncounter {
+export function generateTreasure(rng: Rng, _dungeonLevel = 1): TreasureEncounter {
   const base = rng.getItem(TREASURE_IMMEDIATE);
   return {
     kind: 'treasure',
@@ -168,12 +180,12 @@ export function generateTreasure(rng: Rng): TreasureEncounter {
   };
 }
 
-export function generateEncounter(rng: Rng): Encounter {
+export function generateEncounter(rng: Rng, dungeonLevel = 1): Encounter {
   const type = rng.getItem(['monster', 'trap', 'treasure'] as const);
   switch (type) {
-    case 'monster': return generateMonster(rng);
-    case 'trap': return generateTrap(rng);
-    case 'treasure': return generateTreasure(rng);
+    case 'monster': return generateMonster(rng, dungeonLevel);
+    case 'trap': return generateTrap(rng, dungeonLevel);
+    case 'treasure': return generateTreasure(rng, dungeonLevel);
   }
 }
 

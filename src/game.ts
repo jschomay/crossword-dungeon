@@ -1,18 +1,37 @@
 import * as ROT from '../lib/rotjs';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
-import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord, getEligibleWordCount } from './puzzle';
+import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord, getEligibleWordCount, getWords } from './puzzle';
 import { consumeProgression, fetchPuzzle, getOverridePuzzle, isTutorial, completeTutorial } from './progression';
 import Puzzle from './puzzle';
 import Dungeon from './dungeon';
 import {
   SHOP_DEF,
   BOSS_DEF,
+  DRAGON_TREASURE_DEF,
+  SIMM_DEF,
+  TRAPPED_ADVENTURER_DEF,
+  HIDDEN_TREASURE_DEF,
+  VERY_HIDDEN_DEF,
+  TREASURE_HUNTER_DEF,
+  TRADER_DEF,
+  CURSED_FOUNTAIN_DEF,
+  MIMIC_CHEST_DEF,
   getDef,
   selectArchWord,
   type ExtraRoom,
   type ArchPuzzleState,
   type RunContext,
   type DungeonEvent,
+  type DragonTreasureRoomState,
+  type SimmRoomState,
+  type TrappedAdventurerRoomState,
+  type HiddenTreasureRoomState,
+  type VeryHiddenRoomState,
+  type TreasureHunterRoomState,
+  type TraderRoomState,
+  type CursedFountainRoomState,
+  type MimicChestRoomState,
+  type Coord,
 } from './extraRooms';
 import {
   generateEncounter,
@@ -42,6 +61,7 @@ const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
 type RoomState = {
   activatedLevel: number;
   solvedLetter: string | null;
+  completed: boolean;
   encounter: Encounter;
   incorrectGuesses: string[];
 };
@@ -118,7 +138,6 @@ export default class Game {
   private sidebarEl: HTMLElement;
   private helpOverlayEl: HTMLElement;
   private popupOpen: boolean = false;
-  private popupFromSolve: boolean = false;
   private combatMonsterHp: number | null = null;
   private prevHp: number = BASE_HP;
   private maxMana: number = BASE_MANA;
@@ -155,6 +174,8 @@ export default class Game {
   private shopModTarget: TreasureItemStats | null = null;  // item to receive modifier
   private shopModifier: typeof TREASURE_MODIFIERS[number] | null = null;
   private archPuzzle: ArchPuzzleState | null = null;       // persists across dungeon levels
+  private hasMetSimm: boolean = false;                      // persists across dungeon levels
+  private selectedWordKeys: Set<string> = new Set();        // word keys used in current puzzle
   private gameWon: boolean = false;
   private puzzleComplete: boolean = false;
 
@@ -204,6 +225,7 @@ export default class Game {
     }
     const ipuz = buildSparseIpuz(this.fullIpuz, selected);
     this.puzzle = new Puzzle(ipuz);
+    this.selectedWordKeys = selected;
 
     // Generate arch puzzle from the current level's unused words if not yet set.
     // Deferred rather than first-level-only so the tutorial (which uses all its words)
@@ -215,6 +237,7 @@ export default class Game {
       }
     }
 
+    this.initRoomStates();
     this.extraRooms = this.buildExtraRooms();
     this.emitDungeonEvent({ type: 'level:start' });
     this.shopItem = null;
@@ -262,7 +285,6 @@ export default class Game {
       game.render();
     });
     game.applyTilt();
-    game.initRoomStates();
     game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
     if (getOverridePuzzle() === 'debug') game.gold = 3000;
     game.render();
@@ -291,7 +313,8 @@ export default class Game {
       this.roomStates.set(roomKey(x, y), {
         activatedLevel: 0,
         solvedLetter: null,
-        encounter: generateEncounter(rng),
+        completed: false,
+        encounter: generateEncounter(rng, this.dungeonLevel),
         incorrectGuesses: [],
       });
     }
@@ -302,7 +325,9 @@ export default class Game {
     const unique = rng.shuffle([...new Set(letters)]).slice(0, this.dungeonLevel);
     for (const { x, y } of rooms) {
       if (unique.includes(this.puzzle.ipuz.solution[y][x] as string)) {
-        this.getRoomState(x, y).solvedLetter = this.puzzle.ipuz.solution[y][x] as string;
+        const rs = this.getRoomState(x, y);
+        rs.solvedLetter = this.puzzle.ipuz.solution[y][x] as string;
+        rs.completed = true;
       }
     }
 
@@ -339,16 +364,174 @@ export default class Game {
     const shopPos = this.pickAdjacentEmptyCell(used);
     if (shopPos) {
       used.add(`${shopPos.x},${shopPos.y}`);
-      rooms.push({ type: 'shop', pos: shopPos, locked: false, glowColor: SHOP_DEF.glowColor, state: {} });
+      rooms.push({ type: 'shop', pos: shopPos, locked: false, completed: false, glowColor: SHOP_DEF.glowColor, state: {} });
     }
 
     const bossPos = this.pickAdjacentEmptyCell(used);
     if (bossPos) {
       used.add(`${bossPos.x},${bossPos.y}`);
-      rooms.push({ type: 'boss', pos: bossPos, locked: true, glowColor: BOSS_DEF.glowColor, state: { failPending: false, exitPending: false } });
+      rooms.push({ type: 'boss', pos: bossPos, locked: true, completed: false, glowColor: BOSS_DEF.glowColor, state: { failPending: false, exitPending: false } });
+    }
+
+    // Simm: spawns every level
+    const simmPos = this.pickAdjacentEmptyCell(used);
+    if (simmPos) {
+      used.add(`${simmPos.x},${simmPos.y}`);
+      const simmState: SimmRoomState = { dialogue: '' };
+      rooms.push({ type: 'simm', pos: simmPos, locked: false, completed: false, glowColor: SIMM_DEF.glowColor, state: simmState });
+    }
+
+    // Trapped adventurer: min_level 2, 30% chance
+    if (this.dungeonLevel >= 2 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const { width, height } = this.puzzle.ipuz.dimensions;
+        const roomSet = new Set(this.puzzle.getRooms().map(r => `${r.x},${r.y}`));
+        const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+        const adjacentRooms: Coord[] = [];
+        for (const { dx, dy } of dirs) {
+          const nx = pos.x + dx, ny = pos.y + dy;
+          if (nx >= 0 && ny >= 0 && nx < width && ny < height && roomSet.has(`${nx},${ny}`)) {
+            adjacentRooms.push({ x: nx, y: ny });
+          }
+        }
+        const rewards = ['gold', 'hp_potion', 'mana_potion', 'arch_hint'] as const;
+        const reward = rewards[Math.floor(Math.random() * rewards.length)];
+        const trappedState: TrappedAdventurerRoomState = { adjacentRooms, rescued: false, reward };
+        const isLocked = !adjacentRooms.every(p => {
+          const s = this.roomStates.get(roomKey(p.x, p.y));
+          return s?.solvedLetter !== null && s?.solvedLetter !== undefined;
+        });
+        rooms.push({ type: 'trapped_adventurer', pos, locked: isLocked, completed: false, glowColor: TRAPPED_ADVENTURER_DEF.glowColor, state: trappedState });
+      }
+    }
+
+    // Very hidden room: min_level 1, 30% chance
+    if (Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const stats = ['max_hp', 'max_mana', 'damage', 'defense'] as const;
+        const stat = stats[Math.floor(Math.random() * stats.length)];
+        const vhState: VeryHiddenRoomState = { blessed: false, stat };
+        rooms.push({ type: 'very_hidden', pos, locked: false, completed: false, glowColor: VERY_HIDDEN_DEF.glowColor, state: vhState, veryHidden: true });
+      }
+    }
+
+    // Hidden treasure room: min_level 2, 30% chance
+    if (this.dungeonLevel >= 2 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        // Pick contents: 50/50 gold vs notes, or arch hint if arch puzzle exists
+        const contentsOptions: HiddenTreasureRoomState['contents'][] = ['gold', 'notes'];
+        if (this.archPuzzle) contentsOptions.push('arch_hint');
+        const contents = contentsOptions[Math.floor(Math.random() * contentsOptions.length)];
+        // Build notes words if needed
+        let notesWords: string[] | undefined;
+        if (contents === 'notes') {
+          const puzzleWds = getWords(this.puzzle.ipuz)
+            .filter(w => this.selectedWordKeys.has(w.key))
+            .map(w => w.cells.map(c => this.puzzle.ipuz.solution[c.y]?.[c.x] as string).join(''))
+            .filter(w => w && !/[^A-Z]/.test(w));
+          const unusedWds = getWords(this.fullIpuz)
+            .filter(w => !this.selectedWordKeys.has(w.key))
+            .map(w => w.cells.map(c => this.fullIpuz.solution[c.y]?.[c.x] as string).join(''))
+            .filter(w => w && !/[^A-Z]/.test(w));
+          const realWord = puzzleWds[Math.floor(Math.random() * puzzleWds.length)] ?? 'MYSTERY';
+          const unused1 = unusedWds[Math.floor(Math.random() * unusedWds.length)] ?? 'UNKNOWN';
+          const unused2 = unusedWds.filter(w => w !== unused1)[Math.floor(Math.random() * (unusedWds.length - 1))] ?? 'ENIGMA';
+          notesWords = [realWord, unused1, unused2].sort(() => Math.random() - 0.5);
+        }
+        const hiddenState: HiddenTreasureRoomState = { claimed: false, contents, notesWords };
+        rooms.push({ type: 'hidden_treasure', pos, locked: false, completed: false, glowColor: HIDDEN_TREASURE_DEF.glowColor, state: hiddenState, hidden: true });
+      }
+    }
+
+    // Treasure hunter: min_level 2, 30% chance
+    if (this.dungeonLevel >= 2 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const thState: TreasureHunterRoomState = { talked: false };
+        rooms.push({ type: 'treasure_hunter', pos, locked: false, completed: false, glowColor: TREASURE_HUNTER_DEF.glowColor, state: thState });
+      }
+    }
+
+    // Trader: min_level 3, 30% chance
+    if (this.dungeonLevel >= 3 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const traderState: TraderRoomState = { traded: false, tradeSlot: null };
+        rooms.push({ type: 'trader', pos, locked: false, completed: false, glowColor: TRADER_DEF.glowColor, state: traderState });
+      }
+    }
+
+    // Cursed fountain: min_level 3, 30% chance
+    if (this.dungeonLevel >= 3 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const fountainState: CursedFountainRoomState = { used: false, trade: null };
+        rooms.push({ type: 'cursed_fountain', pos, locked: false, completed: false, glowColor: CURSED_FOUNTAIN_DEF.glowColor, state: fountainState });
+      }
+    }
+
+    // Mimic chest: min_level 2, 30% chance
+    if (this.dungeonLevel >= 2 && Math.random() < 0.3) {
+      const pos = this.pickAdjacentEmptyCell(used);
+      if (pos) {
+        used.add(`${pos.x},${pos.y}`);
+        const mimicState: MimicChestRoomState = { opened: false, isReal: Math.random() < 0.5 };
+        rooms.push({ type: 'mimic_chest', pos, locked: false, completed: false, glowColor: MIMIC_CHEST_DEF.glowColor, state: mimicState });
+      }
+    }
+
+    // Dragon treasure rooms: one per dragon encounter
+    for (const [key, state] of this.roomStates) {
+      if (state.encounter.kind !== 'monster' || state.encounter.baseName !== 'Dragon') continue;
+      const [gx, gy] = key.split(',').map(Number);
+      const treasurePos = this.pickAdjacentEmptyCellForRoom(gx, gy, used);
+      if (!treasurePos) continue;
+      used.add(`${treasurePos.x},${treasurePos.y}`);
+      const goldAmount = 20 * this.dungeonLevel;
+      const dragonState: DragonTreasureRoomState = { dragonPos: { x: gx, y: gy }, looted: false, goldAmount };
+      rooms.push({
+        type: 'dragon_treasure',
+        pos: treasurePos,
+        locked: true,
+        completed: false,
+        glowColor: DRAGON_TREASURE_DEF.glowColor,
+        state: dragonState,
+        connectedTo: { x: gx, y: gy },
+      });
     }
 
     return rooms;
+  }
+
+  /**
+   * Pick an adjacent empty cell specifically next to a given room position (gx, gy).
+   * The cell must be adjacent to (gx, gy) and not in the puzzle grid or already used.
+   */
+  private pickAdjacentEmptyCellForRoom(gx: number, gy: number, exclude: Set<string>): Coord | null {
+    const { width, height } = this.puzzle.ipuz.dimensions;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+    const roomSet = new Set(this.puzzle.getRooms().map(r => `${r.x},${r.y}`));
+    const candidates: Coord[] = [];
+    for (const { dx, dy } of dirs) {
+      const nx = gx + dx;
+      const ny = gy + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const key = `${nx},${ny}`;
+      if (roomSet.has(key) || exclude.has(key)) continue;
+      const v = this.puzzle.ipuz.solution[ny]?.[nx];
+      if (v === null || v === '#') candidates.push({ x: nx, y: ny });
+    }
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
   private emitDungeonEvent(event: DungeonEvent): void {
@@ -365,12 +548,116 @@ export default class Game {
       archPuzzle: this.archPuzzle,
       puzzleComplete: this.puzzleComplete,
       showInteraction: (lines) => this.showInteraction(lines),
-      clearLogs: () => this.clearLogs(),
       render: () => this.render(),
       advancePuzzle: () => this.advancePuzzle(),
       triggerVictory: () => this.triggerVictory(),
       renderShopPanel: () => this.renderShopPanel(),
       shopPurchase: (slot) => this.shopPurchase(slot),
+      addGold: (amount) => { this.gold += amount; },
+      isRoomSolved: (pos) => {
+        const state = this.roomStates.get(roomKey(pos.x, pos.y));
+        return state?.solvedLetter !== null && state?.solvedLetter !== undefined;
+      },
+      hasMetSimm: this.hasMetSimm,
+      setHasMetSimm: (value) => { this.hasMetSimm = value; },
+      hp: this.hp,
+      maxHp: this.maxHp,
+      mana: this.mana,
+      maxMana: this.maxMana,
+      effectiveDamage: this.effectiveDmg(),
+      effectiveDefense: this.effectiveDef(),
+      equippedItems: [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+        .filter((i): i is TreasureItemStats => i !== null)
+        .map(i => ({ name: i.name })),
+      getVeryHiddenRooms: () => {
+        const dirs = [
+          { dx: 0, dy: -1, dir: 'north' }, { dx: 0, dy: 1, dir: 'south' },
+          { dx: -1, dy: 0, dir: 'west' }, { dx: 1, dy: 0, dir: 'east' },
+        ];
+        const roomSet = new Set(this.puzzle.getRooms().map(r => `${r.x},${r.y}`));
+        return this.extraRooms
+          .filter(r => r.type === 'very_hidden' && r.veryHidden)
+          .map(r => {
+            // Find an adjacent letter room to give as reference
+            for (const { dx, dy, dir } of dirs) {
+              const key = `${r.pos.x + dx},${r.pos.y + dy}`;
+              if (roomSet.has(key)) {
+                const letter = this.puzzle.ipuz.solution[r.pos.y + dy]?.[r.pos.x + dx];
+                const adjStr = letter && letter !== '#' ? String(letter) : `${r.pos.x + dx},${r.pos.y + dy}`;
+                return { pos: r.pos, adjacentLetterRoom: { x: r.pos.x + dx, y: r.pos.y + dy }, direction: dir, letterHint: adjStr };
+              }
+            }
+            return null;
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+      },
+      puzzleWords: getWords(this.puzzle.ipuz)
+        .filter(w => this.selectedWordKeys.has(w.key))
+        .map(w => w.cells.map(c => this.puzzle.ipuz.solution[c.y]?.[c.x] as string).join(''))
+        .filter(w => w && !/[^A-Z]/.test(w)),
+      unusedPuzzleWords: getWords(this.fullIpuz)
+        .filter(w => !this.selectedWordKeys.has(w.key))
+        .map(w => w.cells.map(c => this.fullIpuz.solution[c.y]?.[c.x] as string).join(''))
+        .filter(w => w && !/[^A-Z]/.test(w)),
+      equippedItemsFull: [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
+        .filter((i): i is TreasureItemStats => i !== null)
+        .map(i => ({ slot: i.slot, name: i.name, level: i.level })),
+      tradeEquippedItem: (slot) => {
+        const slotKey = slot as 'weapon' | 'armor' | 'amulet';
+        const current = this.equipped[slotKey];
+        if (!current) return null;
+        const newLevel = Math.max(1, current.level - 1);
+        // Pick a random item of the same slot type
+        const matchingItems = TREASURE_ITEMS.filter(t => t.slot === slotKey);
+        if (matchingItems.length === 0) return null;
+        const base = matchingItems[Math.floor(Math.random() * matchingItems.length)];
+        let statType: import('./encounters').TreasureItemEncounter['statType'];
+        let baseStat: number;
+        let statGrowth: number;
+        if ('base_damage_bonus' in base) {
+          statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
+        } else if ('base_defense_bonus' in base) {
+          statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
+        } else if ('base_max_hp_bonus' in base) {
+          statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
+        } else {
+          statType = 'max_mana'; baseStat = (base as { base_max_mana_bonus: number }).base_max_mana_bonus;
+          statGrowth = (base as { max_mana_bonus_growth: number }).max_mana_bonus_growth;
+        }
+        const itemEnc: import('./encounters').TreasureItemEncounter = {
+          kind: 'treasure', subKind: 'item',
+          baseName: base.name, baseDescription: base.description,
+          slot: slotKey, statType, baseStat, statGrowth,
+        };
+        const newItem = getTreasureItemStats(itemEnc, newLevel);
+        this.equipped[slotKey] = newItem;
+        // Cap HP/mana if effective max decreased
+        this.hp = Math.min(this.hp, this.effectiveMaxHp());
+        this.mana = Math.min(this.mana, this.effectiveMaxMana());
+        return { newItemName: newItem.name };
+      },
+      applyStatBonus: (stat, amount) => {
+        if (stat === 'max_hp') { this.maxHp += amount; this.hp = Math.min(this.hp + amount, this.maxHp); }
+        else if (stat === 'max_mana') { this.maxMana += amount; this.mana = Math.min(this.mana + amount, this.maxMana); }
+        else if (stat === 'damage') { this.dmg += amount; }
+        else if (stat === 'defense') { this.baseDef += amount; }
+      },
+      addHpPotion: () => { this.hpPotions++; },
+      addManaPotion: () => { this.manaPotions++; },
+      revealArchLetter: () => {
+        if (!this.archPuzzle) return null;
+        const unrevealed = this.archPuzzle.word
+          .split('')
+          .filter(l => !this.archPuzzle!.guessedLetters.has(l));
+        if (unrevealed.length === 0) return null;
+        const letter = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        this.archPuzzle.guessedLetters.add(letter);
+        return letter;
+      },
+      takeDamage: (hpDmg, manaDmg) => {
+        this.hp = Math.max(0, this.hp - hpDmg);
+        this.mana = Math.max(0, this.mana - manaDmg);
+      },
     };
   }
 
@@ -422,9 +709,9 @@ export default class Game {
     this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.equipped = { weapon: null, armor: null, amulet: null };
     this.archPuzzle = null;
+    this.hasMetSimm = false;
     this.gameWon = false;
     await this.regenDungeon();
-    this.initRoomStates();
     this.mana = BASE_MANA;
     this.maxMana = BASE_MANA;
     this.hp = BASE_HP;
@@ -444,7 +731,7 @@ export default class Game {
     this.gameOverReason = null;
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
     this.applyTilt();
-    this.clearLogs();
+    this.dismissPopup();
     this.render();
   }
 
@@ -455,12 +742,11 @@ export default class Game {
     this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.puzzleComplete = false;
     await this.regenDungeon();
-    this.initRoomStates();
     this.combatRunning = false;
     this.combatMonsterHp = null;
     this.playerPos = ROT.RNG.getItem(this.puzzle.getRooms())!;
     this.applyTilt();
-    this.clearLogs();
+    this.dismissPopup();
     this.render();
   }
 
@@ -602,10 +888,6 @@ export default class Game {
     return false;
   }
 
-  private clearLogs(): void {
-    this.dismissPopup();
-  }
-
   private showInteraction(lines: string[], castLetter?: string): void {
     const header = castLetter
       ? `<span style="color:#ccaa66">You cast the '${esc(castLetter)}' rune  (-1 MANA)</span>\n`
@@ -615,7 +897,6 @@ export default class Game {
     const footer = isCombat && this.combatRunning
       ? ''
       : '\n\n<span style="color:#fff">[SPACE]</span><span style="color:#888"> Continue</span>';
-    this.popupFromSolve = !!castLetter;
     this.openPopup(header + body + footer, isCombat);
   }
 
@@ -628,11 +909,23 @@ export default class Game {
   }
 
   private dismissPopup(): void {
+    const wasOpen = this.popupOpen;
     this.popupOpen = false;
-    this.popupFromSolve = false;
     this.combatMonsterHp = null;
     this.interactionPopupEl.classList.add('hidden');
     this.sidebarEl.classList.remove('popup-open');
+    // Only mark completed when a popup was actually open
+    if (!wasOpen) return;
+    const { x, y } = this.playerPos;
+    const extraRoom = this.dungeon.getExtraRoomAt(x, y);
+    if (extraRoom) {
+      if (extraRoom.type !== 'shop' && extraRoom.type !== 'boss') {
+        extraRoom.completed = true;
+      }
+    } else if (this.dungeon.hasRoom(x, y)) {
+      const state = this.roomStates.get(roomKey(x, y));
+      if (state?.solvedLetter) state.completed = true;
+    }
   }
 
   private renderInteractionLog(): void {
@@ -648,6 +941,7 @@ export default class Game {
   private markRoomSolved(x: number, y: number, letter: string): void {
     const state = this.getRoomState(x, y);
     state.solvedLetter = letter;
+    this.emitDungeonEvent({ type: 'room:solved', x, y });
     const neighbors = this.puzzle.getWordNeighbors({ x, y });
     for (const nb of neighbors) {
       const nbState = this.getRoomState(nb.x, nb.y);
@@ -1151,9 +1445,9 @@ export default class Game {
       return;
     }
 
-    // Extra room: delegate input to the room's def handler
+    // Extra room: delegate input to the room's def handler (skip if completed)
     const currentExtraRoom = this.dungeon.getExtraRoomAt(this.playerPos.x, this.playerPos.y);
-    if (currentExtraRoom) {
+    if (currentExtraRoom && !currentExtraRoom.completed) {
       const consumed = getDef(currentExtraRoom.type).handleInput(currentExtraRoom, e.key, this.makeRunContext());
       if (consumed) return;
       // not consumed — fall through to arrow key / map toggle handling
@@ -1167,16 +1461,15 @@ export default class Game {
     }
 
     if (!currentExtraRoom) {
-      if (e.key === '1') { this.clearLogs(); this.useConsumable(1); return; }
-      if (e.key === '2') { this.clearLogs(); this.useConsumable(2); return; }
-      if (e.key === '3') { this.clearLogs(); this.useConsumable(3); return; }
-      if (e.key === '4') { this.clearLogs(); this.useConsumable(4); return; }
+      if (e.key === '1') { this.useConsumable(1); return; }
+      if (e.key === '2') { this.useConsumable(2); return; }
+      if (e.key === '3') { this.useConsumable(3); return; }
+      if (e.key === '4') { this.useConsumable(4); return; }
     }
 
     if (/^[a-z]$/.test(e.key)) {
       const { x, y } = this.playerPos;
       if (this.dungeon.hasRoom(x, y) && !currentExtraRoom) {
-        this.clearLogs();
         this.tryGuess(x, y, e.key.toUpperCase());
         if (!this.pulseRunning) this.render();
       }
@@ -1188,12 +1481,22 @@ export default class Game {
     const nx = this.playerPos.x + dir.dx;
     const ny = this.playerPos.y + dir.dy;
     if (this.dungeon.hasRoom(nx, ny)) {
+      const targetExtra = this.dungeon.getExtraRoomAt(nx, ny);
+      // Discover hidden rooms when player walks toward them — reveal but don't move
+      if (targetExtra?.hidden || targetExtra?.veryHidden) {
+        targetExtra.hidden = false;
+        targetExtra.veryHidden = false;
+        // Rebuild dungeon cells now that the corridor is visible
+        this.dungeon = new Dungeon(this.puzzle, this.extraRooms);
+        this.showInteraction(['You find a secret passage! A hidden chamber reveals itself.']);
+        this.render();
+        return;
+      }
       if (this.dungeon.isLockedBetween(this.playerPos.x, this.playerPos.y, nx, ny)) {
         this.showInteraction([`The passage to this room is locked.`]);
         this.render();
         return;
       }
-      this.clearLogs();
       this.playerPos = { x: nx, y: ny };
       this.render();
     }
@@ -1314,10 +1617,12 @@ export default class Game {
       const currentExtraRoom = this.dungeon.getExtraRoomAt(x, y);
       if (currentExtraRoom) {
         this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
-        const html = getDef(currentExtraRoom.type).renderPanel(currentExtraRoom, this.makeRunContext());
-        if (html) {
+        if (currentExtraRoom.completed) {
+          this.encounterEl.classList.add('hidden');
+        } else {
+          const html = getDef(currentExtraRoom.type).renderPanel(currentExtraRoom, this.makeRunContext());
           this.encounterEl.classList.remove('hidden');
-          this.encounterEl.innerHTML = html;
+          if (html) this.encounterEl.innerHTML = html;
         }
         this.renderInteractionLog();
         return;
@@ -1336,7 +1641,7 @@ export default class Game {
       const style = ENCOUNTER_STYLE[state.encounter.kind];
       this.encounterEl.style.color = '';
 
-      if (state.solvedLetter !== null && !this.combatRunning && !this.popupFromSolve) {
+      if (state.completed) {
         this.encounterEl.classList.add('hidden');
       } else {
         this.encounterEl.classList.remove('hidden');
