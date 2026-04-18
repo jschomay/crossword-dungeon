@@ -11,6 +11,9 @@ The workflow will progress layer by layer of functionality in an agile style.
 
 Output should be kept brief. Before making changes, succinctly outline the plan to get approval. Bring up any questions around missing or unclear context or potentially high impact trade-off decisions. On resolving big decisions, suggest adding it to docs/decisions.md.
 
-Only read parts of the codebase or referenced code on an as-needed-basis to do the current work.
+Before writing new code, you must reference `docs/architecture.md`. If any of this document gets out of date, you should call it out and update it.
 
-After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest. Make sure types compile and tests pass before committing.
+Sometimes it is useful to read `docs/decisions.md` to see technical and design choices made.
+
+After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest. Make sure types compile and tests pass before committing. Make sure architecture doc is still accurate.
+
