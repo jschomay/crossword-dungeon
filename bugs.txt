@@ -1,0 +1,79 @@
+Text in room panels needs to wrap (dynamically with css not line breaks)
+
+"...materializes before you, offering you a gift."
+remove "grant a boon line"
+Press [space] to accept
+
+
+remove quotes around trader room description
+
+Treasure hunter has N and S swapped
+
+Trapped adventurer needs to make sure all connecting rooms are not already solved
+
+possible to unlock rooms (like trapped adventurere) on popup close instead of solve?
+And can we add something to the popup when an adjacent room unlocks that says the locks pop open?
+
+trapped adventurer description should just describe ragged adventurer behind locked doors, popup says thank you + reward, action word is press space to "free"
+
+Simm on dragons - "No joke, that" -> "They're no joke!"
+
+why can't I use potions/spells in bonus rooms? maybe that is fine?
+
+bug - if a dragon treasure room is adjacent to other rooms too, moving in the direction of the treasure room for an adjacent room that is not the dragon room shows the "this room is locked" popup. It should not, it should only be "enterable" from the connected dragaon room.
+
+
+
+minlevel very hidden 1->2
+
+
+hidden discover should say you find an opening in the wall
+very hidden discover says you find a secret passage
+
+should scrolls unlock dragon treasure and trapped adventurere? likely not?
+
+intone scroll doesn't mark rooms as completed
+
+solving dragon room before it is revealed (still a ?) should not unlock treasure
+
+dragons should not spawn at initial solved rooms
+
+check if Simm's greetin is level dependent - greeting and content seem to have different conditions
+
+mimic - use previous description, something about "an old cheast covered in dust"
+
+too many dragons?
+
+we need an architecture diagram
+
+
+how does treasure hunter work? what if hidden room is found?
+Make sure fountain and trader update when condition changes.
+Don't show space action if no action can be taken
+
+remove X [type] and just leave name
+
+
+  1. Dragon treasure unlock message interrupts flow — DRAGON_TREASURE_DEF.onEvent
+  calls ctx.showInteraction() and ctx.render() when dragon is defeated (line 425).
+  This pops up an interaction mid-room-resolution, before the player has dismissed
+  the combat result. This could be jarring or cause double-popup issues.
+  2. Simm marks hasMetSimm = true immediately on level:start — so even if the player
+  never finds Simm on a level, they'll get "repeat" greetings next time. The dialogue
+   is built at level:start before the player meets Simm, so it may not reflect the
+  actual HP/mana the player has when they finally talk.
+  3. dismissPopup marks extra rooms as completed (line 921-924) for non-shop/non-boss
+   rooms, but markExtraRoomSolved is also on the RunContext — there may be
+  double-completion paths.
+  4. Treasure Hunter handleInput doesn't mark the room solved after talking (space
+  just returns true). The room stays visible and talkable forever. (Same for Simm —
+  it disappears via completed in dismissPopup, but only if the player dismisses while
+   still in the room.)
+  5. pickAdjacentEmptyCell uses Math.floor(Math.random() * candidates.length) rather
+  than ROT.RNG — so it's not seeded/deterministic like the rest of generation. Minor,
+   but consistent with the rest.
+
+
+---- done ----
+
+bug - bonus room near a locked door, moving to the locked door opens status log saying the path is blocked, confirming it marks bonus room completed. Same for discovering hidden rooms

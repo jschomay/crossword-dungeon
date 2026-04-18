@@ -156,11 +156,8 @@ describe('BOSS_DEF.onEvent', () => {
     return { type: 'boss', pos: { x: 1, y: 0 }, locked: true, completed: false, glowColor: '#ff4444', state: { failPending: false, exitPending: false } };
   }
 
-  it('locks on level:start', () => {
-    const room = makeBossRoom();
-    room.locked = false;
-    BOSS_DEF.onEvent(room, { type: 'level:start' }, {} as never);
-    expect(room.locked).toBe(true);
+  it('spawns locked via initialLocked', () => {
+    expect(BOSS_DEF.initialLocked).toBe(true);
   });
 
   it('unlocks on puzzle:complete', () => {
@@ -505,11 +502,8 @@ function makeHiddenRoom(hidden: boolean, claimed = false, contents: HiddenTreasu
 }
 
 describe('HIDDEN_TREASURE_DEF', () => {
-  it('level:start marks as hidden and unclaimed', () => {
-    const room = makeHiddenRoom(false, true);
-    HIDDEN_TREASURE_DEF.onEvent(room, { type: 'level:start' }, {} as never);
-    expect(room.hidden).toBe(true);
-    expect((room.state as HiddenTreasureRoomState).claimed).toBe(false);
+  it('spawns hidden via initialHidden', () => {
+    expect(HIDDEN_TREASURE_DEF.initialHidden).toBe(true);
   });
 
   it('does nothing when hidden', () => {
@@ -536,7 +530,7 @@ describe('HIDDEN_TREASURE_DEF', () => {
     const room = makeHiddenRoom(false, false, 'gold');
     const html = HIDDEN_TREASURE_DEF.renderPanel(room, {} as never);
     expect(html).toContain('SPACE');
-    expect(html).toContain('50 gold');
+    expect(html).toContain('loot');
   });
 
   it('renderPanel returns empty string when hidden', () => {
@@ -555,11 +549,8 @@ describe('VERY_HIDDEN_DEF', () => {
     return { type: 'very_hidden', pos: { x: 5, y: 5 }, locked: false, completed: false, glowColor: '#aa66ff', state, veryHidden };
   }
 
-  it('level:start marks as veryHidden and unblessed', () => {
-    const room = makeVeryHiddenRoom(false, true);
-    VERY_HIDDEN_DEF.onEvent(room, { type: 'level:start' }, {} as never);
-    expect(room.veryHidden).toBe(true);
-    expect((room.state as VeryHiddenRoomState).blessed).toBe(false);
+  it('spawns very hidden via initialVeryHidden', () => {
+    expect(VERY_HIDDEN_DEF.initialVeryHidden).toBe(true);
   });
 
   it('does nothing when very hidden', () => {

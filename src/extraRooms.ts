@@ -9,6 +9,7 @@
 
 import { getWords } from './puzzle';
 import type { Ipuz } from './puzzle';
+import type Puzzle from './puzzle';
 
 // ---- Types ----
 
@@ -124,7 +125,7 @@ export interface RunContext {
   readonly puzzleComplete: boolean;
 
   // Actions
-  showInteraction(lines: string[]): void;
+  showInteraction(lines: string[], onDismiss?: () => void): void;
   render(): void;
   advancePuzzle(): Promise<void>;
   triggerVictory(): void;
@@ -173,17 +174,45 @@ export interface RunContext {
   readonly equippedItems: Array<{ name: string }>;
 }
 
+/**
+ * Context passed to buildState at room generation time.
+ * Lighter than RunContext — only what's needed to construct initial room state.
+ */
+export interface BuildContext {
+  readonly dungeonLevel: number;
+  readonly archPuzzle: ArchPuzzleState | null;
+  readonly puzzle: Puzzle;
+  readonly fullIpuz: Ipuz;
+  readonly selectedWordKeys: Set<string>;
+  /** Returns true if the letter room at pos has a pre-solved letter at generation time. */
+  isPreSolved(pos: Coord): boolean;
+  /** Pick a random position from available, removing it. Returns null if none left. */
+  pickPosition(available: Set<string>): Coord | null;
+}
+
 export type ExtraRoomDef = {
   type: 'shop' | 'boss' | 'dragon_treasure' | 'simm' | 'trapped_adventurer' | 'hidden_treasure' | 'very_hidden' | 'treasure_hunter' | 'trader' | 'cursed_fountain' | 'mimic_chest';
   glowColor: string;
   centerChar: string;
   lockedCenterChar: string;
+  /** Minimum dungeon level for this room to spawn. */
+  minLevel: number;
+  /** Spawn chance 0–1, or 'always' to always spawn. */
+  spawnChance: number | 'always';
+  /** If true, room spawns locked. */
+  initialLocked?: boolean;
+  /** If true, room spawns hidden (crack indicator visible in adjacent wall). */
+  initialHidden?: boolean;
+  /** If true, room spawns very hidden (no indicator). */
+  initialVeryHidden?: boolean;
+  /**
+   * Pick a position from available and build initial state.
+   * Removes chosen position from available. Returns null if no valid placement exists.
+   */
+  buildState(ctx: BuildContext, available: Set<string>): { pos: Coord; state: ExtraRoomState } | null;
   /** onEvent mutates room.locked / room.state in response to game events */
   onEvent(room: ExtraRoom, event: DungeonEvent, ctx: RunContext): void;
-  /**
-   * renderPanel returns the HTML string for the sidebar panel when player is in this room.
-   * Game is responsible for injecting it into the DOM.
-   */
+  /** renderPanel returns the HTML string for the sidebar panel when player is in this room. */
   renderPanel(room: ExtraRoom, ctx: RunContext): string;
   /** handleInput handles a key press when player is in this room. Returns true if consumed. */
   handleInput(room: ExtraRoom, key: string, ctx: RunContext): boolean;
@@ -267,6 +296,12 @@ export const SHOP_DEF: ExtraRoomDef = {
   glowColor: '#44ffcc',
   centerChar: '%',
   lockedCenterChar: '%',
+  minLevel: 1,
+  spawnChance: 'always',
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: {} } : null;
+  },
 
   onEvent(room, event) {
     if (event.type === 'level:start') room.locked = false;
@@ -295,13 +330,15 @@ export const BOSS_DEF: ExtraRoomDef = {
   glowColor: '#ff4444',
   centerChar: '/',
   lockedCenterChar: '/',
+  minLevel: 1,
+  spawnChance: 'always',
+  initialLocked: true,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { failPending: false, exitPending: false } } : null;
+  },
 
   onEvent(room, event) {
-    if (event.type === 'level:start') {
-      room.locked = true;
-      (room.state as BossRoomState).failPending = false;
-      (room.state as BossRoomState).exitPending = false;
-    }
     if (event.type === 'puzzle:complete') room.locked = false;
   },
 
@@ -323,12 +360,12 @@ export const BOSS_DEF: ExtraRoomDef = {
         let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
         html += s('#888', 'As you reach for the door, it seals with a magical lock!') + '<br>';
         html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
-        html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Continue') + '<br>';
+        html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to continue.') + '<br>';
         return html;
       }
       let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
       html += s('#888', 'You found the exit! Freedom is within reach.') + '<br><br>';
-      html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Escape the dungeon') + '<br>';
+      html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to escape the dungeon.') + '<br>';
       return html;
     }
 
@@ -336,7 +373,7 @@ export const BOSS_DEF: ExtraRoomDef = {
       let html = s(BOSS_COLOR, '/ The Sealed Door') + '<br>';
       html += s('#888', 'The rune corrupts the spell.') + '<br>';
       html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
-      html += `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Continue') + '<br>';
+      html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to continue.') + '<br>';
       return html;
     }
 
@@ -413,6 +450,9 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
   glowColor: '#ffaa00',
   centerChar: '$',
   lockedCenterChar: '$',
+  minLevel: 2,
+  spawnChance: 'always', // special: handled outside main loop, one per dragon
+  buildState: () => null, // handled specially outside the main loop
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
@@ -445,7 +485,7 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
     return s(GOLD_COLOR, "$ Dragon's Hoard") + '<br>' +
       s('#888', `A pile of gold glitters in the torchlight.`) + '<br>' +
       s('#ccc', `${ds.goldAmount} gold`) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + s('#888', ' Loot the treasure') + '<br>';
+      s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to loot the treasure.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -454,7 +494,7 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
     if (key === ' ') {
       ds.looted = true;
       ctx.addGold(ds.goldAmount);
-      ctx.showInteraction([`You claim ${ds.goldAmount} gold from the dragon's hoard!`]);
+      ctx.showInteraction([`You claim ${ds.goldAmount} gold from the dragon's hoard!`], () => { room.completed = true; });
       return true;
     }
     return false;
@@ -577,6 +617,12 @@ export const SIMM_DEF: ExtraRoomDef = {
   glowColor: '#88ff88',
   centerChar: '&',
   lockedCenterChar: '&',
+  minLevel: 1,
+  spawnChance: 'always',
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { dialogue: '' } } : null;
+  },
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
@@ -604,7 +650,7 @@ export const SIMM_DEF: ExtraRoomDef = {
   handleInput(room, key, ctx) {
     if (key === ' ') {
       const s = room.state as SimmRoomState;
-      ctx.showInteraction([`"${s.dialogue}"`, '', 'Simm runs off to solve other puzzles.']);
+      ctx.showInteraction([`"${s.dialogue}"`, '', 'Simm runs off to solve other puzzles.'], () => { room.completed = true; });
       return true;
     }
     if (/^[a-z]$/.test(key)) return true;
@@ -619,31 +665,28 @@ export const VERY_HIDDEN_DEF: ExtraRoomDef = {
   glowColor: '#aa66ff',
   centerChar: '%',
   lockedCenterChar: '%',
-
-  onEvent(room, event, _ctx) {
-    if (event.type === 'level:start') {
-      room.veryHidden = true;
-      (room.state as VeryHiddenRoomState).blessed = false;
-    }
+  minLevel: 1,
+  spawnChance: 0.3,
+  initialVeryHidden: true,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    if (!pos) return null;
+    const stats = ['max_hp', 'max_mana', 'damage', 'defense'] as const;
+    return { pos, state: { blessed: false, stat: stats[Math.floor(Math.random() * stats.length)] } };
   },
 
+  onEvent(_room, _event, _ctx) {},
+
   renderPanel(room, _ctx) {
-    const s = room.state as VeryHiddenRoomState;
     const COLOR = '#aa66ff';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
     if (room.veryHidden) return '';
 
-    const statDesc = s.stat === 'max_hp' ? '+10 max HP'
-      : s.stat === 'max_mana' ? '+5 max Mana'
-      : s.stat === 'damage' ? '+3 Damage'
-      : '+2 Defense';
-
     return sp(COLOR, '% Mysterious Sorcerer') + '<br>' +
       sp('#aaa', 'A mysterious sorcerer materializes before you.') + '<br>' +
-      sp('#aaa', '"Let me grant you a boon, wanderer."') + '<br>' +
-      sp('#ccc', statDesc) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Accept blessing') + '<br>';
+      sp('#aaa', '"Come closer and I\'ll give you a gift."') + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to accept.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -651,18 +694,19 @@ export const VERY_HIDDEN_DEF: ExtraRoomDef = {
     if (room.veryHidden) return false;
     if (key === ' ') {
       s.blessed = true;
+      const onDismiss = () => { room.completed = true; };
       if (s.stat === 'max_hp') {
         ctx.applyStatBonus('max_hp', 10);
-        ctx.showInteraction(['The sorcerer blesses you — +10 max HP!']);
+        ctx.showInteraction(['The sorcerer blesses you with +10 max HP!'], onDismiss);
       } else if (s.stat === 'max_mana') {
         ctx.applyStatBonus('max_mana', 5);
-        ctx.showInteraction(['The sorcerer blesses you — +5 max Mana!']);
+        ctx.showInteraction(['The sorcerer blesses you with +5 max Mana!'], onDismiss);
       } else if (s.stat === 'damage') {
         ctx.applyStatBonus('damage', 3);
-        ctx.showInteraction(['The sorcerer blesses you — +3 Damage!']);
+        ctx.showInteraction(['The sorcerer blesses you with +3 Damage!'], onDismiss);
       } else {
         ctx.applyStatBonus('defense', 2);
-        ctx.showInteraction(['The sorcerer blesses you — +2 Defense!']);
+        ctx.showInteraction(['The sorcerer blesses you with +2 Defense!'], onDismiss);
       }
       return true;
     }
@@ -678,13 +722,36 @@ export const HIDDEN_TREASURE_DEF: ExtraRoomDef = {
   glowColor: '#ffdd66',
   centerChar: '?',
   lockedCenterChar: '?',
-
-  onEvent(room, event, _ctx) {
-    if (event.type === 'level:start') {
-      room.hidden = true;
-      (room.state as HiddenTreasureRoomState).claimed = false;
+  minLevel: 2,
+  spawnChance: 0.3,
+  initialHidden: true,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    if (!pos) return null;
+    const contentsOptions: HiddenTreasureRoomState['contents'][] = ['gold', 'notes'];
+    if (ctx.archPuzzle) contentsOptions.push('arch_hint');
+    const contents = contentsOptions[Math.floor(Math.random() * contentsOptions.length)];
+    let notesWords: string[] | undefined;
+    if (contents === 'notes') {
+      const wordStr = (sol: Ipuz['solution'], cells: { x: number; y: number }[]) =>
+        cells.map(c => sol[c.y]?.[c.x] as string).join('');
+      const puzzleWds = getWords(ctx.puzzle.ipuz as Ipuz)
+        .filter(w => ctx.selectedWordKeys.has(w.key))
+        .map(w => wordStr(ctx.puzzle.ipuz.solution as Ipuz['solution'], w.cells))
+        .filter(w => w && !/[^A-Z]/.test(w));
+      const unusedWds = getWords(ctx.fullIpuz)
+        .filter(w => !ctx.selectedWordKeys.has(w.key))
+        .map(w => wordStr(ctx.fullIpuz.solution, w.cells))
+        .filter(w => w && !/[^A-Z]/.test(w));
+      const realWord = puzzleWds[Math.floor(Math.random() * puzzleWds.length)] ?? 'MYSTERY';
+      const unused1 = unusedWds[Math.floor(Math.random() * unusedWds.length)] ?? 'UNKNOWN';
+      const unused2 = unusedWds.filter(w => w !== unused1)[Math.floor(Math.random() * (unusedWds.length - 1))] ?? 'ENIGMA';
+      notesWords = [realWord, unused1, unused2].sort(() => Math.random() - 0.5);
     }
+    return { pos, state: { claimed: false, contents, notesWords } };
   },
+
+  onEvent(_room, _event, _ctx) {},
 
   renderPanel(room, _ctx) {
     const s = room.state as HiddenTreasureRoomState;
@@ -695,20 +762,20 @@ export const HIDDEN_TREASURE_DEF: ExtraRoomDef = {
       return ''; // not visible yet
     }
 
+    const actionWord = s.contents === 'gold' ? 'loot' : 'explore';
     let contentsDesc = '';
     if (s.contents === 'gold') {
-      contentsDesc = 'A hidden cache of 50 gold glitters in the dust.';
+      contentsDesc = 'Something glitters in the dust.';
     } else if (s.contents === 'notes') {
-      const words = s.notesWords ?? [];
-      contentsDesc = `Scattered notes from the puzzle setter. Three words are scrawled: ${words.join(', ')}. The paper crumbles to dust as you read it — remember what you saw!`;
+      contentsDesc = 'Paper scraps litter the floor, notes scribbled across them.';
     } else {
-      contentsDesc = 'A faded inscription reveals one letter of the magical seal.';
+      contentsDesc = 'A faded inscription adorns the wall, hinting at a magical seal.';
     }
 
     return sp(COLOR, '? Secret Chamber') + '<br>' +
-      sp('#aaa', 'You found a secret passage!') + '<br>' +
+      sp('#aaa', 'A long forgotten room.') + '<br>' +
       sp('#aaa', contentsDesc) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Claim') + '<br>';
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ` to ${actionWord}.`) + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -716,22 +783,23 @@ export const HIDDEN_TREASURE_DEF: ExtraRoomDef = {
     if (key === ' ') {
       const s = room.state as HiddenTreasureRoomState;
       s.claimed = true;
+      const onDismiss = () => { room.completed = true; };
       if (s.contents === 'gold') {
         ctx.addGold(50);
-        ctx.showInteraction(['You claim 50 gold from the secret chamber!']);
+        ctx.showInteraction(['You find 50 gold!'], onDismiss);
       } else if (s.contents === 'arch_hint') {
         const letter = ctx.revealArchLetter();
         if (letter) {
-          ctx.showInteraction([`The inscription reveals the letter '${letter}'. Don't forget it!`]);
+          ctx.showInteraction([`The inscription reveals the letter '${letter}'. Don't forget it!`], onDismiss);
         } else {
-          ctx.showInteraction(['The inscription is illegible.']);
+          ctx.showInteraction(['The inscription is illegible.'], onDismiss);
         }
       } else {
         ctx.showInteraction([
-          'Puzzle setter notes — remember:',
+          'You piece together the notes...',
           ...(s.notesWords ?? []).map(w => `  ${w}`),
-          '(The paper crumbles to dust.)',
-        ]);
+          'The paper crumbles to dust in your hands.',
+        ], onDismiss);
       }
       return true;
     }
@@ -754,6 +822,41 @@ export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
   glowColor: '#ffcc44',
   centerChar: '&',
   lockedCenterChar: '&',
+  minLevel: 2,
+  spawnChance: 0.3,
+  buildState: (ctx, available) => {
+    const { width, height } = ctx.puzzle.ipuz.dimensions;
+    const roomSet = new Set(ctx.puzzle.getRooms().map(r => `${r.x},${r.y}`));
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+
+    // Filter available positions to those with at least one unsolved adjacent letter room
+    const validKeys = [...available].filter(key => {
+      const [x, y] = key.split(',').map(Number);
+      return dirs.some(({ dx, dy }) => {
+        const nx = x + dx, ny = y + dy;
+        return nx >= 0 && ny >= 0 && nx < width && ny < height
+          && roomSet.has(`${nx},${ny}`)
+          && !ctx.isPreSolved({ x: nx, y: ny });
+      });
+    });
+    if (validKeys.length === 0) return null;
+
+    const key = validKeys[Math.floor(Math.random() * validKeys.length)];
+    available.delete(key);
+    const [x, y] = key.split(',').map(Number);
+    const pos = { x, y };
+
+    const adjacentRooms: Coord[] = [];
+    for (const { dx, dy } of dirs) {
+      const nx = pos.x + dx, ny = pos.y + dy;
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && roomSet.has(`${nx},${ny}`)) {
+        adjacentRooms.push({ x: nx, y: ny });
+      }
+    }
+    const rewards = ['gold', 'hp_potion', 'mana_potion', 'arch_hint'] as const;
+    const reward = rewards[Math.floor(Math.random() * rewards.length)];
+    return { pos, state: { adjacentRooms, rescued: false, reward } };
+  },
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
@@ -787,15 +890,9 @@ export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
         sp('#666', `Locked: Solve ${remaining} more adjacent room(s)`) + '<br>';
     }
 
-    const rewardDesc = s.reward === 'gold' ? '30 gold'
-      : s.reward === 'hp_potion' ? 'a health potion'
-      : s.reward === 'mana_potion' ? 'a mana potion'
-      : 'a hint about the magical seal';
-
     return sp(COLOR, '& Trapped Adventurer') + '<br>' +
-      sp('#aaa', pickRandom(TRAPPED_ADVENTURER_DIALOGUES)) + '<br>' +
-      sp('#888', `They offer you ${rewardDesc}.`) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Accept reward') + '<br>';
+      sp('#aaa', pickRandom(TRAPPED_ADVENTURER_DIALOGUES)) + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to talk.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -803,21 +900,22 @@ export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
     if (key === ' ') {
       const s = room.state as TrappedAdventurerRoomState;
       s.rescued = true;
+      const onDismiss = () => { room.completed = true; };
       if (s.reward === 'gold') {
         ctx.addGold(30);
-        ctx.showInteraction(['The rescued adventurer gives you 30 gold.']);
+        ctx.showInteraction(['They press 30 gold into your hand. "Take it, please."'], onDismiss);
       } else if (s.reward === 'hp_potion') {
         ctx.addHpPotion();
-        ctx.showInteraction(['The rescued adventurer gives you a health potion.']);
+        ctx.showInteraction(['"Here, take this health potion. It\'s all I have."'], onDismiss);
       } else if (s.reward === 'mana_potion') {
         ctx.addManaPotion();
-        ctx.showInteraction(['The rescued adventurer gives you a mana potion.']);
+        ctx.showInteraction(['"Here, take this mana potion. It\'s all I have."'], onDismiss);
       } else {
         const letter = ctx.revealArchLetter();
         if (letter) {
-          ctx.showInteraction([`The rescued adventurer whispers: "I once heard the seal word contained the letter '${letter}'. Don't forget it!"`]);
+          ctx.showInteraction([`They lean in close. "I have a secret. '${letter}' is a magical rune. You'll know when to use it. Don't forget!"`], onDismiss);
         } else {
-          ctx.showInteraction(['The rescued adventurer gives you their blessings.']);
+          ctx.showInteraction(['"Thank you for freeing me. Safe travels.'], onDismiss);
         }
       }
       return true;
@@ -834,6 +932,12 @@ export const TREASURE_HUNTER_DEF: ExtraRoomDef = {
   glowColor: '#ffaa44',
   centerChar: '&',
   lockedCenterChar: '&',
+  minLevel: 2,
+  spawnChance: 0.3,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { talked: false } } : null;
+  },
 
   onEvent(room, event, _ctx) {
     if (event.type === 'level:start') {
@@ -841,27 +945,30 @@ export const TREASURE_HUNTER_DEF: ExtraRoomDef = {
     }
   },
 
-  renderPanel(_room, ctx) {
+  renderPanel(_room, _ctx) {
     const COLOR = '#ffaa44';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
-    const vhRooms = ctx.getVeryHiddenRooms();
-    let hint: string;
-    if (vhRooms.length === 0) {
-      hint = "Have you heard about the secret rooms? Sometimes you can find them if you look hard enough. I haven't found any on this level yet.";
-    } else {
-      const vh = vhRooms[0];
-      hint = `Pssst! I found something! There's a secret room hidden ${vh.direction} of the letter ${vh.letterHint}.`;
-    }
-
     return sp(COLOR, '& Treasure Hunter') + '<br>' +
-      sp('#aaa', '"A furtive treasure hunter hides in the shadows."') + '<br>' +
-      sp('#aaa', hint) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Continue') + '<br>';
+      sp('#aaa', 'A furtive treasure hunter hides in the shadows.') + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to talk.') + '<br>';
   },
 
-  handleInput(_room, key, _ctx) {
-    if (key === ' ') return true;
+  handleInput(room, key, ctx) {
+    if (key === ' ') {
+      const s = room.state as TreasureHunterRoomState;
+      s.talked = true;
+      const vhRooms = ctx.getVeryHiddenRooms();
+      let hint: string;
+      if (vhRooms.length === 0) {
+        hint = "Have you heard about the secret rooms? Sometimes you can find them if you look hard enough. I haven't found any on this level yet.";
+      } else {
+        const vh = vhRooms[0];
+        hint = `Pssst! I found something! There's a secret room hidden ${vh.direction} of the letter ${vh.letterHint}.`;
+      }
+      ctx.showInteraction([hint], () => { room.completed = true; });
+      return true;
+    }
     if (/^[a-z]$/.test(key)) return true;
     return false;
   },
@@ -874,6 +981,12 @@ export const TRADER_DEF: ExtraRoomDef = {
   glowColor: '#cc8844',
   centerChar: '%',
   lockedCenterChar: '%',
+  minLevel: 3,
+  spawnChance: 0.3,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { traded: false, tradeSlot: null } } : null;
+  },
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
@@ -907,7 +1020,7 @@ export const TRADER_DEF: ExtraRoomDef = {
       sp('#aaa', '"A weathered trader eyes your gear."') + '<br>' +
       sp('#aaa', `"I\'ll trade you something for that ${offerItem.name} (Lv.${offerItem.level})."`) + '<br>' +
       sp('#888', `You\'ll receive: a ${offerItem.slot} item (1 level lower, no mods).`) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Accept trade') + '<br>';
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to accept trade.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -918,10 +1031,11 @@ export const TRADER_DEF: ExtraRoomDef = {
     if (key === ' ') {
       const result = ctx.tradeEquippedItem(s.tradeSlot);
       s.traded = true;
+      const onDismiss = () => { room.completed = true; };
       if (result) {
-        ctx.showInteraction([`Trade complete! You received a ${result.newItemName}.`]);
+        ctx.showInteraction([`Trade complete! You received a ${result.newItemName}.`], onDismiss);
       } else {
-        ctx.showInteraction(['The trader shrugs — no suitable item for trade.']);
+        ctx.showInteraction(['The trader shrugs — no suitable item for trade.'], onDismiss);
       }
       return true;
     }
@@ -961,14 +1075,20 @@ export const CURSED_FOUNTAIN_DEF: ExtraRoomDef = {
   glowColor: '#4444cc',
   centerChar: '?',
   lockedCenterChar: '?',
+  minLevel: 3,
+  spawnChance: 0.3,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { used: false, trade: null } } : null;
+  },
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
       const s = room.state as CursedFountainRoomState;
       s.used = false;
-      // Pick a random valid trade
+      // Pick a random affordable trade; fall back to any trade if none affordable
       const validTrades = getValidFountainTrades(ctx);
-      s.trade = validTrades.length > 0 ? pickRandom(validTrades) : null;
+      s.trade = pickRandom(validTrades.length > 0 ? validTrades : ALL_FOUNTAIN_TRADES);
     }
   },
 
@@ -977,16 +1097,21 @@ export const CURSED_FOUNTAIN_DEF: ExtraRoomDef = {
     const COLOR = '#4444cc';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
-    if (!s.trade) {
-      return sp(COLOR, '? Cursed Fountain') + '<br>' +
-        sp('#aaa', 'A cursed fountain bubbling with dark energy.') + '<br>' +
-        sp('#888', 'The fountain offers no trade you can afford.') + '<br>';
-    }
+    const [give, take] = s.trade ? [s.trade.give, s.trade.take] : [null, null];
+    const fmtStat = (stat: string, amt: number) => {
+      const label = stat === 'max_hp' ? 'max HP' : stat === 'max_mana' ? 'max Mana' : stat === 'damage' ? 'DMG' : 'DEF';
+      return `+${amt} ${label}`;
+    };
+    const tradeGive = give ? fmtStat(give.stat, give.amount) : '';
+    const tradeTake = take ? `-${take.amount} ${take.stat === 'max_hp' ? 'max HP' : take.stat === 'max_mana' ? 'max Mana' : take.stat === 'damage' ? 'DMG' : 'DEF'}` : '';
+    const tradeDesc = give && take
+      ? `An eerie voice whispers an unholy transaction:<br>${tradeGive} for ${tradeTake}`
+      : '';
 
     return sp(COLOR, '? Cursed Fountain') + '<br>' +
-      sp('#aaa', 'A cursed fountain bubbling with dark energy.') + '<br>' +
-      sp('#ccc', s.trade.desc) + '<br><br>' +
-      `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' Drink') + '<br>';
+      sp('#aaa', 'A fountain bubbling with dark energy.') + '<br>' +
+      sp('#ccc', tradeDesc) + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to drink.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -996,10 +1121,15 @@ export const CURSED_FOUNTAIN_DEF: ExtraRoomDef = {
       s.used = true;
       ctx.applyStatBonus(s.trade.give.stat, s.trade.give.amount);
       ctx.applyStatBonus(s.trade.take.stat, -s.trade.take.amount);
+      const g = s.trade.give, t = s.trade.take;
+      const fmtS = (stat: string, amt: number, sign: '+' | '-') => {
+        const label = stat === 'max_hp' ? 'max HP' : stat === 'max_mana' ? 'max Mana' : stat === 'damage' ? 'DMG' : 'DEF';
+        return `${sign}${amt} ${label}`;
+      };
       ctx.showInteraction([
         'You drink from the cursed fountain...',
-        s.trade.desc,
-      ]);
+        `${fmtS(g.stat, g.amount, '+')}  ${fmtS(t.stat, t.amount, '-')}`,
+      ], () => { room.completed = true; });
       return true;
     }
     if (/^[a-z]$/.test(key)) return true;
@@ -1014,6 +1144,12 @@ export const MIMIC_CHEST_DEF: ExtraRoomDef = {
   glowColor: '#ccaa22',
   centerChar: '$',
   lockedCenterChar: '$',
+  minLevel: 2,
+  spawnChance: 0.3,
+  buildState: (ctx, available) => {
+    const pos = ctx.pickPosition(available);
+    return pos ? { pos, state: { opened: false, isReal: Math.random() < 0.5 } } : null;
+  },
 
   onEvent(room, event) {
     if (event.type === 'level:start') {
@@ -1030,7 +1166,7 @@ export const MIMIC_CHEST_DEF: ExtraRoomDef = {
 
     return sp(GOLD, '$ Treasure Chest') + '<br>' +
       sp('#aaa', 'A chest sits here, glinting invitingly.') + '<br><br>' +
-      sp('#fff', '[SPACE]') + sp('#aaa', ' Open chest') + '<br>';
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to loot.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -1039,17 +1175,18 @@ export const MIMIC_CHEST_DEF: ExtraRoomDef = {
     if (s.opened) return true;
 
     s.opened = true;
+    const onDismiss = () => { room.completed = true; };
     if (s.isReal) {
       ctx.addGold(100);
-      ctx.showInteraction(['You found 100 gold inside the chest!']);
+      ctx.showInteraction(['You find 100 gold inside the chest!'], onDismiss);
     } else {
       const hpDmg = Math.floor(ctx.hp * 0.5);
       const manaDmg = Math.floor(ctx.mana * 0.5);
       ctx.takeDamage(hpDmg, manaDmg);
       ctx.showInteraction([
-        'The chest springs to life — it\'s a mimic!',
-        `It deals ${hpDmg} damage and drains ${manaDmg} mana!`,
-      ]);
+        'The chest is trapped!',
+        `-${hpDmg} HP  -${manaDmg} MANA`,
+      ], onDismiss);
     }
     return true;
   },
@@ -1073,6 +1210,23 @@ export const EXTRA_ROOM_DEFS: Record<string, ExtraRoomDef> = {
 
 /** Alias for use in dungeon rendering — same object, exported separately for clarity. */
 export const EXTRA_ROOM_DEFS_MAP = EXTRA_ROOM_DEFS;
+
+/**
+ * Ordered list of defs for the bonus room generation loop.
+ * Dragon treasure is excluded — it's handled separately per dragon encounter.
+ */
+export const BONUS_ROOM_DEFS: ExtraRoomDef[] = [
+  SHOP_DEF,
+  BOSS_DEF,
+  SIMM_DEF,
+  TRAPPED_ADVENTURER_DEF,
+  VERY_HIDDEN_DEF,
+  HIDDEN_TREASURE_DEF,
+  TREASURE_HUNTER_DEF,
+  TRADER_DEF,
+  CURSED_FOUNTAIN_DEF,
+  MIMIC_CHEST_DEF,
+];
 
 export function getDef(type: string): ExtraRoomDef {
   return EXTRA_ROOM_DEFS[type];

@@ -11,6 +11,8 @@ The workflow will progress layer by layer of functionality in an agile style.
 
 Output should be kept brief. Before making changes, succinctly outline the plan to get approval. Bring up any questions around missing or unclear context or potentially high impact trade-off decisions. On resolving big decisions, suggest adding it to docs/decisions.md.
 
+When fixing a bug, read all affected code paths and identify any design smells before proposing a fix. Prefer fixes that address the underlying design issue over ones that paper over it.
+
 Before writing new code, you must reference `docs/architecture.md`. If any of this document gets out of date, you should call it out and update it.
 
 Sometimes it is useful to read `docs/decisions.md` to see technical and design choices made.
