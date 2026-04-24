@@ -8,6 +8,7 @@
  */
 import { readFileSync } from 'fs';
 import { createServer } from 'http';
+import { resolve } from 'path';
 
 // ── Stubs (must be set before any game import) ────────────────────────────────
 
@@ -90,6 +91,9 @@ const keydownListeners: Array<(e: unknown) => void> = [];
 // ── Boot game ─────────────────────────────────────────────────────────────────
 
 const { default: Game } = await import('../src/game.ts');
+const { default: Dungeon } = await import('../src/dungeon.ts');
+const { default: Puzzle, validateIpuz } = await import('../src/puzzle.ts');
+const { generateEncounter } = await import('../src/encounters.ts');
 const game = await (Game as any).create() as any;
 console.log('Game booted. playerPos:', game.playerPos);
 
@@ -245,9 +249,40 @@ createServer(async (req, res) => {
       lines.push(`  ${name} (${nx},${ny}): hasRoom=${has} connected=${conn} locked=${locked}`);
     }
     res.end(lines.join('\n'));
+  } else if (url.pathname === '/load') {
+    // Load a hand-crafted fixture to set up a specific bug scenario.
+    // GET /load?fixture=dragon-bug  → loads tests/fixtures/dragon-bug.json
+    const name = url.searchParams.get('fixture') ?? '';
+    const fixturePath = resolve(`./tests/fixtures/${name}.json`);
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
+
+    // Build Puzzle + Dungeon from fixture ipuz
+    const ipuz = validateIpuz(fixture.ipuz);
+    const puzzle = new Puzzle(ipuz);
+    const extraRooms = fixture.extraRooms ?? [];
+    const dungeon = new Dungeon(puzzle, extraRooms);
+
+    // Inject into live game instance (bypasses generator entirely)
+    game.puzzle = puzzle;
+    game.dungeon = dungeon;
+    game.extraRooms = extraRooms;
+    game.playerPos = fixture.playerPos;
+
+    // Build roomStates map — generate a random encounter for any room missing one
+    const rng = { getItem: <T>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)] as T, shuffle: <T>(arr: readonly T[]) => [...arr].sort(() => Math.random() - 0.5) as T[] };
+    game.roomStates = new Map(Object.entries(fixture.roomStates).map(([k, v]: [string, any]) => {
+      const enc = v.encounter ?? generateEncounter(rng, game.dungeonLevel);
+      return [k, { ...v, encounter: enc }];
+    }));
+
+    game.puzzleComplete = false;
+    game.gameOver = false;
+    game.gameWon = false;
+    game.render();
+    res.end(`Loaded fixture: ${name}\n\n` + snapshot());
   } else {
     res.statusCode = 404;
-    res.end('Not found. Endpoints: /state  /key?k=ArrowRight  /dismiss  /debug');
+    res.end('Not found. Endpoints: /state  /key?k=ArrowRight  /dismiss  /debug  /load?fixture=<name>');
   }
 }).listen(PORT, () => {
   console.log(`Playtest server on http://localhost:${PORT}`);

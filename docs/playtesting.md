@@ -93,6 +93,70 @@ Only appears on status updates: using a consumable, hitting a locked door, comba
 - **Consumables** (keys 1-4): Heal, Restore mana, Inscribe (reveal letter), Intone (reveal word). Using one opens a popup — dismiss before moving.
 - **Combat**: resolves instantly in the harness (animation skipped). Final state is correct.
 
+## Bug reproduction with fixtures
+
+When a bug requires a specific dungeon layout that may not appear in normal play, use a hand-crafted fixture instead of hoping the generator produces the right configuration.
+
+### How it works
+
+The `/load` endpoint reads a JSON fixture from `tests/fixtures/<name>.json`, constructs a `Puzzle` and `Dungeon` directly from it, and injects the result into the live game instance — bypassing the puzzle generator entirely. The game runs normally from that point.
+
+```bash
+curl -s "http://localhost:3001/load?fixture=dragon-bug"
+```
+
+### Fixture format
+
+```json
+{
+  "ipuz": {
+    "version": "http://ipuz.org/v1",
+    "kind": ["http://ipuz.org/crossword#1"],
+    "dimensions": { "width": 3, "height": 2 },
+    "puzzle": [["#", 1, "#"], ["#", 2, 3]],
+    "solution": [
+      ["#", "B", "#"],
+      ["#", "C", "D"]
+    ],
+    "clues": {
+      "Across": [[2, "Some clue"]],
+      "Down": [[1, "Some clue"]]
+    }
+  },
+  "playerPos": { "x": 2, "y": 1 },
+  "roomStates": {
+    "1,0": { "activatedLevel": 3, "solvedLetter": null, "completed": false, "incorrectGuesses": [] },
+    "1,1": { "activatedLevel": 1, "solvedLetter": null, "completed": false, "incorrectGuesses": [] },
+    "2,1": { "activatedLevel": 1, "solvedLetter": null, "completed": false, "incorrectGuesses": [] }
+  },
+  "extraRooms": [
+    {
+      "type": "dragon_treasure",
+      "pos": { "x": 2, "y": 0 },
+      "locked": true,
+      "completed": false,
+      "hidden": false,
+      "veryHidden": false,
+      "glowColor": "#ffaa00",
+      "connectedTo": { "x": 1, "y": 0 },
+      "state": { "dragonPos": { "x": 1, "y": 0 }, "goldAmount": 150, "looted": false }
+    }
+  ]
+}
+```
+
+**Key points:**
+- `solution` controls which grid positions are rooms (`#` = no room, any letter = room). Extra rooms are placed at positions that are `#` in the solution — the extra room overrides the black square.
+- `roomStates` keys are `"x,y"`. Any room in the solution grid that isn't in `roomStates` won't be interactable. `encounter` is optional — one will be generated if omitted.
+- `extraRooms` fields: `type`, `pos`, `locked`, `completed`, `hidden`, `veryHidden`, `glowColor` are required. `connectedTo` restricts corridor drawing to one neighbor (used for dragon treasure). `state` shape depends on room type.
+- Player `activatedLevel > 0` means the encounter type is visible. `activatedLevel = 0` means dark/unknown.
+
+### Designing for a specific bug
+
+Think about the minimal grid that forces the condition. For the locked-door-from-wrong-side bug, the key constraint was: a locked extra room with `connectedTo` pointing away from the player's starting position. A 3×2 grid with the player below the extra room was enough to reproduce it in two moves.
+
+Keep fixtures small — the smaller the grid, the easier it is to navigate to the bug in a few keystrokes.
+
 ## Things that will trip you up
 
 - **One curl at a time.** If you chain multiple curl calls in one Bash command, a popup opened by the first call will silently swallow subsequent key inputs — the keys are ignored while popup is open and you won't know why movement stopped working. Always check the full snapshot after each action before sending the next one.

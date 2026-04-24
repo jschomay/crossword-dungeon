@@ -1,0 +1,35 @@
+{
+  "ipuz": {
+    "version": "http://ipuz.org/v1",
+    "kind": ["http://ipuz.org/crossword#1"],
+    "dimensions": { "width": 3, "height": 2 },
+    "puzzle": [["#", 1, "#"], ["#", 2, 3]],
+    "solution": [
+      ["#", "B", "#"],
+      ["#", "C", "D"]
+    ],
+    "clues": {
+      "Across": [[2, "Test across"]],
+      "Down": [[1, "Test down"]]
+    }
+  },
+  "playerPos": { "x": 2, "y": 1 },
+  "roomStates": {
+    "1,0": { "activatedLevel": 3, "solvedLetter": null, "completed": false, "incorrectGuesses": [] },
+    "1,1": { "activatedLevel": 1, "solvedLetter": null, "completed": false, "incorrectGuesses": [] },
+    "2,1": { "activatedLevel": 1, "solvedLetter": null, "completed": false, "incorrectGuesses": [] }
+  },
+  "extraRooms": [
+    {
+      "type": "dragon_treasure",
+      "pos": { "x": 2, "y": 0 },
+      "locked": true,
+      "completed": false,
+      "hidden": false,
+      "veryHidden": false,
+      "glowColor": "#ffaa00",
+      "connectedTo": { "x": 1, "y": 0 },
+      "state": { "dragonPos": { "x": 1, "y": 0 }, "goldAmount": 150, "looted": false }
+    }
+  ]
+}

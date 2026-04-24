@@ -91,3 +91,18 @@ Walked to the exit /, faced the Sealed Door arch puzzle: a 4-letter word I didn'
 
 ⏺ Yeah, genuinely. There's something satisfying about navigating blind from pure ASCII [...] The harness works well enough that I was actually _playing_, not just exercising code paths. Ready to go find some bugs?
 
+
+---
+
+⏺ Fixture loaded. The compact map shows:
+
+    [!]=[$]
+    |
+    [$]-[@]
+
+  Player @ at (2,1). Dragon treasure $ at (2,0) — connected only to (1,0) via = (locked). There's NO corridor between (2,1) and (2,0) — the vertical slot is blank. Now let me try moving up from (2,1) toward (2,0) — this should do nothing (no corridor), but the bug says it shows "locked":
+
+⏺ Bash(curl -s "http://localhost:3001/key?k=ArrowUp")
+
+⏺ Bug reproduced. Player at (2,1), no corridor to (2,0), yet pressing ArrowUp shows "The passage to this room is locked." — exactly the reported bug.
+

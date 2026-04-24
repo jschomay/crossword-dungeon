@@ -1368,6 +1368,7 @@ export default class Game {
         this.render();
         return;
       }
+      if (!this.dungeon.areConnected(this.playerPos.x, this.playerPos.y, nx, ny)) return;
       if (this.dungeon.isLockedBetween(this.playerPos.x, this.playerPos.y, nx, ny)) {
         this.showInteraction([`The passage to this room is locked.`]);
         this.render();

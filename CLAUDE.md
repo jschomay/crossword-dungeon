@@ -19,3 +19,4 @@ Sometimes it is useful to read `docs/decisions.md` to see technical and design c
 
 After work, suggest code worth adding tests for, and consider refactoring opportunities to suggest. Make sure types compile and tests pass before committing. Make sure architecture doc is still accurate.
 
+You can playtest the game! This can be helpful to find or verify bugs that unit tests just won't catch. If this seems like the right thing to do, see `docs/playtesting.md` for instructions.
