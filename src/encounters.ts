@@ -26,6 +26,9 @@ export type MonsterEncounter = {
   xpGrowth: number;
   mod1: typeof MONSTER_MODIFIERS[number];
   mod2: typeof MONSTER_MODIFIERS[number];
+  stolenGold?: number;
+  currentHp?: number;
+  hitCount?: number;
 };
 
 export type TrapEncounter = {
@@ -109,12 +112,14 @@ function effectLabel(effect: string, amount: number): string {
 
 // ---- Generation (rolls base + modifiers, does NOT compute stats) ----
 
-export function generateMonster(rng: Rng, dungeonLevel = 1): MonsterEncounter {
-  type LevelBounded = { min_level?: number; max_level?: number };
+export function generateMonster(rng: Rng, dungeonLevel = 1, exclusions?: Set<string>): MonsterEncounter {
+  type LevelBounded = { min_level?: number; max_level?: number; max_per_level?: number };
   const pool = MONSTER_TYPES.filter(m => {
     const lm = m as unknown as LevelBounded;
-    return (lm.min_level === undefined || dungeonLevel >= lm.min_level) &&
-           (lm.max_level === undefined || dungeonLevel <= lm.max_level);
+    if (lm.min_level !== undefined && dungeonLevel < lm.min_level) return false;
+    if (lm.max_level !== undefined && dungeonLevel > lm.max_level) return false;
+    if (lm.max_per_level !== undefined && exclusions?.has(m.name)) return false;
+    return true;
   });
   const base = rng.getItem(pool.length > 0 ? pool : MONSTER_TYPES);
   const [mod1, mod2] = pickTwo(MONSTER_MODIFIERS, rng);
@@ -180,10 +185,15 @@ export function generateTreasure(rng: Rng, _dungeonLevel = 1): TreasureEncounter
   };
 }
 
-export function generateEncounter(rng: Rng, dungeonLevel = 1): Encounter {
+export function generateEncounter(rng: Rng, dungeonLevel = 1, exclusions?: Set<string>): Encounter {
   const type = rng.getItem(['monster', 'trap', 'treasure'] as const);
   switch (type) {
-    case 'monster': return generateMonster(rng, dungeonLevel);
+    case 'monster': {
+      const enc = generateMonster(rng, dungeonLevel, exclusions);
+      const maxPerLevel = (MONSTER_TYPES.find(m => m.name === enc.baseName) as unknown as { max_per_level?: number })?.max_per_level;
+      if (maxPerLevel !== undefined) exclusions?.add(enc.baseName);
+      return enc;
+    }
     case 'trap': return generateTrap(rng, dungeonLevel);
     case 'treasure': return generateTreasure(rng, dungeonLevel);
   }
@@ -205,17 +215,18 @@ export function getMonsterStats(
   enc: MonsterEncounter,
   level: number,
   puzzleMult: number = 1,
-): { hp: number; dmg: number; def: number; xp: number; manaDrain: number } {
+): { hp: number; dmg: number; def: number; xp: number; manaDrain: number; stealGold: number } {
   const baseHp  = enc.baseHp  + (level - 1) * enc.hpGrowth;
   const baseDmg = enc.baseDamage + (level - 1) * enc.damageGrowth;
   const baseDef = enc.baseDef + (level - 1) * enc.defGrowth;
   const baseXp  = enc.baseXp  + (level - 1) * enc.xpGrowth;
-  let hpBonus = 0, dmgBonus = 0, defBonus = 0, manaDrain = 0;
+  let hpBonus = 0, dmgBonus = 0, defBonus = 0, manaDrain = 0, stealGold = 0;
   const applyMod = (mod: typeof MONSTER_MODIFIERS[number]) => {
     hpBonus   += mod.hp_bonus;
     dmgBonus  += mod.dmg_bonus;
     defBonus  += mod.def_bonus;
     manaDrain += mod.mana_drain;
+    stealGold += mod.steal_gold;
   };
   if (level >= 3) applyMod(enc.mod1);
   if (level >= 6) applyMod(enc.mod2);
@@ -225,6 +236,7 @@ export function getMonsterStats(
     def: round((baseDef + defBonus) * puzzleMult),
     xp:  round(baseXp * puzzleMult),
     manaDrain,
+    stealGold,
   };
 }
 
@@ -304,6 +316,7 @@ export type CombatMonsterStats = {
   def: number;
   xp: number;
   manaDrain: number;
+  dormantTurns?: number;
 };
 
 export type CombatTurn = {
@@ -321,6 +334,7 @@ export type CombatResult = {
   playerWon: boolean;
   manaGameOver: boolean;
   xpGained: number;
+  awakeningAfterTurn?: number;
 };
 
 export function resolveCombat(
@@ -330,11 +344,12 @@ export function resolveCombat(
   const { dmg: playerDmg, hp: playerHp, maxHp: playerMaxHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity, maxMana: playerMaxMana } = player;
   const hpCap = playerMaxHp ?? playerHp;
   const manaCap = playerMaxMana ?? Infinity;
-  const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0 } = monster;
+  const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0, dormantTurns = 0 } = monster;
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
   let curMonsterHp = monsterHp;
   let curMana = startMana;
+  let playerTurnCount = 0;
   const effectivePlayerDmg  = Math.max(1, playerDmg - monsterDef);
   const effectiveMonsterDmg = Math.max(0, monsterDmg - playerDef);
 
@@ -343,6 +358,7 @@ export function resolveCombat(
     curMonsterHp -= effectivePlayerDmg;
     curPlayerHp = Math.min(hpCap, curPlayerHp + hpPerRound);
     curMana = Math.min(manaCap, curMana + manaPerRound);
+    playerTurnCount++;
     turns.push({
       attacker: 'player',
       dmg: effectivePlayerDmg,
@@ -355,22 +371,29 @@ export function resolveCombat(
     if (curMonsterHp <= 0) break;
 
     // Monster attacks (reduced by player def); leech drains mana
-    curPlayerHp -= effectiveMonsterDmg;
-    curMana = Math.max(0, curMana - manaDrain);
+    // Dormant sentinels don't attack for their first N player turns
+    const currentMonsterDmg = playerTurnCount <= dormantTurns ? 0 : effectiveMonsterDmg;
+    const currentManaDrain  = playerTurnCount <= dormantTurns ? 0 : manaDrain;
+    curPlayerHp -= currentMonsterDmg;
+    curMana = Math.max(0, curMana - currentManaDrain);
     turns.push({
       attacker: 'monster',
-      dmg: effectiveMonsterDmg,
+      dmg: currentMonsterDmg,
       playerHpAfter: Math.max(0, curPlayerHp),
       monsterHpAfter: curMonsterHp,
       manaGained: 0,
-      manaDrained: manaDrain,
+      manaDrained: currentManaDrain,
       playerManaAfter: curMana,
     });
   }
 
   const playerWon = curMonsterHp <= 0;
   const manaGameOver = !playerWon && curMana <= 0 && curPlayerHp > 0;
-  return { turns, playerWon, manaGameOver, xpGained: playerWon ? xp : 0 };
+  // If sentinel was still dormant when combat ended (killed before awakening), no awakening message
+  const awakeningAfterTurn = dormantTurns > 0 && turns.length > dormantTurns * 2 - 1
+    ? dormantTurns * 2 - 1  // index of the last dormant monster turn
+    : undefined;
+  return { turns, playerWon, manaGameOver, xpGained: playerWon ? xp : 0, awakeningAfterTurn };
 }
 
 // ---- Display formatting (stats computed from displayLevel) ----
@@ -398,21 +421,26 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
 
     const title = `${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ').trimStart();
     lines.push(title);
-    lines.push(encounter.baseDescription);
+    const description = encounter.baseName === 'Awakened Sentinel'
+      ? encounter.baseDescription.replace(' but inactive', '')
+      : encounter.baseDescription;
+    lines.push(description);
     if (activeMods.length > 0) {
       for (const mod of activeMods) {
         lines.push(`◆ ${mod.name}  — ${mod.description}`);
       }
     }
     lines.push('');
-    const displayHp = currentHp ?? stats.hp;
+    const isDormant = encounter.baseName === 'Dormant Sentinel';
+    const displayHp = currentHp ?? encounter.currentHp ?? stats.hp;
     lines.push(`HP: ${hpBar(displayHp, stats.hp)}  ${displayHp}`);
-    lines.push(`DMG: ${stats.dmg}`);
-    if (stats.def      > 0) lines.push(`DEF: ${stats.def}`);
-    if (stats.manaDrain > 0) lines.push(`-${stats.manaDrain} MANA on hit`);
+    lines.push(`DMG: ${isDormant ? 0 : stats.dmg}`);
+    if (!isDormant && stats.def       > 0) lines.push(`DEF: ${stats.def}`);
+    if (!isDormant && stats.manaDrain > 0) lines.push(`-${stats.manaDrain} MANA on hit`);
+    if (!isDormant && stats.stealGold > 0) lines.push(`-${stats.stealGold} GOLD on wrong guess`);
     lines.push('');
     lines.push('REWARD');
-    lines.push(`+ ${stats.xp} XP  on defeat`);
+    lines.push(`+ ${isDormant ? 0 : stats.xp} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
     const stats = getTrapStats(encounter, displayLevel, puzzleMult);

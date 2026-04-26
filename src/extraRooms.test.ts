@@ -144,7 +144,7 @@ describe('SHOP_DEF.onEvent', () => {
     room.locked = false;
     SHOP_DEF.onEvent(room, { type: 'puzzle:complete' }, {} as never);
     expect(room.locked).toBe(false);
-    SHOP_DEF.onEvent(room, { type: 'room:solved', x: 0, y: 0 }, {} as never);
+    SHOP_DEF.onEvent(room, { type: 'room:solved', x: 0, y: 0, encounterName: 'Goblin' }, {} as never);
     expect(room.locked).toBe(false);
   });
 });
@@ -170,7 +170,7 @@ describe('BOSS_DEF.onEvent', () => {
   it('does not change lock on room:solved', () => {
     const room = makeBossRoom();
     room.locked = true;
-    BOSS_DEF.onEvent(room, { type: 'room:solved', x: 0, y: 0 }, {} as never);
+    BOSS_DEF.onEvent(room, { type: 'room:solved', x: 0, y: 0, encounterName: 'Goblin' }, {} as never);
     expect(room.locked).toBe(true);
   });
 });
@@ -314,14 +314,14 @@ describe('DRAGON_TREASURE_DEF', () => {
   it('unlocks when matching dragon room is solved', () => {
     const room = makeDragonTreasureRoom(true);
     const { ctx } = makeDragonCtx();
-    DRAGON_TREASURE_DEF.onEvent(room, { type: 'room:solved', x: 3, y: 2 }, ctx);
+    DRAGON_TREASURE_DEF.onEvent(room, { type: 'room:solved', x: 3, y: 2, encounterName: 'Dragon' }, ctx);
     expect(room.locked).toBe(false);
   });
 
   it('stays locked when a different room is solved', () => {
     const room = makeDragonTreasureRoom(true);
     const { ctx } = makeDragonCtx();
-    DRAGON_TREASURE_DEF.onEvent(room, { type: 'room:solved', x: 1, y: 1 }, ctx);
+    DRAGON_TREASURE_DEF.onEvent(room, { type: 'room:solved', x: 1, y: 1, encounterName: 'Goblin' }, ctx);
     expect(room.locked).toBe(true);
   });
 
@@ -437,7 +437,7 @@ describe('TRAPPED_ADVENTURER_DEF', () => {
       showAfterPopup: () => {},
       render: () => {},
     } as never;
-    TRAPPED_ADVENTURER_DEF.onEvent(room, { type: 'room:solved', x: 2, y: 1 }, ctx);
+    TRAPPED_ADVENTURER_DEF.onEvent(room, { type: 'room:solved', x: 2, y: 1, encounterName: 'Goblin' }, ctx);
     expect(room.locked).toBe(false);
   });
 
@@ -448,7 +448,7 @@ describe('TRAPPED_ADVENTURER_DEF', () => {
       showInteraction: () => {},
       render: () => {},
     } as never;
-    TRAPPED_ADVENTURER_DEF.onEvent(room, { type: 'room:solved', x: 1, y: 1 }, ctx);
+    TRAPPED_ADVENTURER_DEF.onEvent(room, { type: 'room:solved', x: 1, y: 1, encounterName: 'Goblin' }, ctx);
     expect(room.locked).toBe(true);
   });
 

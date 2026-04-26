@@ -34,6 +34,7 @@ import {
   type Rng,
 } from './encounters';
 import { TREASURE_ITEMS, TREASURE_MODIFIERS } from './data/treasures';
+import { MONSTER_MODIFIERS } from './data/monsters';
 
 const KEY_DIRS: Record<string, { dx: number; dy: number }> = {
   ArrowUp: { dx: 0, dy: -1 },
@@ -48,6 +49,7 @@ type RoomState = {
   completed: boolean;
   encounter: Encounter;
   incorrectGuesses: string[];
+  locked: boolean;
 };
 
 function roomKey(x: number, y: number): string {
@@ -295,13 +297,15 @@ export default class Game {
   private initRoomStates(): void {
     this.roomStates = new Map();
     const rng = this.makeRng();
+    const exclusions = new Set<string>();
     for (const { x, y } of this.puzzle.getRooms()) {
       this.roomStates.set(roomKey(x, y), {
         activatedLevel: 0,
         solvedLetter: null,
         completed: false,
-        encounter: generateEncounter(rng, this.dungeonLevel),
+        encounter: generateEncounter(rng, this.dungeonLevel, exclusions),
         incorrectGuesses: [],
+        locked: false,
       });
     }
 
@@ -735,6 +739,7 @@ export default class Game {
       const completeLine = this.checkPuzzleComplete();
       if (completeLine) this.afterPopupLines.push(completeLine);
       const lines = [`You inscribe the '${letter}' rune. It burns into the stone and the room transforms.`];
+      if (state.locked) lines.push(`The iron bars dissolve into piles of rust, you are free.`);
       this.showInteraction(lines, undefined, () => { state.completed = true; });
       if (this.mana === 0) this.triggerManaGameOver();
       else this.render();
@@ -770,6 +775,8 @@ export default class Game {
       const completeLine = this.checkPuzzleComplete();
       if (completeLine) this.afterPopupLines.push(completeLine);
       const lines = [`Your voice echoes through the hall. The letters burn into the stone and the rooms transform.`];
+      const currentRoomState = this.dungeon.hasRoom(x, y) ? this.getRoomState(x, y) : null;
+      if (currentRoomState?.locked) lines.push(`The iron bars dissolve into piles of rust, you are free.`);
       this.showInteraction(lines, undefined, () => {
         for (const cell of solvedCells) {
           this.getRoomState(cell.x, cell.y).completed = true;
@@ -853,7 +860,8 @@ export default class Game {
   private markRoomSolved(x: number, y: number, letter: string): void {
     const state = this.getRoomState(x, y);
     state.solvedLetter = letter;
-    this.emitDungeonEvent({ type: 'room:solved', x, y });
+    state.locked = false;
+    this.emitDungeonEvent({ type: 'room:solved', x, y, encounterName: state.encounter.baseName });
     const neighbors = this.puzzle.getWordNeighbors({ x, y });
     for (const nb of neighbors) {
       const nbState = this.getRoomState(nb.x, nb.y);
@@ -872,6 +880,7 @@ export default class Game {
   private markRoomSolvedQuietly(x: number, y: number, letter: string): void {
     const state = this.getRoomState(x, y);
     state.solvedLetter = letter;
+    state.locked = false;
     const neighbors = this.puzzle.getWordNeighbors({ x, y });
     for (const nb of neighbors) {
       const nbState = this.getRoomState(nb.x, nb.y);
@@ -932,7 +941,19 @@ export default class Game {
       } else {
         logLines.push(`The rune glows briefly but then fades away.`);
 
-        if (enc.kind === 'monster') {
+        if (enc.kind === 'monster' && (enc as MonsterEncounter).baseName === 'Dormant Sentinel') {
+          logLines.push(`The sentinel doesn't stir.`);
+        } else if (enc.kind === 'monster' && (enc as MonsterEncounter).baseName === 'Thief') {
+          const monsterEnc = enc as MonsterEncounter;
+          const stats = getMonsterStats(monsterEnc, level, this.puzzleMult());
+          const stealAmount = Math.min(this.gold, stats.stealGold > 0 ? stats.stealGold : 10 * this.dungeonLevel);
+          if (stealAmount > 0) {
+            this.gold -= stealAmount;
+            logLines.push(`The Thief steals ${stealAmount} gold!`);
+          } else {
+            logLines.push(`The Thief eyes your empty purse and sneers.`);
+          }
+        } else if (enc.kind === 'monster') {
           const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
           const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
           this.hp = Math.max(0, this.hp - dmgTaken);
@@ -943,9 +964,21 @@ export default class Game {
             this.mana = Math.max(0, this.mana - drained);
             logLines.push(`  -${drained} MANA (drained)`);
           }
+          if (stats.stealGold > 0) {
+            const stolen = Math.min(this.gold, stats.stealGold);
+            this.gold = Math.max(0, this.gold - stolen);
+            if (stolen > 0) logLines.push(`  -${stolen} GOLD (stolen)`);
+          }
         } else if (enc.kind === 'trap') {
           const stats = getTrapStats(enc as TrapEncounter, level, this.puzzleMult());
-          if (enc.damageType === 'hp') {
+          if (enc.baseName === 'Cage Trap') {
+            if (!state.locked) {
+              state.locked = true;
+              this.afterPopupLines.push(`The portcullises slam down around you! You are trapped!`);
+            } else {
+              this.afterPopupLines.push(`The bars hold firm.`);
+            }
+          } else if (enc.damageType === 'hp') {
             const dmgTaken = Math.max(0, stats.dmg - this.effectiveDef());
             this.hp = Math.max(0, this.hp - dmgTaken);
             logLines.push(`The ${enc.baseName} triggers!`);
@@ -1025,15 +1058,27 @@ export default class Game {
   }
 
   private resolveCorrectGuess(x: number, y: number, letter: string, enc: Encounter, level: number, preamble?: string): void {
-    this.markRoomSolved(x, y, letter);
+    if (enc.kind === 'monster' && (enc as MonsterEncounter).baseName === 'Dormant Sentinel') {
+      this.resolveDormantSentinelHit(x, y, letter, enc as MonsterEncounter, level, preamble);
+      return;
+    }
+
+    const wasCaged = this.getRoomState(x, y).locked;
+    this.markRoomSolvedQuietly(x, y, letter);
     this.pulseRunning = true;
     this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
 
     if (enc.kind === 'monster') {
-      const stats = getMonsterStats(enc as MonsterEncounter, level, this.puzzleMult());
+      const monsterEnc = enc as MonsterEncounter;
+      if (monsterEnc.baseName === 'Thief') {
+        this.resolveThief(x, y, letter, monsterEnc, level, preamble);
+        return;
+      }
+      const stats = getMonsterStats(monsterEnc, level, this.puzzleMult());
       const equippedItems = [this.equipped.weapon, this.equipped.armor, this.equipped.amulet];
       const manaPerRound = equippedItems.reduce((s, i) => s + (i?.manaPerRound ?? 0), 0);
       const hpPerRound = equippedItems.reduce((s, i) => s + (i?.hpPerRound ?? 0), 0);
+      const monsterHp = monsterEnc.currentHp ?? stats.hp;
       const result = resolveCombat(
         {
           dmg: this.effectiveDmg(),
@@ -1045,16 +1090,19 @@ export default class Game {
           hpPerRound,
           manaPerRound,
         },
-        { dmg: stats.dmg, hp: stats.hp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
+        { dmg: stats.dmg, hp: monsterHp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
       );
       const state = this.getRoomState(x, y);
-      this.runCombatAnimation(enc as MonsterEncounter, result, stats.hp, letter, preamble, () => { state.completed = true; });
+      this.runCombatAnimation(monsterEnc, result, monsterHp, letter, preamble, () => {
+        this.emitDungeonEvent({ type: 'room:solved', x, y, encounterName: monsterEnc.baseName });
+        state.completed = true;
+      }, x, y);
       return;
     }
 
     // Trap or treasure — instant resolve
     const logLines = enc.kind === 'trap'
-      ? this.resolveTrap(enc as TrapEncounter, level)
+      ? this.resolveTrap(enc as TrapEncounter, level, wasCaged)
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
     if (preamble) logLines.unshift(preamble);
@@ -1068,8 +1116,9 @@ export default class Game {
     }
   }
 
-  private resolveTrap(enc: TrapEncounter, level: number): string[] {
+  private resolveTrap(enc: TrapEncounter, level: number, wasCaged = false): string[] {
     const stats = getTrapStats(enc, level, this.puzzleMult());
+    if (wasCaged) this.afterPopupLines.push(`The iron bars dissolve into piles of rust, you are free.`);
     const lines = [`You disarm the ${enc.baseName}!`];
     if (stats.rewardType === 'xp') {
       const leveledUp = this.gainXp(stats.reward);
@@ -1237,6 +1286,145 @@ export default class Game {
     this.render();
   }
 
+  private resolveDormantSentinelHit(x: number, y: number, letter: string, enc: MonsterEncounter, level: number, preamble?: string): void {
+    const stats = getMonsterStats(enc, level, this.puzzleMult());
+    const currentHp = enc.currentHp ?? stats.hp;
+    const hitCount = (enc.hitCount ?? 0) + 1;
+    const playerDmg = Math.max(1, this.effectiveDmg() - stats.def);
+    const newHp = Math.max(0, currentHp - playerDmg);
+    const state = this.getRoomState(x, y);
+
+    this.combatMonsterHp = newHp;
+    this.pulseRunning = true;
+    this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
+
+    if (hitCount >= 5) {
+      // 5th hit — awaken, leave room unsolved for next cast
+      const awakenedEnc: MonsterEncounter = { ...enc, baseName: 'Awakened Sentinel', currentHp: newHp, hitCount };
+      state.encounter = awakenedEnc;
+      const lines = preamble ? [preamble] : [];
+      lines.push(`You deal ${playerDmg} damage.`);
+      this.showInteraction(lines, letter);
+      this.afterPopupLines.push(`The sentinel awakens and turns its full force towards you! You'll have to defeat it to solve the room.`);
+    } else {
+      // Still dormant — update HP and hitCount, leave room unsolved
+      state.encounter = { ...enc, currentHp: newHp, hitCount };
+      const lines = preamble ? [preamble] : [];
+      lines.push(`You deal ${playerDmg} damage.`);
+      this.showInteraction(lines, letter);
+      this.afterPopupLines.push(`The rune absorbs into the sentinel, yet the room remains unsolved. You could cast again... if you dare.`);
+    }
+    if (this.mana === 0) this.triggerManaGameOver();
+    this.render();
+  }
+
+  private resolveThief(x: number, y: number, letter: string, enc: MonsterEncounter, level: number, preamble?: string): void {
+    const stats = getMonsterStats(enc, level, this.puzzleMult());
+    const currentHp = enc.currentHp ?? stats.hp;
+    const stolenSoFar = enc.stolenGold ?? 0;
+    const playerDmg = Math.max(1, this.effectiveDmg() - stats.def);
+    const newHp = currentHp - playerDmg;
+
+    const state = this.getRoomState(x, y);
+    this.markRoomSolved(x, y, letter);
+    this.pulseRunning = true;
+    this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
+
+    if (newHp <= 0) {
+      // Thief defeated — recover all stolen gold
+      const completeLine = this.checkPuzzleComplete();
+      if (completeLine) this.afterPopupLines.push(completeLine);
+      const leveledUp = this.gainXp(stats.xp);
+      this.gold += stolenSoFar;
+      const lines = preamble ? [preamble] : [];
+      lines.push(`Thief defeated!`, `+${stats.xp} XP`);
+      if (stolenSoFar > 0) lines.push(`You recover ${stolenSoFar} stolen gold.`);
+      if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+      this.showInteraction(lines, letter, () => { state.completed = true; });
+      if (this.mana === 0) this.triggerManaGameOver();
+      this.render();
+      return;
+    }
+
+    // Thief survives — steal gold and flee to a random unsolved treasure room
+    const stealAmount = Math.min(this.gold, 10 * level);
+    this.gold = Math.max(0, this.gold - stealAmount);
+    const newStolenTotal = stolenSoFar + stealAmount;
+
+    // Find a random unsolved treasure room
+    const treasureRooms: { key: string; roomState: RoomState }[] = [];
+    for (const [key, rs] of this.roomStates) {
+      if (rs.solvedLetter === null && rs.encounter.kind === 'treasure') {
+        const [tx, ty] = key.split(',').map(Number);
+        if (!this.dungeon.getExtraRoomAt(tx, ty)) treasureRooms.push({ key, roomState: rs });
+      }
+    }
+
+    const completeLine = this.checkPuzzleComplete();
+    if (completeLine) this.afterPopupLines.push(completeLine);
+
+    if (treasureRooms.length === 0) {
+      // No treasure rooms — thief vanishes
+      const lines = preamble ? [preamble] : [];
+      lines.push(stealAmount > 0 ? `The thief grabs ${stealAmount} gold and vanishes!` : `The thief vanishes into the shadows.`);
+      this.showInteraction(lines, letter, () => { state.completed = true; });
+      if (this.mana === 0) this.triggerManaGameOver();
+      this.render();
+      return;
+    }
+
+    // Teleport thief to a random treasure room
+    const target = treasureRooms[Math.floor(Math.random() * treasureRooms.length)];
+    if (target.roomState.activatedLevel === 0) target.roomState.activatedLevel = 1;
+    target.roomState.encounter = {
+      ...enc,
+      currentHp: newHp,
+      stolenGold: newStolenTotal,
+    };
+
+    const lines = preamble ? [preamble] : [];
+    lines.push(stealAmount > 0 ? `The thief grabs ${stealAmount} gold and dashes away!` : `The thief dashes away empty-handed!`);
+    this.showInteraction(lines, letter, () => { state.completed = true; });
+    if (this.mana === 0) this.triggerManaGameOver();
+    this.render();
+  }
+
+  private splitSlime(enc: MonsterEncounter, slimeDisplayHp: number, roomX: number, roomY: number): string | null {
+    const nextHp = Math.ceil(slimeDisplayHp / 2);
+    if (nextHp < 1) return null;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+    const noMod = MONSTER_MODIFIERS[0];
+    let didSplit = false;
+    for (const { dx, dy } of dirs) {
+      const nx = roomX + dx, ny = roomY + dy;
+      if (!this.dungeon.hasRoom(nx, ny) || this.dungeon.getExtraRoomAt(nx, ny)) continue;
+      const state = this.getRoomState(nx, ny);
+      if (state.solvedLetter !== null) continue;
+      const kind = state.encounter.kind;
+      if (kind !== 'monster' && kind !== 'trap' && kind !== 'treasure') continue;
+      if (kind === 'monster' && (state.encounter as MonsterEncounter).baseName === 'Dragon') continue;
+      state.activatedLevel = 1;
+      state.encounter = {
+        kind: 'monster',
+        baseName: 'Slime Blob',
+        baseDescription: 'A quivering blob of translucent slime.',
+        baseHp: enc.baseHp,
+        hpGrowth: enc.hpGrowth,
+        baseDamage: enc.baseDamage,
+        damageGrowth: enc.damageGrowth,
+        baseDef: enc.baseDef,
+        defGrowth: enc.defGrowth,
+        baseXp: enc.baseXp,
+        xpGrowth: enc.xpGrowth,
+        mod1: noMod,
+        mod2: noMod,
+        currentHp: nextHp,
+      };
+      didSplit = true;
+    }
+    return didSplit ? `The slime bursts! Smaller blobs ooze into adjacent rooms.` : null;
+  }
+
   private runCombatAnimation(
     enc: MonsterEncounter,
     result: ReturnType<typeof resolveCombat>,
@@ -1244,6 +1432,8 @@ export default class Game {
     letter: string,
     preamble?: string,
     onVictory?: () => void,
+    roomX?: number,
+    roomY?: number,
   ): void {
     this.combatRunning = true;
     const { turns, playerWon, manaGameOver, xpGained } = result;
@@ -1273,6 +1463,11 @@ export default class Game {
           if (completeLine) this.afterPopupLines.push(completeLine);
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+          if (result.awakeningAfterTurn !== undefined) lines.push(`The sentinel awakens!`);
+          if (enc.baseName === 'Slime Blob' && roomX !== undefined && roomY !== undefined) {
+            const splitMsg = this.splitSlime(enc, initialMonsterHp, roomX, roomY);
+            this.afterPopupLines.push(splitMsg ?? `The slime dissolves into a harmless puddle.`);
+          }
           this.showInteraction(lines, letter, onVictory);
           if (this.mana === 0) this.triggerManaGameOver();
           this.render();
@@ -1443,8 +1638,13 @@ export default class Game {
         return;
       }
       if (!this.dungeon.areConnected(this.playerPos.x, this.playerPos.y, nx, ny)) return;
-      if (this.dungeon.isLockedBetween(this.playerPos.x, this.playerPos.y, nx, ny)) {
-        this.showInteraction([`The passage to this room is locked.`]);
+      if (this.dungeon.isLockedBetween(this.playerPos.x, this.playerPos.y, nx, ny, this.roomStates)) {
+        const currentState = this.dungeon.hasRoom(this.playerPos.x, this.playerPos.y)
+          ? this.getRoomState(this.playerPos.x, this.playerPos.y) : null;
+        const msg = currentState?.locked
+          ? `The portcullises block every exit. Solve the room to escape.`
+          : `The passage to this room is locked.`;
+        this.showInteraction([msg]);
         this.render();
         return;
       }

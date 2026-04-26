@@ -131,7 +131,7 @@ export default class Dungeon {
     }
   }
 
-  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' } }>, hidePlayer = false, camera?: { x: number; y: number }): void {
+  render(display: ROT.Display, playerPos: { x: number; y: number }, roomStates: Map<string, { activatedLevel: number; solvedLetter: string | null; encounter: { kind: 'monster' | 'trap' | 'treasure' }; locked?: boolean }>, hidePlayer = false, camera?: { x: number; y: number }): void {
     const { width, height } = this.puzzle.ipuz.dimensions;
     display.clear();
     this.drawBackground(display, camera);
@@ -149,8 +149,8 @@ export default class Dungeon {
       for (let gx = 0; gx < width; gx++) {
         if (this.hasRoom(gx, gy)) {
           this.drawRoom(display, gx, gy, playerPos, roomStates, hidePlayer, camera, recordDraw);
-          if (this.areConnected(gx, gy, gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera, recordDraw);
-          if (this.areConnected(gx, gy, gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera, recordDraw);
+          if (this.areConnected(gx, gy, gx + 1, gy)) this.drawHCorridor(display, gx, gy, camera, roomStates, recordDraw);
+          if (this.areConnected(gx, gy, gx, gy + 1)) this.drawVCorridor(display, gx, gy, camera, roomStates, recordDraw);
         }
       }
     }
@@ -199,12 +199,13 @@ export default class Dungeon {
   }
 
   /** Returns true if the corridor between two adjacent grid cells is locked. */
-  isLockedBetween(x1: number, y1: number, x2: number, y2: number): boolean {
+  isLockedBetween(x1: number, y1: number, x2: number, y2: number, roomStates?: Map<string, { locked?: boolean }>): boolean {
+    const rsLocked = (x: number, y: number) => roomStates?.get(`${x},${y}`)?.locked ?? false;
     const dx = x2 - x1, dy = y2 - y1;
-    if (dx === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked);
-    if (dx === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked);
-    if (dy === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked);
-    if (dy === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked);
+    if (dx === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked || rsLocked(x1, y1) || rsLocked(x2, y2));
+    if (dx === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked || rsLocked(x2, y2) || rsLocked(x1, y1));
+    if (dy === 1)  return !!(this.getExtraRoomAt(x1, y1)?.locked || this.getExtraRoomAt(x2, y2)?.locked || rsLocked(x1, y1) || rsLocked(x2, y2));
+    if (dy === -1) return !!(this.getExtraRoomAt(x2, y2)?.locked || this.getExtraRoomAt(x1, y1)?.locked || rsLocked(x2, y2) || rsLocked(x1, y1));
     return false;
   }
 
@@ -350,29 +351,26 @@ export default class Dungeon {
   }
 
   // Corridor column between (gx, gy) and (gx+1, gy)
-  // If the extra room on either side is locked, draw '=' at the open cell
-  private drawHCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
+  private drawHCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, roomStates: Map<string, { locked?: boolean }>, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wcx = 1 + gx * 6 + 5;
     const wry = 1 + gy * 6;
     recordDraw(wcx, wry + 1, '#', WALL_FG);
     recordDraw(wcx, wry + 3, '#', WALL_FG);
-    // Open center cell — draw '=' if either adjacent extra room is locked
-    const leftLocked = this.getExtraRoomAt(gx, gy)?.locked ?? false;
-    const rightLocked = this.getExtraRoomAt(gx + 1, gy)?.locked ?? false;
+    const leftLocked  = !!(this.getExtraRoomAt(gx, gy)?.locked     || roomStates.get(`${gx},${gy}`)?.locked);
+    const rightLocked = !!(this.getExtraRoomAt(gx + 1, gy)?.locked  || roomStates.get(`${gx + 1},${gy}`)?.locked);
     if (leftLocked || rightLocked) {
       recordDraw(wcx, wry + 2, '=', LOCKED_CORRIDOR_FG);
     }
   }
 
   // Corridor row between (gx, gy) and (gx, gy+1)
-  private drawVCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
+  private drawVCorridor(_display: ROT.Display, gx: number, gy: number, _camera: { x: number; y: number } | undefined, roomStates: Map<string, { locked?: boolean }>, recordDraw: (wx: number, wy: number, ch: string, fg: string) => void): void {
     const wrx = 1 + gx * 6;
     const wcy = 1 + gy * 6 + 5;
     recordDraw(wrx + 1, wcy, '#', WALL_FG);
     recordDraw(wrx + 3, wcy, '#', WALL_FG);
-    // Open center cell — draw '=' if either adjacent extra room is locked
-    const upLocked = this.getExtraRoomAt(gx, gy)?.locked ?? false;
-    const downLocked = this.getExtraRoomAt(gx, gy + 1)?.locked ?? false;
+    const upLocked   = !!(this.getExtraRoomAt(gx, gy)?.locked      || roomStates.get(`${gx},${gy}`)?.locked);
+    const downLocked = !!(this.getExtraRoomAt(gx, gy + 1)?.locked   || roomStates.get(`${gx},${gy + 1}`)?.locked);
     if (upLocked || downLocked) {
       recordDraw(wrx + 2, wcy, '=', LOCKED_CORRIDOR_FG);
     }

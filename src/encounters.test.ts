@@ -53,7 +53,7 @@ describe('getMonsterStats', () => {
   it('level 1: raw stats, no modifiers', () => {
     const stats = getMonsterStats(getRat(), 1);
     // hp=8, dmg=2, def=0, xp=8, manaDrain=0
-    expect(stats).toEqual({ hp: 8, dmg: 2, def: 0, xp: 8, manaDrain: 0 });
+    expect(stats).toEqual({ hp: 8, dmg: 2, def: 0, xp: 8, manaDrain: 0, stealGold: 0 });
   });
 
   it('level 3: mod1 applied', () => {
@@ -610,9 +610,12 @@ describe('generateMonster level filtering', () => {
   });
 
   it('includes Dragon at dungeon level 2', () => {
-    // Force pick to always return last item — Dragon is last in MONSTER_TYPES
+    // Force pick to always return the Dragon (by picking the item named Dragon)
     const rng: Rng = {
-      getItem<T>(arr: readonly T[]): T { return arr[arr.length - 1]; },
+      getItem<T>(arr: readonly T[]): T {
+        const found = (arr as unknown[]).find((x: unknown) => (x as { name?: string }).name === 'Dragon');
+        return (found ?? arr[arr.length - 1]) as T;
+      },
       shuffle<T>(arr: readonly T[]): T[] { return [...arr]; },
     };
     const m = generateMonster(rng, 2);

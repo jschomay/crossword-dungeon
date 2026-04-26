@@ -59,6 +59,17 @@ export const TRAP_TYPES = [
     base_mana: 4,
     mana_growth: 1,
   },
+  {
+    name: 'Cage Trap',
+    description: 'Each door has a heavy rusted portcullis.',
+    type: 'physical' as const,
+    base_damage: 0,
+    damage_growth: 0,
+    damage_type: 'hp' as const,
+    base_xp: 10,
+    xp_growth: 3,
+    min_level: 2,
+  },
 ] as const;
 
 export const TRAP_MODIFIERS = [

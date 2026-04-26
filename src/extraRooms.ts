@@ -17,7 +17,7 @@ export type Coord = { x: number; y: number };
 
 export type DungeonEvent =
   | { type: 'level:start' }
-  | { type: 'room:solved'; x: number; y: number }
+  | { type: 'room:solved'; x: number; y: number; encounterName: string }
   | { type: 'room:completed'; x: number; y: number }
   | { type: 'room:activated'; x: number; y: number }
   | { type: 'puzzle:complete' };
@@ -479,7 +479,7 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
     }
     if (event.type === 'room:solved') {
       const ds = room.state as DragonTreasureRoomState;
-      if (event.x === ds.dragonPos.x && event.y === ds.dragonPos.y && !room.hidden) {
+      if (event.x === ds.dragonPos.x && event.y === ds.dragonPos.y && !room.hidden && event.encounterName === 'Dragon') {
         room.locked = false;
         ctx.showInteraction([
           `The dragon is defeated! The treasure room unlocks.`,

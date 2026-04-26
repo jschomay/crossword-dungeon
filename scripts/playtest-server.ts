@@ -147,13 +147,13 @@ const lines: string[] = [];
       } else {
         roomLine += `[${centerChar(gx, gy)}]`;
         const connD = dungeon.areConnected(gx, gy, gx, gy + 1);
-        const lockedD = connD && dungeon.isLockedBetween(gx, gy, gx, gy + 1);
+        const lockedD = connD && dungeon.isLockedBetween(gx, gy, gx, gy + 1, game.roomStates);
         corrLine += connD ? ` ${lockedD ? '‖' : '|'} ` : '   ';
       }
       // Horizontal corridor between this room and next
       if (gx < width - 1) {
         const conn = dungeon.areConnected(gx, gy, gx + 1, gy);
-        const locked = conn && dungeon.isLockedBetween(gx, gy, gx + 1, gy);
+        const locked = conn && dungeon.isLockedBetween(gx, gy, gx + 1, gy, game.roomStates);
         const sep = !conn ? ' ' : locked ? '=' : hCorrChar(gx, gy) === ' ' ? '-' : hCorrChar(gx, gy);
         roomLine += sep;
         corrLine += ' ';
@@ -245,7 +245,7 @@ createServer(async (req, res) => {
       const nx=px+(dx as number), ny=py+(dy as number);
       const has = dungeon.hasRoom(nx,ny);
       const conn = dungeon.areConnected(px,py,nx,ny);
-      const locked = conn && dungeon.isLockedBetween(px,py,nx,ny);
+      const locked = conn && dungeon.isLockedBetween(px,py,nx,ny, game.roomStates);
       lines.push(`  ${name} (${nx},${ny}): hasRoom=${has} connected=${conn} locked=${locked}`);
     }
     res.end(lines.join('\n'));
@@ -283,6 +283,8 @@ createServer(async (req, res) => {
       if (ps.gold !== undefined) game.gold = ps.gold;
       if (ps.equipped !== undefined) game.equipped = ps.equipped;
       if (ps.dungeonLevel !== undefined) game.dungeonLevel = ps.dungeonLevel;
+      if (ps.hp !== undefined) { game.hp = ps.hp; game.maxHp = ps.hp; }
+      if (ps.dmg !== undefined) game.dmg = ps.dmg;
     }
     // Fire level:start so extra rooms (trader, simm etc.) generate their state
     game.emitDungeonEvent({ type: 'level:start' });
