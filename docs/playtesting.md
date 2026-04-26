@@ -7,7 +7,13 @@ npx tsx scripts/playtest-server.ts &
 sleep 3
 ```
 
-Run from the project root. The `&` runs it in the background. Wait 3 seconds before first request or it won't be ready. The server loads the `?puzzle=debug` puzzle at dungeon level 3.
+Run from the project root. The `&` runs it in the background. Wait 3 seconds (or 4 to be safe) before first request or it won't be ready.
+
+**Normal mode (random real puzzles):** The server file has two hardcoded values to check before starting:
+- `location: { search: '' }` — must be empty string, not `'?puzzle=debug'`
+- `localStorage._store: { crossword_dungeon_progression: '1' }` — must be `'1'` to skip tutorial and use real puzzles
+
+If either is wrong, you'll get the debug or tutorial puzzle every level instead of progression.
 
 ## Interacting across turns
 

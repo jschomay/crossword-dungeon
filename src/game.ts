@@ -18,6 +18,7 @@ import {
 } from './extraRooms';
 import {
   generateEncounter,
+  generateNonDragonEncounter,
   formatEncounter,
   getMonsterStats,
   getTrapStats,
@@ -61,7 +62,7 @@ const BASE_HP = 50;
 const BASE_DMG = 8;
 
 export function xpThreshold(level: number): number {
-  return Math.round(100 * 1.2 ** level / 10) * 10;
+  return Math.round(200 * 1.2 ** level / 10) * 10;
 }
 
 export function shopPrice(base: number, dungeonLevel: number, purchases: number): number {
@@ -122,6 +123,8 @@ export default class Game {
   private helpOverlayEl: HTMLElement;
   private popupOpen: boolean = false;
   private onDismiss: (() => void) | null = null;
+  private pendingPopupLines: string[] = [];
+  private afterPopupLines: string[] = [];
   private combatMonsterHp: number | null = null;
   private prevHp: number = BASE_HP;
   private maxMana: number = BASE_MANA;
@@ -141,7 +144,7 @@ export default class Game {
   private xp: number = 0;
   private gameOver: boolean = false;
   private gameOverReason: 'hp' | 'mana' | null = null;
-  private dungeonLevel: number = 3; // DEBUG: temp
+  private dungeonLevel: number = 1;
   private shopBuyCounts: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
   private totalRooms: number = 0;
   private combatRunning: boolean = false;
@@ -155,10 +158,12 @@ export default class Game {
   private intoneScrolls: number = 3;
   private extraRooms: ExtraRoom[] = [];
   private shopItem: TreasureItemStats | null = null;       // one-time equipment offer
+  private pendingTradeItem: TreasureItemStats | null = null; // pre-generated trader offer
   private shopModTarget: TreasureItemStats | null = null;  // item to receive modifier
   private shopModifier: typeof TREASURE_MODIFIERS[number] | null = null;
   private archPuzzle: ArchPuzzleState | null = null;       // persists across dungeon levels
   private hasMetSimm: boolean = false;                      // persists across dungeon levels
+  private simmLastCommentedItem: string | null = null;      // persists across dungeon levels
   private selectedWordKeys: Set<string> = new Set();        // word keys used in current puzzle
   private gameWon: boolean = false;
   private puzzleComplete: boolean = false;
@@ -224,9 +229,6 @@ export default class Game {
     this.initRoomStates();
     this.extraRooms = this.buildExtraRooms();
     this.emitDungeonEvent({ type: 'level:start' });
-    this.shopItem = null;
-    this.shopModTarget = null;
-    this.shopModifier = null;
     this.dungeon = new Dungeon(this.puzzle, this.extraRooms);
     this.totalRooms = this.puzzle.getRooms().length;
     this.dungeonEl.innerHTML = '';
@@ -365,21 +367,27 @@ export default class Game {
     // Reserve dragon treasure positions first so the main loop can't claim them
     const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
     const dragonRooms: ExtraRoom[] = [];
+    const rng = this.makeRng();
     for (const [key, state] of this.roomStates) {
       if (state.encounter.kind !== 'monster' || state.encounter.baseName !== 'Dragon') continue;
+      if (state.solvedLetter !== null) continue; // pre-solved rooms are never activated by player
       const [gx, gy] = key.split(',').map(Number);
       const adjacent = dirs.map(({ dx, dy }) => `${gx + dx},${gy + dy}`).filter(k => available.has(k));
-      if (adjacent.length === 0) continue;
+      if (adjacent.length === 0) {
+        state.encounter = generateNonDragonEncounter(rng, this.dungeonLevel);
+        continue;
+      }
       const treasureKey = adjacent[Math.floor(Math.random() * adjacent.length)];
       available.delete(treasureKey);
       const [tx, ty] = treasureKey.split(',').map(Number);
-      const goldAmount = 20 * this.dungeonLevel;
+      const goldAmount = 60 * this.dungeonLevel;
       const dragonState: DragonTreasureRoomState = { dragonPos: { x: gx, y: gy }, looted: false, goldAmount };
       dragonRooms.push({
         type: 'dragon_treasure',
         pos: { x: tx, y: ty },
         locked: true,
         completed: false,
+        hidden: true,
         glowColor: DRAGON_TREASURE_DEF.glowColor,
         state: dragonState,
         connectedTo: { x: gx, y: gy },
@@ -436,6 +444,8 @@ export default class Game {
       },
       hasMetSimm: this.hasMetSimm,
       setHasMetSimm: (value) => { this.hasMetSimm = value; },
+      simmLastCommentedItem: this.simmLastCommentedItem,
+      setSimmLastCommentedItem: (value) => { this.simmLastCommentedItem = value; },
       hp: this.hp,
       maxHp: this.maxHp,
       mana: this.mana,
@@ -445,10 +455,19 @@ export default class Game {
       equippedItems: [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
         .filter((i): i is TreasureItemStats => i !== null)
         .map(i => ({ name: i.name })),
+      hasFoundTreasureAlready: () => {
+        return this.extraRooms.some(r => r.type === 'very_hidden' && !r.veryHidden && r.completed);
+      },
+      appendToNextPopup: (line: string) => {
+        this.pendingPopupLines.push(line);
+      },
+      showAfterPopup: (line: string) => {
+        this.afterPopupLines.push(line);
+      },
       getVeryHiddenRooms: () => {
         const dirs = [
-          { dx: 0, dy: -1, dir: 'north' }, { dx: 0, dy: 1, dir: 'south' },
-          { dx: -1, dy: 0, dir: 'west' }, { dx: 1, dy: 0, dir: 'east' },
+          { dx: 0, dy: -1, dir: 'south' }, { dx: 0, dy: 1, dir: 'north' },
+          { dx: -1, dy: 0, dir: 'east' }, { dx: 1, dy: 0, dir: 'west' },
         ];
         const roomSet = new Set(this.puzzle.getRooms().map(r => `${r.x},${r.y}`));
         return this.extraRooms
@@ -478,34 +497,20 @@ export default class Game {
       equippedItemsFull: [this.equipped.weapon, this.equipped.armor, this.equipped.amulet]
         .filter((i): i is TreasureItemStats => i !== null)
         .map(i => ({ slot: i.slot, name: i.name, level: i.level })),
+      generateTradeOffer: (slot) => {
+        const slotKey = slot as 'weapon' | 'armor' | 'amulet';
+        const current = this.equipped[slotKey];
+        if (!current) return null;
+        this.pendingTradeItem = this.buildRandomItem(slotKey, current.level);
+        const stats = this.itemStatLines(this.pendingTradeItem).join(', ') || 'no bonuses';
+        return { name: this.pendingTradeItem.name, stats };
+      },
       tradeEquippedItem: (slot) => {
         const slotKey = slot as 'weapon' | 'armor' | 'amulet';
         const current = this.equipped[slotKey];
         if (!current) return null;
-        const newLevel = Math.max(1, current.level - 1);
-        // Pick a random item of the same slot type
-        const matchingItems = TREASURE_ITEMS.filter(t => t.slot === slotKey);
-        if (matchingItems.length === 0) return null;
-        const base = matchingItems[Math.floor(Math.random() * matchingItems.length)];
-        let statType: import('./encounters').TreasureItemEncounter['statType'];
-        let baseStat: number;
-        let statGrowth: number;
-        if ('base_damage_bonus' in base) {
-          statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
-        } else if ('base_defense_bonus' in base) {
-          statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
-        } else if ('base_max_hp_bonus' in base) {
-          statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
-        } else {
-          statType = 'max_mana'; baseStat = (base as { base_max_mana_bonus: number }).base_max_mana_bonus;
-          statGrowth = (base as { max_mana_bonus_growth: number }).max_mana_bonus_growth;
-        }
-        const itemEnc: import('./encounters').TreasureItemEncounter = {
-          kind: 'treasure', subKind: 'item',
-          baseName: base.name, baseDescription: base.description,
-          slot: slotKey, statType, baseStat, statGrowth,
-        };
-        const newItem = getTreasureItemStats(itemEnc, newLevel);
+        const newItem = this.pendingTradeItem ?? this.buildRandomItem(slotKey, current.level);
+        this.pendingTradeItem = null;
         this.equipped[slotKey] = newItem;
         // Cap HP/mana if effective max decreased
         this.hp = Math.min(this.hp, this.effectiveMaxHp());
@@ -580,12 +585,37 @@ export default class Game {
     }
   }
 
+  private buildRandomItem(slot: 'weapon' | 'armor' | 'amulet', level: number): TreasureItemStats {
+    const matchingItems = TREASURE_ITEMS.filter(t => t.slot === slot);
+    const base = matchingItems[Math.floor(Math.random() * matchingItems.length)];
+    let statType: import('./encounters').TreasureItemEncounter['statType'];
+    let baseStat: number;
+    let statGrowth: number;
+    if ('base_damage_bonus' in base) {
+      statType = 'damage'; baseStat = base.base_damage_bonus; statGrowth = base.damage_bonus_growth;
+    } else if ('base_defense_bonus' in base) {
+      statType = 'defense'; baseStat = base.base_defense_bonus; statGrowth = base.defense_bonus_growth;
+    } else if ('base_max_hp_bonus' in base) {
+      statType = 'max_hp'; baseStat = base.base_max_hp_bonus; statGrowth = base.max_hp_bonus_growth;
+    } else {
+      statType = 'max_mana'; baseStat = (base as { base_max_mana_bonus: number }).base_max_mana_bonus;
+      statGrowth = (base as { max_mana_bonus_growth: number }).max_mana_bonus_growth;
+    }
+    const itemEnc: import('./encounters').TreasureItemEncounter = {
+      kind: 'treasure', subKind: 'item',
+      baseName: base.name, baseDescription: base.description,
+      slot, statType, baseStat, statGrowth,
+    };
+    return getTreasureItemStats(itemEnc, level);
+  }
+
   private async restart(): Promise<void> {
     this.dungeonLevel = 1;
     this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.equipped = { weapon: null, armor: null, amulet: null };
     this.archPuzzle = null;
     this.hasMetSimm = false;
+    this.simmLastCommentedItem = null;
     this.gameWon = false;
     await this.regenDungeon();
     this.mana = BASE_MANA;
@@ -701,11 +731,11 @@ export default class Game {
       if (state.solvedLetter !== null) { this.showInteraction([`These runes are already known to you.`]); this.render(); return; }
       this.revealScrolls--;
       const letter = this.puzzle.ipuz.solution[y][x] as string;
-      this.markRoomSolved(x, y, letter);
+      this.markRoomSolvedQuietly(x, y, letter);
       const completeLine = this.checkPuzzleComplete();
-      const lines = [`You inscribe the '${letter}' rune. It burns into the stone.`];
-      if (completeLine) lines.push(completeLine);
-      this.showInteraction(lines);
+      if (completeLine) this.afterPopupLines.push(completeLine);
+      const lines = [`You inscribe the '${letter}' rune. It burns into the stone and the room transforms.`];
+      this.showInteraction(lines, undefined, () => { state.completed = true; });
       if (this.mana === 0) this.triggerManaGameOver();
       else this.render();
       return;
@@ -729,16 +759,22 @@ export default class Game {
         return;
       }
       this.intoneScrolls--;
-      for (const cell of word.cells) {
+      const solvedCells = word.cells.filter(cell => {
         const cellState = this.getRoomState(cell.x, cell.y);
-        if (cellState.solvedLetter !== null) continue;
+        return cellState.solvedLetter === null;
+      });
+      for (const cell of solvedCells) {
         const letter = this.puzzle.ipuz.solution[cell.y][cell.x] as string;
-        this.markRoomSolved(cell.x, cell.y, letter);
+        this.markRoomSolvedQuietly(cell.x, cell.y, letter);
       }
       const completeLine = this.checkPuzzleComplete();
-      const lines = [`Your voice echoes through the hall. The letters burn into the stone.`];
-      if (completeLine) lines.push(completeLine);
-      this.showInteraction(lines);
+      if (completeLine) this.afterPopupLines.push(completeLine);
+      const lines = [`Your voice echoes through the hall. The letters burn into the stone and the rooms transform.`];
+      this.showInteraction(lines, undefined, () => {
+        for (const cell of solvedCells) {
+          this.getRoomState(cell.x, cell.y).completed = true;
+        }
+      });
       if (this.mana === 0) this.triggerManaGameOver();
       else this.render();
       return;
@@ -768,7 +804,9 @@ export default class Game {
     const header = castLetter
       ? `<span style="color:#ccaa66">You cast the '${esc(castLetter)}' rune  (-1 MANA)</span>\n`
       : '';
-    const body = lines.map(l => `<span style="color:#ccaa66">${esc(l)}</span>`).join('\n');
+    const allLines = this.pendingPopupLines.length > 0 ? [...lines, ...this.pendingPopupLines] : lines;
+    this.pendingPopupLines = [];
+    const body = allLines.map(l => `<span style="color:#ccaa66">${esc(l)}</span>`).join('\n');
     const isCombat = lines.some(l => l.includes('fight') || l.includes('defeated') || l.includes('defeated by'));
     const footer = isCombat && this.combatRunning
       ? ''
@@ -794,6 +832,12 @@ export default class Game {
     this.interactionPopupEl.classList.add('hidden');
     this.sidebarEl.classList.remove('popup-open');
     if (wasOpen) onDismiss?.();
+    if (wasOpen && this.afterPopupLines.length > 0) {
+      const lines = this.afterPopupLines;
+      this.afterPopupLines = [];
+      this.showInteraction(lines);
+      this.render();
+    }
   }
 
   private renderInteractionLog(): void {
@@ -814,8 +858,30 @@ export default class Game {
     for (const nb of neighbors) {
       const nbState = this.getRoomState(nb.x, nb.y);
       if (nbState.solvedLetter !== null) continue;
+      const wasUnactivated = nbState.activatedLevel === 0;
       const maxLevel = this.puzzle.potentialLevels[nb.y][nb.x];
       nbState.activatedLevel = Math.min(nbState.activatedLevel + 1, maxLevel);
+      if (wasUnactivated && nbState.activatedLevel > 0) {
+        this.emitDungeonEvent({ type: 'room:activated', x: nb.x, y: nb.y });
+      }
+    }
+  }
+
+  /** Like markRoomSolved but does NOT emit room:solved — used by scrolls so they
+   *  don't trigger event-driven side effects (dragon unlock, trapped adventurer unlock). */
+  private markRoomSolvedQuietly(x: number, y: number, letter: string): void {
+    const state = this.getRoomState(x, y);
+    state.solvedLetter = letter;
+    const neighbors = this.puzzle.getWordNeighbors({ x, y });
+    for (const nb of neighbors) {
+      const nbState = this.getRoomState(nb.x, nb.y);
+      if (nbState.solvedLetter !== null) continue;
+      const wasUnactivated = nbState.activatedLevel === 0;
+      const maxLevel = this.puzzle.potentialLevels[nb.y][nb.x];
+      nbState.activatedLevel = Math.min(nbState.activatedLevel + 1, maxLevel);
+      if (wasUnactivated && nbState.activatedLevel > 0) {
+        this.emitDungeonEvent({ type: 'room:activated', x: nb.x, y: nb.y });
+      }
     }
   }
 
@@ -832,12 +898,16 @@ export default class Game {
   private triggerGameOver(): void {
     this.gameOver = true;
     this.gameOverReason = 'hp';
+    this.afterPopupLines = [];
+    this.puzzleComplete = false;
     this.render();
   }
 
   private triggerManaGameOver(): void {
     this.gameOver = true;
     this.gameOverReason = 'mana';
+    this.afterPopupLines = [];
+    this.puzzleComplete = false;
     this.render();
   }
 
@@ -934,12 +1004,12 @@ export default class Game {
       ];
       this.markRoomSolved(x, y, letter);
       const completeLine = this.checkPuzzleComplete();
+      if (completeLine) this.afterPopupLines.push(completeLine);
       const awaken = AWAKEN_LINES[x % AWAKEN_LINES.length];
       const logLines = [
         `The rune glows. Light seeps through the cracks.`,
         awaken,
       ];
-      if (completeLine) logLines.push(completeLine);
       if (this.mana === 0) this.triggerManaGameOver();
       else {
         this.pulseRunning = true;
@@ -989,7 +1059,7 @@ export default class Game {
 
     if (preamble) logLines.unshift(preamble);
     const completeLine = this.checkPuzzleComplete();
-    if (completeLine) logLines.push(completeLine);
+    if (completeLine) this.afterPopupLines.push(completeLine);
     if (this.mana === 0) this.triggerManaGameOver();
     else {
       const state = this.getRoomState(x, y);
@@ -1045,7 +1115,7 @@ export default class Game {
 
   private renderShopPanel(): void {
     const SHOP_COLOR = '#44ffcc';
-    let html = `<span style="color:${SHOP_COLOR};font-size:16px">% Merchant  Lv.${this.dungeonLevel}</span><br>`;
+    let html = `<span style="color:${SHOP_COLOR};font-size:16px">Merchant  Lv.${this.dungeonLevel}</span><br>`;
     html += `<span style="color:#888">Wares and wonder, for the right price.</span><br>`;
     html += `<span style="color:#888">Choose an option to purchase.</span><br><br>`;
 
@@ -1200,9 +1270,9 @@ export default class Game {
           const leveledUp = this.gainXp(xpGained);
           const completeLine = this.checkPuzzleComplete();
           this.combatRunning = false;
+          if (completeLine) this.afterPopupLines.push(completeLine);
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
-          if (completeLine) lines.push(completeLine);
           this.showInteraction(lines, letter, onVictory);
           if (this.mana === 0) this.triggerManaGameOver();
           this.render();
@@ -1359,12 +1429,16 @@ export default class Game {
     if (this.dungeon.hasRoom(nx, ny)) {
       const targetExtra = this.dungeon.getExtraRoomAt(nx, ny);
       // Discover hidden rooms when player walks toward them — reveal but don't move
-      if (targetExtra?.hidden || targetExtra?.veryHidden) {
+      if ((targetExtra?.hidden || targetExtra?.veryHidden) && targetExtra.type !== 'dragon_treasure') {
+        const wasVeryHidden = targetExtra.veryHidden;
         targetExtra.hidden = false;
         targetExtra.veryHidden = false;
         // Rebuild dungeon cells now that the corridor is visible
         this.dungeon = new Dungeon(this.puzzle, this.extraRooms);
-        this.showInteraction(['You find a secret passage! A hidden chamber reveals itself.']);
+        const discoverMsg = wasVeryHidden
+          ? 'You find a secret passage.'
+          : 'You find a crack in the wall and squeeze through.';
+        this.showInteraction([discoverMsg]);
         this.render();
         return;
       }
@@ -1523,6 +1597,11 @@ export default class Game {
       } else {
         this.encounterEl.classList.remove('hidden');
         const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined, this.puzzleMult());
+        const runeAction = state.activatedLevel === 0 ? 'awaken'
+          : state.encounter.kind === 'treasure' ? 'loot'
+          : state.encounter.kind === 'monster' ? 'fight'
+          : 'disarm';
+        encLines.splice(state.activatedLevel === 0 ? 1 : 2, 0, `Cast a rune to ${runeAction}.`);
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
         const flashMonsterHp = this.combatMonsterHp !== this.prevCombatMonsterHp;

@@ -19,6 +19,7 @@ export type DungeonEvent =
   | { type: 'level:start' }
   | { type: 'room:solved'; x: number; y: number }
   | { type: 'room:completed'; x: number; y: number }
+  | { type: 'room:activated'; x: number; y: number }
   | { type: 'puzzle:complete' };
 
 /** Type-specific per-level state for a room instance. */
@@ -54,6 +55,7 @@ export type TreasureHunterRoomState = {
 export type TraderRoomState = {
   traded: boolean;
   tradeSlot: string | null;   // slot of the item being offered for trade
+  tradeOffer: { name: string; stats: string } | null;  // pre-generated offer shown in panel
 };
 
 export type MimicChestRoomState = {
@@ -141,9 +143,17 @@ export interface RunContext {
   // Per-run state flags
   readonly hasMetSimm: boolean;
   setHasMetSimm(value: boolean): void;
+  readonly simmLastCommentedItem: string | null;
+  setSimmLastCommentedItem(value: string | null): void;
 
   // Bonus room queries
   getVeryHiddenRooms(): Array<{ pos: Coord; adjacentLetterRoom: Coord; direction: string; letterHint: string }>;
+  hasFoundTreasureAlready(): boolean;
+
+  // Append a line to the next popup that gets shown (used by event handlers that fire before showInteraction)
+  appendToNextPopup(line: string): void;
+  // Queue a popup to show after the current popup is dismissed
+  showAfterPopup(line: string): void;
 
   // Puzzle word helpers
   readonly puzzleWords: string[];    // words used in current puzzle
@@ -154,6 +164,7 @@ export interface RunContext {
 
   // Equipment trading
   readonly equippedItemsFull: Array<{ slot: string; name: string; level: number }>;
+  generateTradeOffer(slot: string): { name: string; stats: string } | null;
   tradeEquippedItem(slot: string): { newItemName: string } | null;
 
   // Direct damage (for traps and mimic attacks)
@@ -349,7 +360,7 @@ export const BOSS_DEF: ExtraRoomDef = {
     const bossState = room.state as BossRoomState;
 
     if (room.locked) {
-      return s(BOSS_COLOR, '/ The Sealed Door') + '<br>' +
+      return s(BOSS_COLOR, 'The Sealed Door') + '<br>' +
         s('#888', 'You hear a rumbling beyond the sealed door.') + '<br>' +
         s('#666', 'Complete the dungeon to break the seal.') + '<br>';
     }
@@ -357,20 +368,20 @@ export const BOSS_DEF: ExtraRoomDef = {
     // No arch puzzle yet (e.g. tutorial level) — show exit teaser, then fall
     if (!arch) {
       if (bossState.exitPending) {
-        let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
+        let html = s(BOSS_COLOR, 'The Exit') + '<br>';
         html += s('#888', 'As you reach for the door, it seals with a magical lock!') + '<br>';
         html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
         html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to continue.') + '<br>';
         return html;
       }
-      let html = s(BOSS_COLOR, '/ The Exit') + '<br>';
+      let html = s(BOSS_COLOR, 'The Exit') + '<br>';
       html += s('#888', 'You found the exit! Freedom is within reach.') + '<br><br>';
       html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to escape the dungeon.') + '<br>';
       return html;
     }
 
     if (bossState.failPending) {
-      let html = s(BOSS_COLOR, '/ The Sealed Door') + '<br>';
+      let html = s(BOSS_COLOR, 'The Sealed Door') + '<br>';
       html += s('#888', 'The rune corrupts the spell.') + '<br>';
       html += s('#888', 'A trap door opens and you fall to a deeper level of the dungeon!') + '<br><br>';
       html += s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to continue.') + '<br>';
@@ -380,7 +391,7 @@ export const BOSS_DEF: ExtraRoomDef = {
     const display = hangmanDisplay(arch.word, arch.guessedLetters);
     const failedList = [...arch.guessedLetters].filter(l => !arch.word.includes(l)).sort().join(' ');
 
-    let html = s(BOSS_COLOR, '/ The Sealed Door') + '<br>';
+    let html = s(BOSS_COLOR, 'The Sealed Door') + '<br>';
     html += s('#888', 'You see a way out, but a magical seal bars the door.') + '<br>';
     html += s('#888', 'Cast the correct runes to break it —') + '<br>';
     html += s('#888', 'but watch out if you mess up the spell!') + '<br><br>';
@@ -457,10 +468,18 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
       room.locked = true;
+      room.hidden = true;
+    }
+    if (event.type === 'room:activated') {
+      const ds = room.state as DragonTreasureRoomState;
+      if (event.x === ds.dragonPos.x && event.y === ds.dragonPos.y) {
+        room.hidden = false;
+        ctx.render();
+      }
     }
     if (event.type === 'room:solved') {
       const ds = room.state as DragonTreasureRoomState;
-      if (event.x === ds.dragonPos.x && event.y === ds.dragonPos.y) {
+      if (event.x === ds.dragonPos.x && event.y === ds.dragonPos.y && !room.hidden) {
         room.locked = false;
         ctx.showInteraction([
           `The dragon is defeated! The treasure room unlocks.`,
@@ -477,12 +496,12 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
     const s = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
     if (room.locked) {
-      return s(GOLD_COLOR, "$ Dragon's Hoard") + '<br>' +
+      return s(GOLD_COLOR, "Dragon's Hoard") + '<br>' +
         s('#888', 'The chamber is sealed — the dragon still lives.') + '<br>' +
         s('#666', 'Defeat the dragon to claim the treasure.') + '<br>';
     }
 
-    return s(GOLD_COLOR, "$ Dragon's Hoard") + '<br>' +
+    return s(GOLD_COLOR, "Dragon's Hoard") + '<br>' +
       s('#888', `A pile of gold glitters in the torchlight.`) + '<br>' +
       s('#ccc', `${ds.goldAmount} gold`) + '<br><br>' +
       s('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + s('#888', ' to loot the treasure.') + '<br>';
@@ -536,7 +555,7 @@ const SIMM_CONTENT_RANDOM = [
   "Have you made any progress on the magical seal barring the exit?",
   "Impressive! Not many make it this far.",
   "You have a respectable level. I stopped counting mine a long time ago.",
-  "Have you fought a dragon yet? No joke, that.",
+  "Have you fought a dragon yet? They're no joke!",
   "Have you come across the slime blob yet?",
   "If I ever get out, I'm going to write down all of these puzzles in a big book and become famous.",
   "Some say these halls used to be the foundations of a lost city.",
@@ -575,11 +594,10 @@ function pickRandom<T>(arr: T[]): T {
  */
 export function buildSimmDialogue(
   hasMetBefore: boolean,
-  dungeonLevel: number,
   hpPct: number,       // hp / maxHp
   manaPct: number,     // mana / maxMana
   equippedItemNames: string[],
-): string {
+): { dialogue: string; commentedItem: string | null } {
   const parts: string[] = [];
 
   // 1. Greeting
@@ -589,25 +607,28 @@ export function buildSimmDialogue(
   parts.push(greeting);
 
   // 2. Content
-  const content = (!hasMetBefore && dungeonLevel === 1)
+  const content = !hasMetBefore
     ? pickRandom(SIMM_CONTENT_FIRST)
     : pickRandom(SIMM_CONTENT_RANDOM);
   parts.push(content);
 
   // 3. Additional content (at most one)
-  const additionalOptions: string[] = [];
-  if (hpPct < 0.2) additionalOptions.push(pickRandom(SIMM_HP_LOW));
-  if (manaPct < 0.2) additionalOptions.push(pickRandom(SIMM_MANA_LOW));
+  const additionalOptions: Array<{ text: string; itemName: string | null }> = [];
+  if (hpPct < 0.2) additionalOptions.push({ text: pickRandom(SIMM_HP_LOW), itemName: null });
+  if (manaPct < 0.2) additionalOptions.push({ text: pickRandom(SIMM_MANA_LOW), itemName: null });
+  let commentedItem: string | null = null;
   if (equippedItemNames.length > 0) {
     const itemName = pickRandom(equippedItemNames);
     const template = pickRandom(SIMM_ITEM_COMMENTS);
-    additionalOptions.push(template(itemName));
+    additionalOptions.push({ text: template(itemName), itemName });
   }
   if (additionalOptions.length > 0) {
-    parts.push(pickRandom(additionalOptions));
+    const picked = pickRandom(additionalOptions);
+    parts.push(picked.text);
+    commentedItem = picked.itemName;
   }
 
-  return parts.join(' ');
+  return { dialogue: parts.join(' '), commentedItem };
 }
 
 // ---- ExtraRoomDef: Simm ----
@@ -628,13 +649,15 @@ export const SIMM_DEF: ExtraRoomDef = {
     if (event.type === 'level:start') {
       const s = room.state as SimmRoomState;
       const equippedNames = ctx.equippedItems.map(i => i.name).filter(Boolean);
-      s.dialogue = buildSimmDialogue(
+      const newItemNames = equippedNames.filter(n => n !== ctx.simmLastCommentedItem);
+      const result = buildSimmDialogue(
         ctx.hasMetSimm,
-        ctx.dungeonLevel,
         ctx.hp / ctx.maxHp,
         ctx.mana / ctx.maxMana,
-        equippedNames,
+        newItemNames,
       );
+      s.dialogue = result.dialogue;
+      if (result.commentedItem !== null) ctx.setSimmLastCommentedItem(result.commentedItem);
       ctx.setHasMetSimm(true);
     }
   },
@@ -642,7 +665,7 @@ export const SIMM_DEF: ExtraRoomDef = {
   renderPanel(_room, _ctx) {
     const COLOR = '#88ff88';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
-    return sp(COLOR, '& Simm') + '<br>' +
+    return sp(COLOR, 'Simm') + '<br>' +
       sp('#aaa', 'A plucky fellow adventurer.') + '<br><br>' +
       sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to talk.') + '<br>';
   },
@@ -665,7 +688,7 @@ export const VERY_HIDDEN_DEF: ExtraRoomDef = {
   glowColor: '#aa66ff',
   centerChar: '%',
   lockedCenterChar: '%',
-  minLevel: 1,
+  minLevel: 2,
   spawnChance: 0.3,
   initialVeryHidden: true,
   buildState: (ctx, available) => {
@@ -683,10 +706,9 @@ export const VERY_HIDDEN_DEF: ExtraRoomDef = {
 
     if (room.veryHidden) return '';
 
-    return sp(COLOR, '% Mysterious Sorcerer') + '<br>' +
-      sp('#aaa', 'A mysterious sorcerer materializes before you.') + '<br>' +
-      sp('#aaa', '"Come closer and I\'ll give you a gift."') + '<br><br>' +
-      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to accept.') + '<br>';
+    return sp(COLOR, 'Mysterious Sorcerer') + '<br>' +
+      sp('#aaa', 'A mysterious sorcerer materializes before you, offering you a gift.') + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[space]</span>` + sp('#888', ' to accept') + '<br>';
   },
 
   handleInput(room, key, ctx) {
@@ -772,7 +794,7 @@ export const HIDDEN_TREASURE_DEF: ExtraRoomDef = {
       contentsDesc = 'A faded inscription adorns the wall, hinting at a magical seal.';
     }
 
-    return sp(COLOR, '? Secret Chamber') + '<br>' +
+    return sp(COLOR, 'Secret Chamber') + '<br>' +
       sp('#aaa', 'A long forgotten room.') + '<br>' +
       sp('#aaa', contentsDesc) + '<br><br>' +
       sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ` to ${actionWord}.`) + '<br>';
@@ -811,10 +833,9 @@ export const HIDDEN_TREASURE_DEF: ExtraRoomDef = {
 // ---- ExtraRoomDef: Trapped Adventurer ----
 
 const TRAPPED_ADVENTURER_DIALOGUES = [
-  "Help! I've been stuck here for ages — the monsters kept clearing me off while I tried to figure out these wretched runes. Thank you so much!",
-  "Oh thank goodness! I've been wedged here since the last puzzle reset. I thought no one would ever come. You're a lifesaver!",
-  "Finally! I've been trapped here waiting for someone to clear the way. Take this as thanks — I'd give more but I've been looted dry.",
-  "I owe you one, adventurer. I got cut off from the exit trying to dodge a trap and couldn't get back. Here, take this.",
+  "I'm free! At last, I'm free!",
+  "Oh, thank you! I thought I'd be locked down here forever.",
+  "I got trapped in here while searching for treasure. Thank you for freeing me!",
 ];
 
 export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
@@ -862,62 +883,64 @@ export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
     if (event.type === 'level:start') {
       const s = room.state as TrappedAdventurerRoomState;
       s.rescued = false;
-      // Check if already unlocked (all adjacent rooms already solved at start — rare but possible)
-      room.locked = !s.adjacentRooms.every(pos => ctx.isRoomSolved(pos));
+      // Only lock if there are unsolved adjacent rooms that aren't already solved
+      const unsolvedAdjacent = s.adjacentRooms.filter(pos => !ctx.isRoomSolved(pos));
+      room.locked = unsolvedAdjacent.length > 0;
     }
     if (event.type === 'room:solved') {
       if (room.locked) {
         const s = room.state as TrappedAdventurerRoomState;
-        const allSolved = s.adjacentRooms.every(pos => ctx.isRoomSolved(pos));
-        if (allSolved) {
+        const unsolvedAdjacent = s.adjacentRooms.filter(pos => !ctx.isRoomSolved(pos));
+        if (unsolvedAdjacent.length === 0) {
+          ctx.showAfterPopup('A nearby door swings open.');
           room.locked = false;
-          ctx.showInteraction(['You hear a muffled voice from nearby: "Help! I\'m free!"']);
           ctx.render();
         }
       }
     }
   },
 
-  renderPanel(room, _ctx) {
+  renderPanel(room, ctx) {
     const s = room.state as TrappedAdventurerRoomState;
     const COLOR = '#ffcc44';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
     if (room.locked) {
-      const remaining = s.adjacentRooms.filter(pos => !_ctx.isRoomSolved(pos)).length;
-      return sp(COLOR, '& Trapped Adventurer') + '<br>' +
-        sp('#888', 'You hear someone calling for help...') + '<br>' +
-        sp('#666', `Locked: Solve ${remaining} more adjacent room(s)`) + '<br>';
+      const remaining = s.adjacentRooms.filter(pos => !ctx.isRoomSolved(pos)).length;
+      return sp(COLOR, 'Trapped Adventurer') + '<br>' +
+        sp('#888', 'A ragged adventurer peers at you desperately from behind a locked door.') + '<br>' +
+        sp('#666', `Solve ${remaining} more adjacent room(s) to unlock`) + '<br>';
     }
 
-    return sp(COLOR, '& Trapped Adventurer') + '<br>' +
-      sp('#aaa', pickRandom(TRAPPED_ADVENTURER_DIALOGUES)) + '<br><br>' +
-      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to talk.') + '<br>';
+    return sp(COLOR, 'Trapped Adventurer') + '<br>' +
+      sp('#aaa', 'A ragged adventurer waits behind the now-open door.') + '<br><br>' +
+      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to free them.') + '<br>';
   },
 
   handleInput(room, key, ctx) {
     if (room.locked) return false;
     if (key === ' ') {
       const s = room.state as TrappedAdventurerRoomState;
+      if (s.rescued) return false;
       s.rescued = true;
       const onDismiss = () => { room.completed = true; };
+      let rewardLine: string;
       if (s.reward === 'gold') {
         ctx.addGold(30);
-        ctx.showInteraction(['They press 30 gold into your hand. "Take it, please."'], onDismiss);
+        rewardLine = 'They press 30 gold into your hand. "Take it, please."';
       } else if (s.reward === 'hp_potion') {
         ctx.addHpPotion();
-        ctx.showInteraction(['"Here, take this health potion. It\'s all I have."'], onDismiss);
+        rewardLine = '"Here, take this health potion. It\'s all I have."';
       } else if (s.reward === 'mana_potion') {
         ctx.addManaPotion();
-        ctx.showInteraction(['"Here, take this mana potion. It\'s all I have."'], onDismiss);
+        rewardLine = '"Here, take this mana potion. It\'s all I have."';
       } else {
         const letter = ctx.revealArchLetter();
-        if (letter) {
-          ctx.showInteraction([`They lean in close. "I have a secret. '${letter}' is a magical rune. You'll know when to use it. Don't forget!"`], onDismiss);
-        } else {
-          ctx.showInteraction(['"Thank you for freeing me. Safe travels.'], onDismiss);
-        }
+        rewardLine = letter
+          ? `They lean in close. "I have a secret. '${letter}' is a magical rune. You'll know when to use it. Don't forget!"`
+          : '"Thank you for freeing me. Safe travels."';
       }
+      ctx.showInteraction([pickRandom(TRAPPED_ADVENTURER_DIALOGUES), rewardLine], onDismiss);
       return true;
     }
     if (/^[a-z]$/.test(key)) return true;
@@ -949,7 +972,7 @@ export const TREASURE_HUNTER_DEF: ExtraRoomDef = {
     const COLOR = '#ffaa44';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
-    return sp(COLOR, '& Treasure Hunter') + '<br>' +
+    return sp(COLOR, 'Treasure Hunter') + '<br>' +
       sp('#aaa', 'A furtive treasure hunter hides in the shadows.') + '<br><br>' +
       sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to talk.') + '<br>';
   },
@@ -961,7 +984,11 @@ export const TREASURE_HUNTER_DEF: ExtraRoomDef = {
       const vhRooms = ctx.getVeryHiddenRooms();
       let hint: string;
       if (vhRooms.length === 0) {
-        hint = "Have you heard about the secret rooms? Sometimes you can find them if you look hard enough. I haven't found any on this level yet.";
+        if (ctx.hasFoundTreasureAlready()) {
+          hint = "You found it before me! Keep treasure hunting — see you next time.";
+        } else {
+          hint = "Have you heard about the secret rooms? Sometimes you can find them if you look hard enough. I haven't found any on this level yet.";
+        }
       } else {
         const vh = vhRooms[0];
         hint = `Pssst! I found something! There's a secret room hidden ${vh.direction} of the letter ${vh.letterHint}.`;
@@ -985,16 +1012,16 @@ export const TRADER_DEF: ExtraRoomDef = {
   spawnChance: 0.3,
   buildState: (ctx, available) => {
     const pos = ctx.pickPosition(available);
-    return pos ? { pos, state: { traded: false, tradeSlot: null } } : null;
+    return pos ? { pos, state: { traded: false, tradeSlot: null, tradeOffer: null } } : null;
   },
 
   onEvent(room, event, ctx) {
     if (event.type === 'level:start') {
       const s = room.state as TraderRoomState;
       s.traded = false;
-      // Pick a random equipped item slot to offer
       const items = ctx.equippedItemsFull;
       s.tradeSlot = items.length > 0 ? items[Math.floor(Math.random() * items.length)].slot : null;
+      s.tradeOffer = s.tradeSlot ? ctx.generateTradeOffer(s.tradeSlot) : null;
     }
   },
 
@@ -1005,21 +1032,22 @@ export const TRADER_DEF: ExtraRoomDef = {
 
     const items = ctx.equippedItemsFull;
     if (items.length === 0 || !s.tradeSlot) {
-      return sp(COLOR, '% Trader') + '<br>' +
-        sp('#aaa', '"A weathered trader eyes your gear."') + '<br>' +
-        sp('#888', '"Come back when you have some items to trade!"') + '<br>';
+      return sp(COLOR, 'Trader') + '<br>' +
+        sp('#aaa', 'A weathered trader eyes your gear.') + '<br>' +
+        sp('#888', 'Come back when you have some items to trade!') + '<br>';
     }
 
     const offerItem = items.find(i => i.slot === s.tradeSlot);
     if (!offerItem) {
-      return sp(COLOR, '% Trader') + '<br>' +
+      return sp(COLOR, 'Trader') + '<br>' +
         sp('#888', '"Hmm, seems you no longer have the item I wanted..."') + '<br>';
     }
 
-    return sp(COLOR, '% Trader') + '<br>' +
-      sp('#aaa', '"A weathered trader eyes your gear."') + '<br>' +
-      sp('#aaa', `"I\'ll trade you something for that ${offerItem.name} (Lv.${offerItem.level})."`) + '<br>' +
-      sp('#888', `You\'ll receive: a ${offerItem.slot} item (1 level lower, no mods).`) + '<br><br>' +
+    const offer = s.tradeOffer;
+    const offerDesc = offer ? `${offer.name} Lv.${offerItem.level} [${offerItem.slot}] ${offer.stats}` : '...';
+    return sp(COLOR, 'Trader') + '<br>' +
+      sp('#aaa', 'A weathered trader eyes your gear.') + '<br>' +
+      sp('#aaa', `They offer to trade your ${offerItem.name} for their ${offerDesc}.`) + '<br><br>' +
       sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to accept trade.') + '<br>';
   },
 
@@ -1092,12 +1120,20 @@ export const CURSED_FOUNTAIN_DEF: ExtraRoomDef = {
     }
   },
 
-  renderPanel(room, _ctx) {
+  renderPanel(room, ctx) {
     const s = room.state as CursedFountainRoomState;
     const COLOR = '#4444cc';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
-    const [give, take] = s.trade ? [s.trade.give, s.trade.take] : [null, null];
+    // Re-check trade validity in case stats changed since level:start
+    if (s.trade && !s.used) {
+      const valid = getValidFountainTrades(ctx);
+      if (!valid.some(t => t.give.stat === s.trade!.give.stat && t.take.stat === s.trade!.take.stat)) {
+        s.trade = valid.length > 0 ? pickRandom(valid) : null;
+      }
+    }
+
+    const [give, take] = s.trade && !s.used ? [s.trade.give, s.trade.take] : [null, null];
     const fmtStat = (stat: string, amt: number) => {
       const label = stat === 'max_hp' ? 'max HP' : stat === 'max_mana' ? 'max Mana' : stat === 'damage' ? 'DMG' : 'DEF';
       return `+${amt} ${label}`;
@@ -1106,12 +1142,16 @@ export const CURSED_FOUNTAIN_DEF: ExtraRoomDef = {
     const tradeTake = take ? `-${take.amount} ${take.stat === 'max_hp' ? 'max HP' : take.stat === 'max_mana' ? 'max Mana' : take.stat === 'damage' ? 'DMG' : 'DEF'}` : '';
     const tradeDesc = give && take
       ? `An eerie voice whispers an unholy transaction:<br>${tradeGive} for ${tradeTake}`
+      : s.used ? 'You have already drunk from this fountain.' : 'The fountain offers no trade you can afford.';
+
+    const spacePrompt = give && take
+      ? sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to drink.') + '<br>'
       : '';
 
-    return sp(COLOR, '? Cursed Fountain') + '<br>' +
+    return sp(COLOR, 'Cursed Fountain') + '<br>' +
       sp('#aaa', 'A fountain bubbling with dark energy.') + '<br>' +
       sp('#ccc', tradeDesc) + '<br><br>' +
-      sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to drink.') + '<br>';
+      spacePrompt;
   },
 
   handleInput(room, key, ctx) {
@@ -1164,8 +1204,8 @@ export const MIMIC_CHEST_DEF: ExtraRoomDef = {
     const GOLD = '#ccaa22';
     const sp = (color: string, text: string) => `<span style="color:${color}">${text}</span>`;
 
-    return sp(GOLD, '$ Treasure Chest') + '<br>' +
-      sp('#aaa', 'A chest sits here, glinting invitingly.') + '<br><br>' +
+    return sp(GOLD, 'Treasure Chest') + '<br>' +
+      sp('#aaa', 'An old chest covered in dust sits here.') + '<br><br>' +
       sp('#888', 'Press ') + `<span style="color:#fff">[SPACE]</span>` + sp('#888', ' to loot.') + '<br>';
   },
 

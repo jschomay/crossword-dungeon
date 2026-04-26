@@ -189,6 +189,16 @@ export function generateEncounter(rng: Rng, dungeonLevel = 1): Encounter {
   }
 }
 
+export function generateNonDragonEncounter(rng: Rng, dungeonLevel = 1): Encounter {
+  const type = rng.getItem(['monster', 'trap', 'treasure'] as const);
+  if (type === 'monster') {
+    const enc = generateMonster(rng, dungeonLevel);
+    if (enc.baseName === 'Dragon') return generateTrap(rng, dungeonLevel);
+    return enc;
+  }
+  return type === 'trap' ? generateTrap(rng, dungeonLevel) : generateTreasure(rng, dungeonLevel);
+}
+
 // ---- Stat computation helpers (pure, testable) ----
 
 export function getMonsterStats(
@@ -386,7 +396,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     if (displayLevel >= 3) activeMods.push(encounter.mod1);
     if (displayLevel >= 6) activeMods.push(encounter.mod2);
 
-    const title = `${ENCOUNTER_STYLE.monster.symbol} [MONSTER] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    const title = `${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ').trimStart();
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
@@ -410,8 +420,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     if (displayLevel >= 3) activeMods.push(encounter.mod1);
     if (displayLevel >= 6) activeMods.push(encounter.mod2);
 
-    const typeLabel = encounter.trapType === 'magical' ? 'MAGICAL TRAP' : 'TRAP';
-    const title = `${ENCOUNTER_STYLE.trap.symbol} [${typeLabel}] ${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ');
+    const title = `${activeMods.map(m => m.name).join(' ')} ${encounter.baseName}  Lv.${displayLevel}`.replace(/\s+/g, ' ').trimStart();
     lines.push(title);
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
@@ -435,7 +444,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
 
   } else if (encounter.subKind === 'immediate') {
     const amount = encounter.baseAmount + (displayLevel - 1) * encounter.amountGrowth;
-    const title = `${ENCOUNTER_STYLE.treasure.symbol} [TREASURE] ${encounter.baseName}  Lv.${displayLevel}`;
+    const title = `${encounter.baseName}  Lv.${displayLevel}`;
     lines.push(title);
     lines.push(encounter.baseDescription);
     lines.push('');

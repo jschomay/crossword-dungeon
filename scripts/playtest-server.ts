@@ -72,13 +72,13 @@ const keydownListeners: Array<(e: unknown) => void> = [];
 (global as any).clearTimeout = () => {};
 (global as any).window = {
   innerWidth: 1200, innerHeight: 800,
-  location: { search: '?puzzle=debug' },
+  location: { search: '' },
   addEventListener: (type: string, fn: (e: unknown) => void) => {
     if (type === 'keydown') keydownListeners.push(fn);
   },
 };
 (global as any).localStorage = {
-  _store: {} as Record<string, string>,
+  _store: { crossword_dungeon_progression: '1' } as Record<string, string>,
   getItem(k: string) { return this._store[k] ?? null; },
   setItem(k: string, v: string) { this._store[k] = v; },
 };
@@ -110,7 +110,7 @@ function renderGrid(): string {
   for (const [x, y] of Object.values(data)) { if (x > maxX) maxX = x; if (y > maxY) maxY = y; }
   const rows: string[][] = Array.from({ length: maxY + 1 }, () => Array(maxX + 1).fill(' '));
   for (const [x, y, ch] of Object.values(data)) {
-    if (ch && ch !== '\t') rows[y][x] = ch;
+    if (ch && ch !== '\t' && y >= 0 && y <= maxY && x >= 0 && x <= maxX) rows[y][x] = ch;
   }
   return rows.map(r => r.join('')).join('\n');
 }
@@ -278,11 +278,30 @@ createServer(async (req, res) => {
     game.puzzleComplete = false;
     game.gameOver = false;
     game.gameWon = false;
+    if (fixture.playerState) {
+      const ps = fixture.playerState;
+      if (ps.gold !== undefined) game.gold = ps.gold;
+      if (ps.equipped !== undefined) game.equipped = ps.equipped;
+      if (ps.dungeonLevel !== undefined) game.dungeonLevel = ps.dungeonLevel;
+    }
+    // Fire level:start so extra rooms (trader, simm etc.) generate their state
+    game.emitDungeonEvent({ type: 'level:start' });
     game.render();
     res.end(`Loaded fixture: ${name}\n\n` + snapshot());
+  } else if (url.pathname === '/setlevel') {
+    const n = parseInt(url.searchParams.get('n') ?? '', 10);
+    if (!isNaN(n) && n >= 1) {
+      game.dungeonLevel = n;
+      game.generateShopInventory();
+      game.render();
+      res.end(`dungeonLevel set to ${n}\n\n` + snapshot());
+    } else {
+      res.statusCode = 400;
+      res.end('Usage: /setlevel?n=<number>');
+    }
   } else {
     res.statusCode = 404;
-    res.end('Not found. Endpoints: /state  /key?k=ArrowRight  /dismiss  /debug  /load?fixture=<name>');
+    res.end('Not found. Endpoints: /state  /key?k=ArrowRight  /dismiss  /debug  /load?fixture=<name>  /setlevel?n=<number>');
   }
 }).listen(PORT, () => {
   console.log(`Playtest server on http://localhost:${PORT}`);

@@ -252,7 +252,7 @@ export default class Dungeon {
     const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
     for (const { dx, dy } of dirs) {
       const r = this.getExtraRoomAt(gx + dx, gy + dy);
-      if (r?.hidden) return { room: r, dx, dy };
+      if (r?.hidden && r.type !== 'dragon_treasure') return { room: r, dx, dy };
     }
     return null;
   }

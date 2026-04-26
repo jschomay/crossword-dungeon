@@ -364,20 +364,20 @@ describe('DRAGON_TREASURE_DEF', () => {
 import { buildSimmDialogue, SIMM_DEF, type SimmRoomState } from './extraRooms';
 
 describe('buildSimmDialogue', () => {
-  it('returns a non-empty string', () => {
-    const d = buildSimmDialogue(false, 1, 1.0, 1.0, []);
-    expect(typeof d).toBe('string');
-    expect(d.length).toBeGreaterThan(0);
+  it('returns a non-empty dialogue string', () => {
+    const { dialogue } = buildSimmDialogue(false, 1.0, 1.0, []);
+    expect(typeof dialogue).toBe('string');
+    expect(dialogue.length).toBeGreaterThan(0);
   });
 
-  it('on first meeting level 1, includes first-content flavour (greedy check)', () => {
+  it('on first meeting, includes first-content flavour (greedy check)', () => {
     // Run many times to verify first-meeting content is possible
     let sawFirstContent = false;
     for (let i = 0; i < 50; i++) {
-      const d = buildSimmDialogue(false, 1, 1.0, 1.0, []);
+      const { dialogue } = buildSimmDialogue(false, 1.0, 1.0, []);
       // First-content items are distinct from random content (they mention e.g. "new here")
-      if (d.includes("new here") || d.includes("poking around") || d.includes("recognized") ||
-          d.includes("compare notes") || d.includes("last adventurer")) {
+      if (dialogue.includes("new here") || dialogue.includes("poking around") || dialogue.includes("recognized") ||
+          dialogue.includes("compare notes") || dialogue.includes("last adventurer")) {
         sawFirstContent = true;
         break;
       }
@@ -389,8 +389,8 @@ describe('buildSimmDialogue', () => {
     // With HP at 10%, should include hp warning in additional content
     let sawWarning = false;
     for (let i = 0; i < 30; i++) {
-      const d = buildSimmDialogue(false, 1, 0.1, 1.0, []);
-      if (d.includes('rough') || d.includes('alright') || d.includes('health potion') || d.includes('low')) {
+      const { dialogue } = buildSimmDialogue(false, 0.1, 1.0, []);
+      if (dialogue.includes('rough') || dialogue.includes('alright') || dialogue.includes('health potion') || dialogue.includes('low')) {
         sawWarning = true;
         break;
       }
@@ -399,7 +399,7 @@ describe('buildSimmDialogue', () => {
   });
 
   it('consumes space key and shows dialogue popup', () => {
-    const state: SimmRoomState = { dialogue: 'Hello there!' };
+    const state: SimmRoomState = { dialogue: 'Hello there!', };
     const room: ExtraRoom = { type: 'simm', pos: { x: 0, y: 0 }, locked: false, completed: false, glowColor: '#88ff88', state };
     const shown: string[][] = [];
     const ctx = { showInteraction: (lines: string[]) => shown.push(lines) } as never;
@@ -409,7 +409,7 @@ describe('buildSimmDialogue', () => {
   });
 
   it('blocks letter guessing', () => {
-    const state: SimmRoomState = { dialogue: 'Hello!' };
+    const state: SimmRoomState = { dialogue: 'Hello!', };
     const room: ExtraRoom = { type: 'simm', pos: { x: 0, y: 0 }, locked: false, completed: false, glowColor: '#88ff88', state };
     expect(SIMM_DEF.handleInput(room, 'a', {} as never)).toBe(true);
   });
@@ -434,7 +434,7 @@ describe('TRAPPED_ADVENTURER_DEF', () => {
     const ctx = {
       isRoomSolved: (pos: { x: number; y: number }) =>
         (pos.x === 1 && pos.y === 1) || (pos.x === 2 && pos.y === 1),
-      showInteraction: () => {},
+      showAfterPopup: () => {},
       render: () => {},
     } as never;
     TRAPPED_ADVENTURER_DEF.onEvent(room, { type: 'room:solved', x: 2, y: 1 }, ctx);

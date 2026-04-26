@@ -117,7 +117,8 @@ body {
   border: 1px solid #444;
   padding: 16px 20px;
   min-height: 120px;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 #clues {
