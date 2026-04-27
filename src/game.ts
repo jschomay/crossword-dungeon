@@ -1,4 +1,5 @@
 import * as ROT from '../lib/rotjs';
+import { setMetallicTension, playMetallicSting, resetAudio } from './audio';
 import { hpBar, esc, renderEncounterHtml, C_HP, C_MANA, C_DMG, C_DEF, C_XP, C_DIM } from './utils';
 import { validateIpuz, selectWords, buildSparseIpuz, getIntoneWord, getEligibleWordCount, getWords } from './puzzle';
 import { consumeProgression, fetchPuzzle, getOverridePuzzle, isTutorial, completeTutorial } from './progression';
@@ -84,9 +85,9 @@ function modEffectLabel(mod: typeof TREASURE_MODIFIERS[number]): string {
 
 function baseStatLabel(item: TreasureItemStats): string {
   switch (item.statType) {
-    case 'damage':   return `(+${item.baseStat} DMG)`;
-    case 'defense':  return `(+${item.baseStat} DEF)`;
-    case 'max_hp':   return `(+${item.baseStat} max HP)`;
+    case 'damage': return `(+${item.baseStat} DMG)`;
+    case 'defense': return `(+${item.baseStat} DEF)`;
+    case 'max_hp': return `(+${item.baseStat} max HP)`;
     case 'max_mana': return `(+${item.baseStat} max MANA)`;
   }
 }
@@ -275,10 +276,13 @@ export default class Game {
     game.applyTilt();
     game.playerPos = ROT.RNG.getItem(game.puzzle.getRooms())!;
     if (getOverridePuzzle() === 'debug') game.gold = 3000;
-    game.render();
-    if (isTutorial() || getOverridePuzzle() === 'tutorial') game.showHelp();
-    window.addEventListener('keydown', (e) => game.handleKey(e));
     return game;
+  }
+
+  activate(): void {
+    this.render();
+    if (isTutorial() || getOverridePuzzle() === 'tutorial') this.showHelp();
+    window.addEventListener('keydown', (e) => this.handleKey(e));
   }
 
   private applyTilt(): void {
@@ -548,6 +552,7 @@ export default class Game {
 
   private triggerVictory(): void {
     this.gameWon = true;
+    playMetallicSting();
     this.render();
   }
 
@@ -614,6 +619,7 @@ export default class Game {
   }
 
   private async restart(): Promise<void> {
+    resetAudio();
     this.dungeonLevel = 1;
     this.shopBuyCounts = [0, 0, 0, 0, 0, 0];
     this.equipped = { weapon: null, armor: null, amulet: null };
@@ -646,6 +652,7 @@ export default class Game {
   }
 
   private async advancePuzzle(): Promise<void> {
+    resetAudio();
     if (isTutorial()) completeTutorial();
     this.gold += this.dungeonLevel * 100;
     this.dungeonLevel++;
@@ -802,6 +809,7 @@ export default class Game {
       this.baseDef += 1;
       this.hp = this.effectiveMaxHp();
       this.mana = this.effectiveMaxMana();
+      playMetallicSting();
       return true;
     }
     return false;
@@ -838,7 +846,12 @@ export default class Game {
     this.combatMonsterHp = null;
     this.interactionPopupEl.classList.add('hidden');
     this.sidebarEl.classList.remove('popup-open');
-    if (wasOpen) onDismiss?.();
+    if (wasOpen) {
+      onDismiss?.();
+      // Turn off tension if the current room just became completed
+      const cur = this.dungeon.getExtraRoomAt(this.playerPos.x, this.playerPos.y);
+      if (cur?.completed) setMetallicTension(false);
+    }
     if (wasOpen && this.afterPopupLines.length > 0) {
       const lines = this.afterPopupLines;
       this.afterPopupLines = [];
@@ -898,6 +911,7 @@ export default class Game {
     if (this.countSolved() === this.totalRooms) {
       this.puzzleComplete = true;
       this.emitDungeonEvent({ type: 'puzzle:complete' });
+      playMetallicSting();
       return `The dungeon trembles. You hear a lock click in the distance...`;
     }
     return null;
@@ -1266,19 +1280,19 @@ export default class Game {
       // Apply modifier to the item in place
       target.modNames.push(mod.name);
       if ('stat_multiplier' in mod) {
-        target.damageBonus  = Math.round(target.damageBonus  * mod.stat_multiplier);
+        target.damageBonus = Math.round(target.damageBonus * mod.stat_multiplier);
         target.defenseBonus = Math.round(target.defenseBonus * mod.stat_multiplier);
-        target.maxHpBonus   = Math.round(target.maxHpBonus   * mod.stat_multiplier);
+        target.maxHpBonus = Math.round(target.maxHpBonus * mod.stat_multiplier);
         target.maxManaBonus = Math.round(target.maxManaBonus * mod.stat_multiplier);
       } else if ('passive_effect' in mod) {
-        if (mod.passive_effect === 'hp_per_combat_round')   target.hpPerRound   += mod.passive_amount;
+        if (mod.passive_effect === 'hp_per_combat_round') target.hpPerRound += mod.passive_amount;
         if (mod.passive_effect === 'mana_per_combat_round') target.manaPerRound += mod.passive_amount;
       } else {
-        if (mod.bonus_effect === 'max_hp')   target.maxHpBonus   += mod.bonus_amount;
+        if (mod.bonus_effect === 'max_hp') target.maxHpBonus += mod.bonus_amount;
         if (mod.bonus_effect === 'max_mana') target.maxManaBonus += mod.bonus_amount;
       }
       // Re-cap HP/mana after potential max bonus
-      this.hp   = Math.min(this.hp,   this.effectiveMaxHp());
+      this.hp = Math.min(this.hp, this.effectiveMaxHp());
       this.mana = Math.min(this.mana, this.effectiveMaxMana());
       const targetName = [...target.modNames, target.name].join(' ');
       this.showInteraction([`Upgraded to: ${targetName}.`]);
@@ -1489,9 +1503,9 @@ export default class Game {
   }
 
   private showHelp(): void {
-    const C_TITLE  = '#aaaaff';
-    const C_SECT   = '#ffdd44';
-    const C_BODY   = '#888';
+    const C_TITLE = '#aaaaff';
+    const C_SECT = '#ffdd44';
+    const C_BODY = '#888';
     const s = (color: string, text: string) => `<span style="color:${color}">${esc(text)}</span>`;
     const bracketKey = (k: string) =>
       k.replace(/\[([^\]]+)\]/g, `<span style="color:#fff">[$1]</span>`) +
@@ -1511,10 +1525,10 @@ export default class Game {
       `<div style="display:inline-block;vertical-align:top">` +
       `<img src="dungeon-rooms.jpg" style="display:block;height:80px;image-rendering:pixelated">` +
       `<div style="margin-top:4px">` +
-      `<span style="color:${C_PLAYER}">@</span>${s(C_BODY,' you  ')}` +
-      `<span style="color:${C_TREASURE}">$</span>${s(C_BODY,' treasure  ')}` +
-      `<span style="color:${C_TRAP}">!</span>${s(C_BODY,' trap  ')}` +
-      `<span style="color:${C_MONSTER}">*</span>${s(C_BODY,' monster')}` +
+      `<span style="color:${C_PLAYER}">@</span>${s(C_BODY, ' you  ')}` +
+      `<span style="color:${C_TREASURE}">$</span>${s(C_BODY, ' treasure  ')}` +
+      `<span style="color:${C_TRAP}">!</span>${s(C_BODY, ' trap  ')}` +
+      `<span style="color:${C_MONSTER}">*</span>${s(C_BODY, ' monster')}` +
       `</div>` +
       `<div style="margin-top:4px">${s(C_BODY, 'The dots around a room show its level')}</div>` +
       `</div>`;
@@ -1648,9 +1662,19 @@ export default class Game {
         this.render();
         return;
       }
+      const prevExtra = this.dungeon.getExtraRoomAt(this.playerPos.x, this.playerPos.y);
       this.playerPos = { x: nx, y: ny };
+      const nextExtra = this.dungeon.getExtraRoomAt(nx, ny);
+      const wasTense = this.isTenseRoom(prevExtra);
+      const isTense = this.isTenseRoom(nextExtra);
+      if (isTense !== wasTense) setMetallicTension(isTense);
       this.render();
     }
+  }
+
+  private isTenseRoom(room: ExtraRoom | null | undefined): boolean {
+    if (!room || room.completed) return false;
+    return ['boss', 'dragon_treasure', 'very_hidden', 'trapped_adventurer', 'mimic_chest'].includes(room.type);
   }
 
   private renderHeroPanel(): void {
@@ -1799,8 +1823,8 @@ export default class Game {
         const encLines = formatEncounter(state.encounter, state.activatedLevel, this.combatMonsterHp ?? undefined, this.puzzleMult());
         const runeAction = state.activatedLevel === 0 ? 'awaken'
           : state.encounter.kind === 'treasure' ? 'loot'
-          : state.encounter.kind === 'monster' ? 'fight'
-          : 'disarm';
+            : state.encounter.kind === 'monster' ? 'fight'
+              : 'disarm';
         encLines.splice(state.activatedLevel === 0 ? 1 : 2, 0, `Cast a rune to ${runeAction}.`);
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;

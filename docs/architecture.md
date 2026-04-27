@@ -17,6 +17,7 @@ A self-reference doc for Claude (or anyone else) who needs to understand how thi
 | `progression.ts` | Puzzle sequence, localStorage, URL overrides |
 | `utils.ts` | Color helpers, HP bars, HTML escaping |
 | `style.css` | 60/40 flex layout, animations, dungeon tilt |
+| `audio.ts` | Howler.js audio: loads 4 MP3s, exports `initAudio`, `startAmbience`, `setMetallicTension`, `playMetallicSting`, `resetAudio` |
 
 ---
 
@@ -26,15 +27,22 @@ A self-reference doc for Claude (or anyone else) who needs to understand how thi
 
 ```
 window.load
-  └─ Game.create()
-       ├─ new Game()
-       ├─ await regenDungeon()     ← async: fetch puzzle, build dungeon, init rooms
-       ├─ register resize listener
-       ├─ set playerPos to random room
-       ├─ apply dungeon tilt rotation
-       ├─ render()
-       ├─ show help if tutorial
-       └─ register keydown listener
+  └─ main.ts: render title screen crossword (rot.js Display)
+       ├─ Promise.all: Game.create() + initAudio()
+       │   Game.create():
+       │     ├─ new Game()
+       │     ├─ await regenDungeon()  ← async: fetch puzzle, build dungeon
+       │     ├─ register resize listener
+       │     ├─ set playerPos to random room
+       │     └─ apply dungeon tilt rotation
+       ├─ show "Press [SPACE] to enter"
+       └─ on SPACE:
+            ├─ hide title, show #ui
+            ├─ startAmbience()        ← satisfies autoplay policy
+            └─ game.activate()
+                 ├─ render()
+                 ├─ show help if tutorial
+                 └─ register keydown listener
 ```
 
 `regenDungeon()` is async because it fetches the puzzle JSON. It:
