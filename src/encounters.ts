@@ -316,6 +316,7 @@ export type CombatMonsterStats = {
   def: number;
   xp: number;
   manaDrain: number;
+  stealGold?: number;
   dormantTurns?: number;
 };
 
@@ -326,6 +327,7 @@ export type CombatTurn = {
   monsterHpAfter: number;
   manaGained: number;
   manaDrained: number;
+  goldStolen: number;
   playerManaAfter: number;
 };
 
@@ -334,21 +336,23 @@ export type CombatResult = {
   playerWon: boolean;
   manaGameOver: boolean;
   xpGained: number;
+  totalGoldStolen: number;
   awakeningAfterTurn?: number;
 };
 
 export function resolveCombat(
-  player: CombatPlayerStats & { mana?: number; maxMana?: number },
+  player: CombatPlayerStats & { mana?: number; maxMana?: number; gold?: number },
   monster: CombatMonsterStats,
 ): CombatResult {
-  const { dmg: playerDmg, hp: playerHp, maxHp: playerMaxHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity, maxMana: playerMaxMana } = player;
+  const { dmg: playerDmg, hp: playerHp, maxHp: playerMaxHp, def: playerDef = 0, hpPerRound = 0, manaPerRound = 0, mana: startMana = Infinity, maxMana: playerMaxMana, gold: startGold = Infinity } = player;
   const hpCap = playerMaxHp ?? playerHp;
   const manaCap = playerMaxMana ?? Infinity;
-  const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0, dormantTurns = 0 } = monster;
+  const { dmg: monsterDmg, hp: monsterHp, def: monsterDef = 0, xp, manaDrain = 0, stealGold = 0, dormantTurns = 0 } = monster;
   const turns: CombatTurn[] = [];
   let curPlayerHp = playerHp;
   let curMonsterHp = monsterHp;
   let curMana = startMana;
+  let curGold = startGold;
   let playerTurnCount = 0;
   const effectivePlayerDmg  = Math.max(1, playerDmg - monsterDef);
   const effectiveMonsterDmg = Math.max(0, monsterDmg - playerDef);
@@ -366,16 +370,19 @@ export function resolveCombat(
       monsterHpAfter: Math.max(0, curMonsterHp),
       manaGained: manaPerRound,
       manaDrained: 0,
+      goldStolen: 0,
       playerManaAfter: curMana,
     });
     if (curMonsterHp <= 0) break;
 
-    // Monster attacks (reduced by player def); leech drains mana
+    // Monster attacks (reduced by player def); leech drains mana; thieving steals gold
     // Dormant sentinels don't attack for their first N player turns
     const currentMonsterDmg = playerTurnCount <= dormantTurns ? 0 : effectiveMonsterDmg;
     const currentManaDrain  = playerTurnCount <= dormantTurns ? 0 : manaDrain;
+    const currentStealGold  = playerTurnCount <= dormantTurns ? 0 : Math.min(curGold === Infinity ? 0 : curGold, stealGold);
     curPlayerHp -= currentMonsterDmg;
     curMana = Math.max(0, curMana - currentManaDrain);
+    if (curGold !== Infinity) curGold = Math.max(0, curGold - currentStealGold);
     turns.push({
       attacker: 'monster',
       dmg: currentMonsterDmg,
@@ -383,17 +390,19 @@ export function resolveCombat(
       monsterHpAfter: curMonsterHp,
       manaGained: 0,
       manaDrained: currentManaDrain,
+      goldStolen: currentStealGold,
       playerManaAfter: curMana,
     });
   }
 
+  const totalGoldStolen = turns.reduce((s, t) => s + t.goldStolen, 0);
   const playerWon = curMonsterHp <= 0;
   const manaGameOver = !playerWon && curMana <= 0 && curPlayerHp > 0;
   // If sentinel was still dormant when combat ended (killed before awakening), no awakening message
   const awakeningAfterTurn = dormantTurns > 0 && turns.length > dormantTurns * 2 - 1
     ? dormantTurns * 2 - 1  // index of the last dormant monster turn
     : undefined;
-  return { turns, playerWon, manaGameOver, xpGained: playerWon ? xp : 0, awakeningAfterTurn };
+  return { turns, playerWon, manaGameOver, xpGained: playerWon ? xp : 0, totalGoldStolen, awakeningAfterTurn };
 }
 
 // ---- Display formatting (stats computed from displayLevel) ----
@@ -437,7 +446,8 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(`DMG: ${isDormant ? 0 : stats.dmg}`);
     if (!isDormant && stats.def       > 0) lines.push(`DEF: ${stats.def}`);
     if (!isDormant && stats.manaDrain > 0) lines.push(`-${stats.manaDrain} MANA on hit`);
-    if (!isDormant && stats.stealGold > 0) lines.push(`-${stats.stealGold} GOLD on wrong guess`);
+    if (!isDormant && stats.stealGold > 0) lines.push(`-${stats.stealGold} GOLD`);
+    if (!isDormant && encounter.baseName === 'Thief') lines.push(`-${10 * displayLevel} GOLD`);
     lines.push('');
     lines.push('REWARD');
     lines.push(`+ ${isDormant ? 0 : stats.xp} XP  on defeat`);

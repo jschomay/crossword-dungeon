@@ -642,6 +642,7 @@ export default class Game {
     this.revealScrolls = 3;
     this.intoneScrolls = 3;
     this.gameOver = false;
+    this.puzzleComplete = false;
     this.combatRunning = false;
     this.combatMonsterHp = null;
     this.gameOverReason = null;
@@ -960,7 +961,7 @@ export default class Game {
         } else if (enc.kind === 'monster' && (enc as MonsterEncounter).baseName === 'Thief') {
           const monsterEnc = enc as MonsterEncounter;
           const stats = getMonsterStats(monsterEnc, level, this.puzzleMult());
-          const stealAmount = Math.min(this.gold, stats.stealGold > 0 ? stats.stealGold : 10 * this.dungeonLevel);
+          const stealAmount = Math.min(this.gold, stats.stealGold > 0 ? stats.stealGold : 10 * level);
           if (stealAmount > 0) {
             this.gold -= stealAmount;
             logLines.push(`The Thief steals ${stealAmount} gold!`);
@@ -1101,10 +1102,11 @@ export default class Game {
           def: this.effectiveDef(),
           mana: this.mana,
           maxMana: this.effectiveMaxMana(),
+          gold: this.gold,
           hpPerRound,
           manaPerRound,
         },
-        { dmg: stats.dmg, hp: monsterHp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain },
+        { dmg: stats.dmg, hp: monsterHp, def: stats.def, xp: stats.xp, manaDrain: stats.manaDrain, stealGold: stats.stealGold },
       );
       const state = this.getRoomState(x, y);
       this.runCombatAnimation(monsterEnc, result, monsterHp, letter, preamble, () => {
@@ -1119,6 +1121,7 @@ export default class Game {
       ? this.resolveTrap(enc as TrapEncounter, level, wasCaged)
       : this.resolveTreasure(enc as TreasureEncounter, level);
 
+    this.emitDungeonEvent({ type: 'room:solved', x, y, encounterName: enc.baseName });
     if (preamble) logLines.unshift(preamble);
     const completeLine = this.checkPuzzleComplete();
     if (completeLine) this.afterPopupLines.push(completeLine);
@@ -1313,13 +1316,27 @@ export default class Game {
     this.dungeon.triggerCorrectPulse(this.display, this.playerPos, this.roomStates, this.camera(), () => { this.pulseRunning = false; });
 
     if (hitCount >= 5) {
-      // 5th hit — awaken, leave room unsolved for next cast
-      const awakenedEnc: MonsterEncounter = { ...enc, baseName: 'Awakened Sentinel', currentHp: newHp, hitCount };
-      state.encounter = awakenedEnc;
-      const lines = preamble ? [preamble] : [];
-      lines.push(`You deal ${playerDmg} damage.`);
-      this.showInteraction(lines, letter);
-      this.afterPopupLines.push(`The sentinel awakens and turns its full force towards you! You'll have to defeat it to solve the room.`);
+      if (newHp <= 0) {
+        // Sentinel dies on the same turn it awakens — resolve immediately as a defeat
+        this.markRoomSolvedQuietly(x, y, letter);
+        const leveledUp = this.gainXp(stats.xp);
+        const completeLine = this.checkPuzzleComplete();
+        if (completeLine) this.afterPopupLines.push(completeLine);
+        const lines = preamble ? [preamble] : [];
+        lines.push(`You deal ${playerDmg} damage.`);
+        lines.push(`Awakened Sentinel defeated!`, `+${stats.xp} XP`);
+        if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
+        this.emitDungeonEvent({ type: 'room:solved', x, y, encounterName: 'Awakened Sentinel' });
+        this.showInteraction(lines, letter, () => { state.completed = true; });
+      } else {
+        // 5th hit — awaken, leave room unsolved for next cast
+        const awakenedEnc: MonsterEncounter = { ...enc, baseName: 'Awakened Sentinel', currentHp: newHp, hitCount };
+        state.encounter = awakenedEnc;
+        const lines = preamble ? [preamble] : [];
+        lines.push(`You deal ${playerDmg} damage.`);
+        this.showInteraction(lines, letter);
+        this.afterPopupLines.push(`The sentinel awakens and turns its full force towards you! You'll have to defeat it to solve the room.`);
+      }
     } else {
       // Still dormant — update HP and hitCount, leave room unsolved
       state.encounter = { ...enc, currentHp: newHp, hitCount };
@@ -1360,25 +1377,26 @@ export default class Game {
       return;
     }
 
-    // Thief survives — steal gold and flee to a random unsolved treasure room
+    // Thief survives — steal gold and flee to a random unsolved encounter room
     const stealAmount = Math.min(this.gold, 10 * level);
     this.gold = Math.max(0, this.gold - stealAmount);
     const newStolenTotal = stolenSoFar + stealAmount;
 
-    // Find a random unsolved treasure room
-    const treasureRooms: { key: string; roomState: RoomState }[] = [];
+    // Find a random unsolved letter room (any encounter type), excluding current room
+    const currentKey = `${x},${y}`;
+    const fleeRooms: { key: string; roomState: RoomState }[] = [];
     for (const [key, rs] of this.roomStates) {
-      if (rs.solvedLetter === null && rs.encounter.kind === 'treasure') {
+      if (key !== currentKey && rs.solvedLetter === null) {
         const [tx, ty] = key.split(',').map(Number);
-        if (!this.dungeon.getExtraRoomAt(tx, ty)) treasureRooms.push({ key, roomState: rs });
+        if (!this.dungeon.getExtraRoomAt(tx, ty)) fleeRooms.push({ key, roomState: rs });
       }
     }
 
     const completeLine = this.checkPuzzleComplete();
     if (completeLine) this.afterPopupLines.push(completeLine);
 
-    if (treasureRooms.length === 0) {
-      // No treasure rooms — thief vanishes
+    if (fleeRooms.length === 0) {
+      // No other rooms — thief vanishes
       const lines = preamble ? [preamble] : [];
       lines.push(stealAmount > 0 ? `The thief grabs ${stealAmount} gold and vanishes!` : `The thief vanishes into the shadows.`);
       this.showInteraction(lines, letter, () => { state.completed = true; });
@@ -1387,9 +1405,9 @@ export default class Game {
       return;
     }
 
-    // Teleport thief to a random treasure room
-    const target = treasureRooms[Math.floor(Math.random() * treasureRooms.length)];
-    if (target.roomState.activatedLevel === 0) target.roomState.activatedLevel = 1;
+    // Teleport thief to a random room, keeping its own activation level
+    const target = fleeRooms[Math.floor(Math.random() * fleeRooms.length)];
+    target.roomState.activatedLevel = Math.max(1, state.activatedLevel);
     target.roomState.encounter = {
       ...enc,
       currentHp: newHp,
@@ -1450,7 +1468,7 @@ export default class Game {
     roomY?: number,
   ): void {
     this.combatRunning = true;
-    const { turns, playerWon, manaGameOver, xpGained } = result;
+    const { turns, playerWon, manaGameOver, xpGained, totalGoldStolen } = result;
 
     this.combatMonsterHp = initialMonsterHp;
 
@@ -1466,6 +1484,7 @@ export default class Game {
         this.combatMonsterHp = t.monsterHpAfter;
         this.hp = t.playerHpAfter;
         this.mana = t.playerManaAfter;
+        if (t.goldStolen > 0) this.gold = Math.max(0, this.gold - t.goldStolen);
         this.render();
         setTimeout(() => showTurn(idx + 1), 700);
       } else {
@@ -1476,6 +1495,7 @@ export default class Game {
           this.combatRunning = false;
           if (completeLine) this.afterPopupLines.push(completeLine);
           const lines = [`${enc.baseName} defeated.`, `+${xpGained} XP`];
+          if (totalGoldStolen > 0) lines.push(`-${totalGoldStolen} GOLD (stolen)`);
           if (leveledUp) lines.push(`★ Level up! Now Lv.${this.level}`);
           if (result.awakeningAfterTurn !== undefined) lines.push(`The sentinel awakens!`);
           if (enc.baseName === 'Slime Blob' && roomX !== undefined && roomY !== undefined) {

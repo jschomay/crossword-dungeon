@@ -95,6 +95,7 @@ const { default: Dungeon } = await import('../src/dungeon.ts');
 const { default: Puzzle, validateIpuz } = await import('../src/puzzle.ts');
 const { generateEncounter } = await import('../src/encounters.ts');
 const game = await (Game as any).create() as any;
+game.activate();
 console.log('Game booted. playerPos:', game.playerPos);
 
 // ── Snapshot renderer ─────────────────────────────────────────────────────────
@@ -278,6 +279,9 @@ createServer(async (req, res) => {
     game.puzzleComplete = false;
     game.gameOver = false;
     game.gameWon = false;
+    game.pulseRunning = false;
+    game.combatRunning = false;
+    game.popupOpen = false;
     if (fixture.playerState) {
       const ps = fixture.playerState;
       if (ps.gold !== undefined) game.gold = ps.gold;

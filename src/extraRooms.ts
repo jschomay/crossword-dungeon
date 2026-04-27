@@ -483,7 +483,6 @@ export const DRAGON_TREASURE_DEF: ExtraRoomDef = {
         room.locked = false;
         ctx.showInteraction([
           `The dragon is defeated! The treasure room unlocks.`,
-          `A glimmer of gold beckons from nearby...`,
         ]);
         ctx.render();
       }
@@ -870,7 +869,8 @@ export const TRAPPED_ADVENTURER_DEF: ExtraRoomDef = {
     const adjacentRooms: Coord[] = [];
     for (const { dx, dy } of dirs) {
       const nx = pos.x + dx, ny = pos.y + dy;
-      if (nx >= 0 && ny >= 0 && nx < width && ny < height && roomSet.has(`${nx},${ny}`)) {
+      if (nx >= 0 && ny >= 0 && nx < width && ny < height && roomSet.has(`${nx},${ny}`)
+          && !ctx.isPreSolved({ x: nx, y: ny })) {
         adjacentRooms.push({ x: nx, y: ny });
       }
     }

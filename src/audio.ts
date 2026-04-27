@@ -35,19 +35,32 @@ export function startAmbience(): void {
   swoopTone.fade(0, 1.0, 20000);
 }
 
+let preTensionSwoopVolume = 1.0;
+
 export function setMetallicTension(on: boolean): void {
   if (!metallic || metallicTensionOn === on) return;
   metallicTensionOn = on;
   if (on) {
+    preTensionSwoopVolume = (swoopTone?.volume() as number) ?? 1.0;
     if (!metallic.playing()) metallic.play();
     metallic.fade(metallic.volume() as number, 1.0, 1000);
+    swoopTone?.fade(preTensionSwoopVolume, Math.min(preTensionSwoopVolume, 0.2), 1000);
   } else {
     metallic.fade(metallic.volume() as number, 0, 1000);
+    swoopTone?.fade(swoopTone.volume() as number, preTensionSwoopVolume, 1000);
   }
 }
 
 export function playMetallicSting(): void {
   metallicSting?.play();
+  // Briefly swell the swoop tone for a few seconds on level-up / victory
+  if (swoopTone) {
+    const cur = swoopTone.volume() as number;
+    swoopTone.fade(cur, Math.min(1.0, cur + 0.5), 500);
+    setTimeout(() => {
+      if (!metallicTensionOn) swoopTone!.fade(swoopTone!.volume() as number, 1.0, 3000);
+    }, 2000);
+  }
 }
 
 export function resetAudio(): void {
