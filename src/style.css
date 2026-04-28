@@ -48,8 +48,9 @@ body {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 12px;
+  gap: 40px;
   width: 100%;
+  max-width: 1200px;
   min-height: calc(100vh - 24px);
 }
 
@@ -57,12 +58,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 24px;
   flex: 6 1 0;
   min-width: 0;
   align-self: stretch;
   position: relative;
+  padding-top: 16px;
 }
 
 #interaction-popup {
@@ -100,36 +102,34 @@ body {
 
 #status {
   font-family: monospace;
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: 12px;
+  line-height: 1.6;
   border: 1px solid #666;
-  padding: 16px 20px;
+  padding: 10px 14px;
   background: #0d0d0d;
   text-align: center;
 }
 
 #dungeon-level {
-  font-size: 14px;
+  font-size: 12px;
   font-family: monospace;
-  line-height: 1.8;
-  border: 1px solid #444;
-  padding: 16px 20px;
+  line-height: 1.6;
   white-space: pre;
 }
 
 #hero {
-  font-size: 14px;
+  font-size: 12px;
   font-family: monospace;
-  line-height: 1.8;
+  line-height: 1.6;
   border: 1px solid #444;
-  padding: 16px 20px;
+  padding: 10px 14px;
   white-space: pre;
 }
 
 #interaction-log {
   font-family: monospace;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.6;
   color: #ccaa66;
   white-space: pre;
   padding: 4px 0;
@@ -137,19 +137,19 @@ body {
 }
 
 #encounter {
-  font-size: 14px;
+  font-size: 12px;
   font-family: monospace;
-  line-height: 1.8;
+  line-height: 1.6;
   border: 1px solid #444;
-  padding: 16px 20px;
-  min-height: 120px;
+  padding: 10px 14px;
+  min-height: 100px;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 
 #clues {
   color: #888888;
-  font-size: 20px;
+  font-size: 16px;
   font-family: monospace;
   line-height: 1.5;
   height: 3em;

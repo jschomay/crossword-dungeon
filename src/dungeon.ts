@@ -334,7 +334,7 @@ export default class Dungeon {
 
     if (!extraRoom && solved === null) {
       const dotColor = state?.encounter ? ENCOUNTER_STYLE[state.encounter.kind].color : DOT_FG;
-      for (let i = 0; i < activatedLevel; i++) {
+      for (let i = 0; i < Math.min(activatedLevel, DOT_POSITIONS.length); i++) {
         const [lx, ly] = DOT_POSITIONS[i];
         recordDraw(wx + lx, wy + ly, '.', dotColor);
       }

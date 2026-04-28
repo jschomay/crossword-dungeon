@@ -21,10 +21,10 @@ function loadSound(src: string, loop: boolean, volume: number): Promise<Howl> {
 
 export async function initAudio(): Promise<void> {
   [drips, swoopTone, metallic, metallicSting] = await Promise.all([
-    loadSound('/sounds/bg-drips.mp3', true, 1.0),
-    loadSound('/sounds/bg-swoop-tone.mp3', true, 0),
-    loadSound('/sounds/bg-metallic.mp3', true, 0),
-    loadSound('/sounds/bg-metallic-sting.mp3', false, 1.0),
+    loadSound('sounds/bg-drips.mp3', true, 1.0),
+    loadSound('sounds/bg-swoop-tone.mp3', true, 0),
+    loadSound('sounds/bg-metallic.mp3', true, 0),
+    loadSound('sounds/bg-metallic-sting.mp3', false, 1.0),
   ]);
 }
 

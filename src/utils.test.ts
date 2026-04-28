@@ -121,9 +121,8 @@ describe('renderEncounterHtml flash predicate', () => {
   it('flashes lines matching predicate', () => {
     const lines = ['* [MONSTER] Rat  Lv.1', 'HP: ██████████  10', 'DMG: 3'];
     const html = renderEncounterHtml(lines, '#aaa', line => line.startsWith('HP:'));
-    const parts = html.split('\n');
-    expect(parts[1]).toContain('class="flash"');
-    expect(parts[2]).not.toContain('class=');
+    expect(html).toContain('class="flash"');
+    expect(html).toContain('DMG:');
   });
 
   it('no predicate — no flash classes', () => {

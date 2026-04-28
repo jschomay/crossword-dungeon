@@ -41,5 +41,35 @@ export function colorLine(line: string, titleColor: string, isFirst: boolean, fl
 }
 
 export function renderEncounterHtml(lines: string[], titleColor: string, flashLine?: (line: string) => boolean): string {
-  return lines.map((line, idx) => colorLine(line, titleColor, idx === 0, flashLine?.(line) ?? false)).join('\n');
+  const statPrefixes = ['HP:', 'DMG:', 'DEF:', 'DRAIN:'];
+  const parts: Array<{ html: string; block: boolean }> = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const isFirst = i === 0;
+    if (!isFirst && statPrefixes.some(p => line.startsWith(p))) {
+      const statLines: string[] = [];
+      while (i < lines.length && statPrefixes.some(p => lines[i].startsWith(p))) {
+        statLines.push(lines[i]);
+        i++;
+      }
+      const cols = statLines.map(l => {
+        const flash = flashLine?.(l) ?? false;
+        return `<div>${colorLine(l, titleColor, false, flash)}</div>`;
+      }).join('');
+      parts.push({ html: `<div style="display:flex;gap:20px;margin-top:1em">${cols}</div>`, block: true });
+    } else {
+      parts.push({ html: colorLine(line, titleColor, isFirst, flashLine?.(line) ?? false), block: false });
+      i++;
+    }
+  }
+  // Join: block-level flex divs don't need a \n separator (they're already block);
+  // use \n only between inline spans so pre-wrap renders line breaks correctly.
+  let result = '';
+  for (let j = 0; j < parts.length; j++) {
+    const prev = parts[j - 1];
+    if (j > 0 && !parts[j].block && !prev?.block) result += '\n';
+    result += parts[j].html;
+  }
+  return result;
 }

@@ -436,10 +436,9 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(description);
     if (activeMods.length > 0) {
       for (const mod of activeMods) {
-        lines.push(`◆ ${mod.name}  — ${mod.description}`);
+        lines.push(`◆ ${mod.description}`);
       }
     }
-    lines.push('');
     const isDormant = encounter.baseName === 'Dormant Sentinel';
     const displayHp = currentHp ?? encounter.currentHp ?? stats.hp;
     lines.push(`HP: ${hpBar(displayHp, stats.hp)}  ${displayHp}`);
@@ -449,7 +448,6 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     if (!isDormant && stats.stealGold > 0) lines.push(`-${stats.stealGold} GOLD`);
     if (!isDormant && encounter.baseName === 'Thief') lines.push(`-${10 * displayLevel} GOLD`);
     lines.push('');
-    lines.push('REWARD');
     lines.push(`+ ${isDormant ? 0 : stats.xp} XP  on defeat`);
 
   } else if (encounter.kind === 'trap') {
@@ -463,7 +461,7 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     lines.push(encounter.baseDescription);
     if (activeMods.length > 0) {
       for (const mod of activeMods) {
-        lines.push(`◆ ${mod.name}  — ${mod.description}`);
+        lines.push(`◆ ${mod.description}`);
       }
     }
     lines.push('');
@@ -476,7 +474,6 @@ export function formatEncounter(encounter: Encounter, displayLevel: number, curr
     if (stats.sideEffects.maxHpReduce  > 0) lines.push(`-${stats.sideEffects.maxHpReduce} max HP`);
     if (stats.sideEffects.maxManaReduce > 0) lines.push(`-${stats.sideEffects.maxManaReduce} max MANA`);
     lines.push('');
-    lines.push('REWARD');
     const rewardLabel = stats.rewardType === 'xp' ? 'XP' : 'MANA';
     lines.push(`+ ${stats.reward} ${rewardLabel}  on disarm`);
 

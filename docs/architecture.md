@@ -166,14 +166,14 @@ During combat: `combatRunning = true` blocks all input.
 ### Layout
 
 ```
-#ui  (flex row, 60/40)
-  #main  (60%)
+#ui  (flex row, 60/40, max-width 1200px centered)
+  #main  (60%, top-aligned)
+    #dungeon-level     ← "Dungeon 3" + hints (borderless, above canvas)
     #dungeon           ← rot.js canvas
     #clues             ← crossword letter hint
     #interaction-popup ← modal overlay (discovery / combat)
   #sidebar  (40%)
-    #dungeon-level     ← "Dungeon 3" + hints
-    #hero              ← player stats, equipment, inventory
+    #hero              ← player stats (two flex rows: HP/DMG/DEF, MANA/GOLD/XP), equipment, inventory
     #encounter         ← current room description OR bonus room panel
     #interaction-log   ← puzzle solved message
 #help-overlay          ← modal help dialog
@@ -183,7 +183,7 @@ During combat: `combatRunning = true` blocks all input.
 
 **Hero panel** (`renderHeroPanel()`): rewritten on every `render()`. HP/mana bars use CSS `flash` class for blink animation.
 
-**Encounter panel**: written when player is in a letter room. Shows encounter description, stats at current `activatedLevel`, incorrect guesses. Hidden when room is completed.
+**Encounter panel**: written when player is in a letter room. Shows encounter description, stats at current `activatedLevel`, incorrect guesses. Stat lines (HP/DMG/DEF or DRAIN) are grouped into a flex row by `renderEncounterHtml()`. Hidden when room is completed.
 
 **Bonus room panel**: when player enters an extra room, `def.renderPanel(room, ctx)` returns HTML → written to `#encounter`. Each room type renders its own panel. Cleared when room is completed.
 

@@ -93,11 +93,11 @@ function baseStatLabel(item: TreasureItemStats): string {
 }
 
 function equipLines(item: TreasureItemStats): string[] {
-  const lines = [`◆ ${item.name}  Lv.${item.level}  ${baseStatLabel(item)}`];
+  const modPrefix = item.modNames.length > 0 ? item.modNames.join(' ') + ' ' : '';
+  const lines = [`◆ ${modPrefix}${item.name}  Lv.${item.level}  ${baseStatLabel(item)}`];
   for (const modName of item.modNames) {
     const mod = TREASURE_MODIFIERS.find(m => m.name === modName);
-    if (mod) lines.push(`  ${mod.name} — ${mod.description} (${modEffectLabel(mod)})`);
-    else lines.push(`  ${modName}`);
+    if (mod) lines.push(`  ${mod.description} (${modEffectLabel(mod)})`);
   }
   return lines;
 }
@@ -146,7 +146,7 @@ export default class Game {
   private level: number = 1;
   private xp: number = 0;
   private gameOver: boolean = false;
-  private gameOverReason: 'hp' | 'mana' | null = null;
+  private gameOverReason: { type: 'hp'; killer: string } | { type: 'mana' } | null = null;
   private dungeonLevel: number = 1;
   private shopBuyCounts: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
   private totalRooms: number = 0;
@@ -919,9 +919,9 @@ export default class Game {
   }
 
 
-  private triggerGameOver(): void {
+  private triggerGameOver(killer = 'the dungeon'): void {
     this.gameOver = true;
-    this.gameOverReason = 'hp';
+    this.gameOverReason = { type: 'hp', killer };
     this.afterPopupLines = [];
     this.puzzleComplete = false;
     this.render();
@@ -929,7 +929,7 @@ export default class Game {
 
   private triggerManaGameOver(): void {
     this.gameOver = true;
-    this.gameOverReason = 'mana';
+    this.gameOverReason = { type: 'mana' };
     this.afterPopupLines = [];
     this.puzzleComplete = false;
     this.render();
@@ -1028,7 +1028,7 @@ export default class Game {
 
 
       if (this.hp <= 0) {
-        this.triggerGameOver();
+        this.triggerGameOver(`the ${(enc as TrapEncounter).baseName}`);
         return;
       }
       if (this.mana === 0) {
@@ -1512,7 +1512,7 @@ export default class Game {
           this.hp = 0;
           this.combatRunning = false;
           this.gameOver = true;
-          this.gameOverReason = 'hp';
+          this.gameOverReason = { type: 'hp', killer: `the ${enc.baseName}` };
           this.showInteraction([`You were defeated by the ${enc.baseName}.`], letter);
           this.render();
         }
@@ -1593,6 +1593,7 @@ export default class Game {
 
   private handleKey(e: KeyboardEvent): void {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) e.preventDefault();
 
     if (e.key === 'Escape') {
       this.helpOverlayEl.classList.add('hidden');
@@ -1715,36 +1716,29 @@ export default class Game {
       .flatMap(item => equipLines(item).map(l => esc(l)))
       .join('\n');
 
-    const boxStyle = `display:inline-block;border:1px solid #555;padding:3px 5px;width:24%;text-align:left;font-size:12px;vertical-align:top;box-sizing:border-box`;
-    const itemBox = (key: string, label: string, effect: string, count: number) =>
-      `<div style="${boxStyle}"><span style="color:#fff">[${key}]</span><span style="color:#888"> ${esc(label)} ×${count}</span><br>` +
-      `<span style="color:#777">${esc(effect)}</span></div>`;
+    const itemLine = (key: string, label: string, effect: string, count: number) =>
+      `<span style="color:#fff">[${key}]</span><span style="color:#888"> ${esc(label)} ×${count}</span>` +
+      `<span style="color:#555">  ${esc(effect)}</span>`;
     const bagHtml =
-      `<div style="display:flex;justify-content:space-between;width:100%">` +
-      itemBox('1', 'Heal', '+20 HP', this.hpPotions) +
-      itemBox('2', 'Restore', '+10 MANA', this.manaPotions) +
-      itemBox('3', 'Inscribe', 'Reveal letter', this.revealScrolls) +
-      itemBox('4', 'Intone', 'Reveal word', this.intoneScrolls) +
-      `</div>`;
+      itemLine('1', 'Heal', '+20 HP', this.hpPotions) + '<br>' +
+      itemLine('2', 'Restore', '+10 MANA', this.manaPotions) + '<br>' +
+      itemLine('3', 'Inscribe', 'Reveal letter', this.revealScrolls) + '<br>' +
+      itemLine('4', 'Intone', 'Reveal word', this.intoneScrolls);
 
     this.heroEl.innerHTML =
       `<div style="display:flex;align-items:baseline;gap:12px">` +
       `<span style="color:#ffdd44">Adventurer</span>` +
       `<span${lvlFlash} style="color:#777">Lv.${this.level}</span>` +
       `</div>` +
-      `<div style="display:flex;gap:32px;margin-top:4px">` +
-      `<div>` +
-      `<div><span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}</span>  <span style="color:#ccc">${this.hp}/${this.effectiveMaxHp()}</span></div>` +
-      `<div><span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}</span>  <span style="color:#ccc">${this.mana}/${this.effectiveMaxMana()}</span></div>` +
-      `</div>` +
-      `<div>` +
+      `<div style="display:flex;gap:16px;margin-top:4px">` +
+      `<div><span${hpFlash} style="color:${C_HP}">HP:   ${hpBarStr}  ${this.hp}/${this.effectiveMaxHp()}</span></div>` +
       `<div><span${dmgFlash} style="color:${C_DMG}">DMG: ${effDmg}</span></div>` +
       `<div><span${defFlash} style="color:${C_DEF}">DEF: ${effDef}</span></div>` +
       `</div>` +
-      `<div>` +
-      `<div><span${xpFlash} style="color:${C_XP}">XP:   ${this.xp}/${xpThreshold(this.level)}</span></div>` +
+      `<div style="display:flex;gap:16px;margin-top:2px">` +
+      `<div><span${manaFlash} style="color:${C_MANA}">MANA: ${manaBarStr}  ${this.mana}/${this.effectiveMaxMana()}</span></div>` +
       `<div><span style="color:#ffdd44">GOLD: ${this.gold}</span></div>` +
-      `</div>` +
+      `<div><span${xpFlash} style="color:${C_XP}">XP: ${this.xp}/${xpThreshold(this.level)}</span></div>` +
       `</div>` +
       `\n` +
       (equipBlock ? `<span style="color:${C_DIM}">${equipBlock}</span>\n\n` : '') +
@@ -1789,16 +1783,18 @@ export default class Game {
         `<span style="color:#aaaaff">The word was: ${esc(arch?.word ?? '?')}</span>\n` +
         `<span style="color:#888">Dungeon levels survived: ${this.dungeonLevel}</span>\n` +
         `<span style="color:#888">Player level: ${this.level}</span>\n` +
-        `<span style="color:#888">HP remaining: ${this.hp}/${this.effectiveMaxHp()}</span>\n\n` +
+        `<span style="color:#888">HP remaining: ${this.hp}/${this.effectiveMaxHp()}</span>\n` +
+        `<span style="color:#888">XP earned: ${this.xp}</span>\n` +
+        `<span style="color:#888">Gold collected: ${this.gold}</span>\n\n` +
         `<span style="color:#fff">[SPACE]</span><span style="color:#888"> New run</span>`
       );
       return;
     }
 
     if (this.gameOver) {
-      const reason = this.gameOverReason === 'mana'
+      const reason = this.gameOverReason?.type === 'mana'
         ? 'You have exhausted your magic.'
-        : 'You have been slain.';
+        : `You were slain by ${this.gameOverReason?.killer ?? 'the dungeon'}.`;
       this.statusEl.classList.add('hidden');
       this.cluesEl.innerHTML = '&nbsp;<br>&nbsp;';
       this.openPopup(
@@ -1845,7 +1841,7 @@ export default class Game {
           : state.encounter.kind === 'treasure' ? 'loot'
             : state.encounter.kind === 'monster' ? 'fight'
               : 'disarm';
-        encLines.splice(state.activatedLevel === 0 ? 1 : 2, 0, `Cast a rune to ${runeAction}.`);
+        encLines.splice(state.activatedLevel === 0 ? 1 : 2, 0, `Cast a rune to ${runeAction}`);
         const guesses = state.incorrectGuesses;
         const titleColor = state.activatedLevel > 0 ? style.color : UNKNOWN_COLOR;
         const flashMonsterHp = this.combatMonsterHp !== this.prevCombatMonsterHp;
